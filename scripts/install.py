@@ -94,7 +94,7 @@ def validate_target(target: Path, repo: Path) -> None:
     if target.exists():
         raise InstallError("The install target already exists. Choose a fresh path.")
     if not target.parent.is_dir():
-        raise InstallError("The target parent must already exist.")
+        target.parent.mkdir(mode=0o700, parents=True)
     parent = target.parent.stat()
     if parent.st_uid != os.geteuid() or parent.st_mode & 0o022:
         raise InstallError("The target parent must be user owned and protected from other writers.")

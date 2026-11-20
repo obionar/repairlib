@@ -36,6 +36,20 @@ SCRIPT = ROOT / "scripts/install.py"
 
 @unittest.skipUnless(sys.platform == "linux" and os.geteuid() != 0 and shutil.which("git"),
                      "unprivileged Linux with Git")
+class TargetParentTests(unittest.TestCase):
+    def test_a_missing_target_parent_is_created(self):
+        spec = importlib.util.spec_from_file_location("repairlib_installer", ROOT / "scripts" / "install.py")
+        self.assertIsNotNone(spec)
+        loader = spec.loader
+        assert loader is not None
+        module = importlib.util.module_from_spec(spec)
+        loader.exec_module(module)
+        with tempfile.TemporaryDirectory() as temp:
+            target = Path(temp) / "opt" / "repairlib"
+            module.validate_target(target, ROOT)
+            self.assertTrue(target.parent.is_dir())
+
+
 class LinuxInstallerTests(unittest.TestCase):
     def setUp(self):
         self.assertTrue(SCRIPT.is_file(), "Linux private installer is missing")
