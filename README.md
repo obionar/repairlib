@@ -81,6 +81,34 @@ from this machine unless `--timezone` is given. `service install` registers the
 service; `service start` runs it. Open <http://127.0.0.1:8000>.
 Upgrade later with `git pull` and the [staged update recipe](docs/operations.md#linux-install).
 
+## Portable checkout
+
+The simplest deployment has no installer at all: clone the repository anywhere
+the operator owns, keep the workspace and its backups in a separate directory,
+and register the service from that checkout.
+
+```sh
+git clone https://github.com/obionar/repairlib.git "$HOME/repairlib"
+cd "$HOME/repairlib"
+PYTHONPATH=src python3 -m repairlib setup --workspace "$HOME/repairlib-data" \
+  --shop "My Shop" --username owner
+PYTHONPATH=src python3 -m repairlib service install \
+  --workspace "$HOME/repairlib-data" --port 8000
+PYTHONPATH=src python3 -m repairlib service start \
+  --workspace "$HOME/repairlib-data" --port 8000
+```
+
+Update with `git pull` in the checkout and `service restart`; nothing else moves.
+To move to another machine, clone again, copy the workspace directory (owned by
+the service user, mode 0700) and its `<workspace>-backups` sibling, then install
+the service there.
+
+Keep the workspace **outside** the checkout. The service refuses a workspace
+inside the runtime source because an upgrade, a branch switch or `git clean`
+would remove the shop database; the installer and service rely on that
+separation. Running `dev` or `service foreground` from a checkout with `data/`
+inside is fine for a disposable demo, never for shop records.
+
 ## Check
 
 From the project root:
