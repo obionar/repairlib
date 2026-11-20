@@ -29,6 +29,18 @@ from test_cli_identity import COMMAND, running_listener
 from test_demo import PASSWORD
 
 
+class ServiceManagerTests(unittest.TestCase):
+    def test_openrc_is_detected_only_without_a_running_systemd(self):
+        from repairlib.lifecycle import service
+
+        with patch.object(service.Path, "is_dir", lambda self: False), \
+                patch.object(service.Path, "is_file", lambda self: True), \
+                patch.object(service, "which", lambda name: "/sbin/rc-service"):
+            self.assertTrue(service.using_openrc())
+        with patch.object(service.Path, "is_dir", lambda self: True):
+            self.assertFalse(service.using_openrc())
+
+
 class ServicePathTests(unittest.TestCase):
     def test_a_git_ignored_checkout_workspace_is_allowed(self):
         with tempfile.TemporaryDirectory() as temp:

@@ -762,6 +762,12 @@ def manage_openrc(action: str, workspace: Path, port: int) -> int:
     return 0
 
 
+def using_openrc() -> bool:
+    """True when OpenRC is the running service manager rather than systemd."""
+    return (not Path("/run/systemd/system").is_dir() and OPENRC_RUN.is_file()
+            and which("rc-service") is not None)
+
+
 def ignored_in_checkout(workspace: Path, checkout: Path) -> bool:
     """True when the checkout's own Git ignores this workspace path."""
     try:
@@ -778,6 +784,7 @@ def run_service(action: str, workspace: Path, port: int, *, openrc_system: bool 
             raise WorkspaceError("Service commands require an unprivileged Linux user.")
         if openrc_system and action == "foreground":
             raise WorkspaceError("--openrc-system manages a supervised service; foreground runs unsupervised.")
+        openrc_system = openrc_system or using_openrc()
         if not 1 <= port <= 65535:
             raise WorkspaceError("Choose a fixed loopback port from 1 to 65535.")
         check_path(workspace)
