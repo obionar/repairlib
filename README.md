@@ -65,21 +65,21 @@ For a Linux install outside the source checkout, see
 With the packages above installed, one clone, one target and one service:
 
 ```sh
-git clone https://github.com/obionar/repairlib.git repairlib-source
-python3 -I -B repairlib-source/scripts/install.py --commit HEAD \
-  --target "$HOME/.local/opt/repairlib"
-"$HOME/.local/opt/repairlib/repairlib" setup --workspace "$HOME/.repairlib" \
-  --shop "My Shop" --username owner
-"$HOME/.local/opt/repairlib/repairlib" service install \
-  --workspace "$HOME/.repairlib" --port 8000
-"$HOME/.local/opt/repairlib/repairlib" service start \
-  --workspace "$HOME/.repairlib" --port 8000
+git clone https://github.com/obionar/repairlib.git
+cd repairlib
+bin/repairlib setup --shop "My Shop" --username owner
+bin/repairlib service install
+bin/repairlib service start
 ```
 
-`setup` reads the first admin password from the terminal and takes the timezone
-from this machine unless `--timezone` is given. `service install` registers the
-service; `service start` runs it. Open <http://127.0.0.1:8000>.
-Upgrade later with `git pull` and the [staged update recipe](docs/operations.md#linux-install).
+`bin/repairlib` runs this checkout with the workspace in `./data` and the
+listener on port 8000, so no paths or environment variables are needed. `setup`
+reads the first admin password from the terminal and takes the timezone from
+this machine unless `--timezone` is given. Open <http://127.0.0.1:8000>.
+Upgrade later with `git pull` and `bin/repairlib service restart`.
+
+The [installer](docs/operations.md#linux-install) remains available for a
+versioned installation with atomic staged updates and rollback.
 
 ## Portable checkout
 
@@ -90,24 +90,22 @@ and register the service from that checkout.
 ```sh
 git clone https://github.com/obionar/repairlib.git "$HOME/repairlib"
 cd "$HOME/repairlib"
-PYTHONPATH=src python3 -m repairlib setup --workspace "$HOME/repairlib-data" \
-  --shop "My Shop" --username owner
-PYTHONPATH=src python3 -m repairlib service install \
-  --workspace "$HOME/repairlib-data" --port 8000
-PYTHONPATH=src python3 -m repairlib service start \
-  --workspace "$HOME/repairlib-data" --port 8000
+bin/repairlib setup --shop "My Shop" --username owner
+bin/repairlib service install
+bin/repairlib service start
 ```
 
 Update with `git pull` in the checkout and `service restart`; nothing else moves.
-To move to another machine, clone again, copy the workspace directory (owned by
-the service user, mode 0700) and its `<workspace>-backups` sibling, then install
-the service there.
+To move to another machine, copy the whole checkout and its `data/` and
+`data-backups/` directories (owned by the service user, mode 0700), or clone
+again and copy those two directories, then install the service there.
 
-Keep the workspace **outside** the checkout. The service refuses a workspace
-inside the runtime source because an upgrade, a branch switch or `git clean`
-would remove the shop database; the installer and service rely on that
-separation. Running `dev` or `service foreground` from a checkout with `data/`
-inside is fine for a disposable demo, never for shop records.
+The workspace can be the checkout's own `data/` directory, which is already
+Git-ignored, so one folder carries both code and records. A workspace inside the
+checkout must be ignored: a branch switch or `git checkout` would otherwise
+overwrite shop records, and `git clean -xdf` still deletes ignored files, so keep
+a backup before cleaning. The installer's target is separate from its workspace
+for the same reason.
 
 ## Check
 

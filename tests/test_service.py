@@ -21,12 +21,23 @@ from unittest.mock import patch
 from repairlib.__main__ import main
 from repairlib.domain import sessions, tokens
 from repairlib.domain.setup import initialize_demo_workspace
-from repairlib.lifecycle.service import BOOT, SOURCE, find_process, foreground_args, python_args
+from repairlib.lifecycle.service import BOOT, SOURCE, find_process, foreground_args, ignored_in_checkout, python_args
 from repairlib.lifecycle.workspace import WorkspaceError, database_path, maintenance_lock
 from repairlib.storage.initialization import initialize_database
 from test_baseline import python_env
 from test_cli_identity import COMMAND, running_listener
 from test_demo import PASSWORD
+
+
+class ServicePathTests(unittest.TestCase):
+    def test_a_git_ignored_checkout_workspace_is_allowed(self):
+        with tempfile.TemporaryDirectory() as temp:
+            checkout = Path(temp)
+            subprocess.run(["git", "-C", temp, "init", "-q"], check=True)
+            (checkout / ".gitignore").write_text("/data/\n", encoding="utf8")
+            (checkout / "data").mkdir()
+            self.assertTrue(ignored_in_checkout(checkout / "data", checkout))
+            self.assertFalse(ignored_in_checkout(checkout / "other", checkout))
 
 
 class ServiceHelpTests(unittest.TestCase):

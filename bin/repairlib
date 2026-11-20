@@ -1,0 +1,28 @@
+#!/usr/bin/python3
+"""Run RepairLib from this checkout with the workspace in ./data and port 8000."""
+
+import sys
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / "src"))
+
+from repairlib.__main__ import main  # noqa: E402
+
+PORT_COMMANDS = {"dev", "service"}
+
+
+def defaults(tokens: list[str]) -> list[str]:
+    """Fill --workspace from the checkout and --port for the listener commands."""
+    command = next((index for index, token in enumerate(tokens) if not token.startswith("-")), None)
+    if command is None:
+        return tokens
+    if "--workspace" not in tokens:
+        tokens = tokens[: command + 1] + ["--workspace", str(ROOT / "data")] + tokens[command + 1:]
+    if tokens[command] in PORT_COMMANDS and "--port" not in tokens:
+        tokens = tokens + ["--port", "8000"]
+    return tokens
+
+
+if __name__ == "__main__":
+    raise SystemExit(main(defaults(sys.argv[1:])))

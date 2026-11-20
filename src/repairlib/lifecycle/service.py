@@ -762,6 +762,16 @@ def manage_openrc(action: str, workspace: Path, port: int) -> int:
     return 0
 
 
+def ignored_in_checkout(workspace: Path, checkout: Path) -> bool:
+    """True when the checkout's own Git ignores this workspace path."""
+    try:
+        done = subprocess.run(["git", "-C", str(checkout), "check-ignore", "-q", str(workspace)],
+                              stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    except OSError:
+        return False
+    return done.returncode == 0
+
+
 def run_service(action: str, workspace: Path, port: int, *, openrc_system: bool = False) -> int:
     try:
         if sys.platform != "linux" or os.geteuid() == 0:
@@ -772,8 +782,10 @@ def run_service(action: str, workspace: Path, port: int, *, openrc_system: bool 
             raise WorkspaceError("Choose a fixed loopback port from 1 to 65535.")
         check_path(workspace)
         check_path(SOURCE)
-        if overlaps(workspace, SOURCE.parent) or overlaps(workspace, Path(sys.prefix).resolve()):
-            raise WorkspaceError("Workspace and runtime/source paths must be separate.")
+        if overlaps(workspace, Path(sys.prefix).resolve()):
+            raise WorkspaceError("Workspace and runtime paths must be separate.")
+        if overlaps(workspace, SOURCE.parent) and not ignored_in_checkout(workspace, SOURCE.parent):
+            raise WorkspaceError("A workspace inside the checkout must be Git-ignored; add it to .gitignore.")
         if action == "foreground":
             return foreground(workspace, port)
         if openrc_system:
