@@ -73,7 +73,10 @@ bin/repairlib service start
 ```
 
 `bin/repairlib` runs this checkout with the workspace in `./data` and the
-listener on port 8000, so no paths or environment variables are needed. `setup`
+listener on port 8000, so no paths or environment variables are needed. Link it
+once with `ln -s "$PWD/bin/repairlib" ~/.local/bin/repairlib` to run `repairlib`
+from anywhere; the symlink resolves back to this checkout. `REPAIRLIB_WORKSPACE`
+overrides the default workspace for any command. `setup`
 reads the first admin password from the terminal and takes the timezone from
 this machine unless `--timezone` is given. Open <http://127.0.0.1:8000>.
 Upgrade later with `git pull` and `bin/repairlib service restart`.

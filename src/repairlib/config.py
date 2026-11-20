@@ -34,7 +34,8 @@ def configured_base_url() -> str | None:
 
 
 def resolve_workspace(explicit: str | os.PathLike[str] | None = None) -> Path:
-    """Resolve a workspace path; an explicit path wins over the default."""
+    """Resolve a workspace path: argument, then REPAIRLIB_WORKSPACE, then the user default."""
+    explicit = explicit or os.environ.get("REPAIRLIB_WORKSPACE") or None
     if explicit is None:
         return default_state_root()
     path = Path(explicit).expanduser()
