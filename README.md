@@ -72,10 +72,13 @@ python3 -I -B repairlib-source/scripts/install.py --commit HEAD \
   --shop "My Shop" --username owner
 "$HOME/.local/opt/repairlib/repairlib" service install \
   --workspace "$HOME/.repairlib" --port 8000
+"$HOME/.local/opt/repairlib/repairlib" service start \
+  --workspace "$HOME/.repairlib" --port 8000
 ```
 
 `setup` reads the first admin password from the terminal and takes the timezone
-from this machine unless `--timezone` is given. Open <http://127.0.0.1:8000>.
+from this machine unless `--timezone` is given. `service install` registers the
+service; `service start` runs it. Open <http://127.0.0.1:8000>.
 Upgrade later with `git pull` and the [staged update recipe](docs/operations.md#linux-install).
 
 ## Check
