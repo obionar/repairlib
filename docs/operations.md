@@ -244,6 +244,23 @@ Initialize the workspace, then run in the foreground or register with the platfo
 
 Check `http://127.0.0.1:8000/health`; Ctrl+C stops the foreground process. To register a service, stop it and follow the [systemd](#linux-service-lifecycle) or [OpenRC](#openrc-system-service-on-alpine) steps with the same launcher and workspace.
 
+## Maintenance
+
+- **Logs.** The service logs through the system logger (`logger` on OpenRC, the user journal with
+  systemd), so rotation and retention follow the host configuration. Nothing is written inside the
+  workspace.
+- **Backups.** `repairlib backup snapshot --workspace … --output …` takes a database-only snapshot
+  while stopped, or with `--online` while the app runs; `repairlib backup verify <archive>` proves
+  a snapshot restores. The scheduled backup keeps `<workspace>-backups` fresh; `doctor` reports
+  whether the last verified backup is stale.
+- **Disk.** The app reserves 1 GiB of free space and reports it in `status`; `cleanup` removes
+  stale uploads, expired sessions and old request receipts while stopped.
+- **Health.** `repairlib doctor --workspace …` is the single read-only check: schema, SQLite
+  integrity and foreign keys, stock ledger, orphan entries, retained attachments and backup age.
+  Run it after every update and before a backup is trusted.
+- **Restore drill.** Copy the archive away from the host, verify it, and restore into a disposable
+  workspace once per release so a real recovery is not the first attempt.
+
 ## Update a checkout or an installation
 
 A source checkout updates with `bin/repairlib update`: it refuses a dirty tree, checks out the
