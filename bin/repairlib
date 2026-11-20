@@ -8,7 +8,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 # A symlink resolves to this checkout, so the workspace stays with the clone.
-os.environ.setdefault("REPAIRLIB_WORKSPACE", str(ROOT / "data"))
+if not os.environ.get("REPAIRLIB_WORKSPACE"):
+    os.environ["REPAIRLIB_WORKSPACE"] = str(ROOT / "data")
 
 from repairlib.__main__ import main  # noqa: E402
 
