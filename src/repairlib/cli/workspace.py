@@ -5,7 +5,9 @@ from __future__ import annotations
 import argparse
 import getpass
 import json
+import os
 import sys
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 from pathlib import Path
 
 from repairlib.cli.common import add_workspace, read_password
@@ -22,6 +24,23 @@ from repairlib.lifecycle.support import write_bundle
 from repairlib.lifecycle.workspace import (
     SETUP_STATES, WorkspaceError, migrate_workspace, workspace_status,
 )
+
+
+def local_timezone() -> str | None:
+    """Return this machine's IANA zone from TZ or /etc/localtime, if any."""
+    candidates = [os.environ.get("TZ", "").removeprefix(":")]
+    link = os.path.realpath("/etc/localtime")
+    if "/zoneinfo/" in link:
+        candidates.append(link.split("/zoneinfo/", 1)[1])
+    for candidate in candidates:
+        candidate = candidate.strip()
+        if candidate:
+            try:
+                ZoneInfo(candidate)
+            except (ValueError, ZoneInfoNotFoundError):
+                continue
+            return candidate
+    return None
 
 
 def guarded(label, os_message: str, *, refusals: tuple = (), password: bool = False):
@@ -110,7 +129,8 @@ def register_workspace_commands(commands) -> None:
     setup = commands.add_parser("setup", help="initialize a workspace and first admin")
     setup.add_argument("--workspace", default=None)
     setup.add_argument("--shop", required=True)
-    setup.add_argument("--timezone", required=True)
+    setup.add_argument("--timezone", default=None,
+                       help="IANA zone; defaults to this machine's zone")
     setup.add_argument("--language", default="", help="default interface language code")
     setup.add_argument("--username", required=True)
 
@@ -313,8 +333,11 @@ def run_setup(args) -> int:
     from repairlib.domain.setup import initialize_workspace
 
     password = read_password("First admin password: ")
+    timezone = args.timezone or local_timezone()
+    if not timezone:
+        raise ValueError("pass --timezone: this machine does not expose an IANA zone.")
     initialize_workspace(
-        resolve_workspace(args.workspace), shop=args.shop, timezone=args.timezone,
+        resolve_workspace(args.workspace), shop=args.shop, timezone=timezone,
         username=args.username, password=password, language=args.language,
     )
     print("Workspace initialized. Restart the development server to read the new state.")

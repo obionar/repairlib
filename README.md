@@ -60,6 +60,24 @@ The MCP bridge is part of RepairLib itself (standard library only).
 For a Linux install outside the source checkout, see
 [Linux install](docs/operations.md#linux-install).
 
+## Quick start
+
+With the packages above installed, one clone, one target and one service:
+
+```sh
+git clone https://github.com/obionar/repairlib.git repairlib-source
+python3 -I -B repairlib-source/scripts/install.py --commit HEAD \
+  --target "$HOME/.local/opt/repairlib"
+"$HOME/.local/opt/repairlib/repairlib" setup --workspace "$HOME/.repairlib" \
+  --shop "My Shop" --username owner
+"$HOME/.local/opt/repairlib/repairlib" service install \
+  --workspace "$HOME/.repairlib" --port 8000
+```
+
+`setup` reads the first admin password from the terminal and takes the timezone
+from this machine unless `--timezone` is given. Open <http://127.0.0.1:8000>.
+Upgrade later with `git pull` and the [staged update recipe](docs/operations.md#linux-install).
+
 ## Check
 
 From the project root:

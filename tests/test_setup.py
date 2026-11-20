@@ -12,10 +12,24 @@ from contextlib import closing
 from pathlib import Path
 from unittest.mock import patch
 
+import os
+
 from test_baseline import get_health, python_env
+
+from repairlib.cli import workspace as workspace_cli
 
 PASSWORD = "synthetic setup password"
 CLI = [sys.executable, "-m", "repairlib"]
+
+
+class MachineTimezoneTests(unittest.TestCase):
+    def test_tz_names_a_valid_zone(self):
+        with patch.dict(os.environ, {"TZ": "Europe/Nicosia"}):
+            self.assertEqual(workspace_cli.local_timezone(), "Europe/Nicosia")
+
+    def test_an_invalid_tz_falls_back_instead_of_failing(self):
+        with patch.dict(os.environ, {"TZ": "Not/AZone"}):
+            self.assertNotEqual(workspace_cli.local_timezone(), "Not/AZone")
 
 
 class SetupTests(unittest.TestCase):
