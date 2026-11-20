@@ -90,6 +90,10 @@ def register_workspace_commands(commands) -> None:
     status.add_argument("--workspace", default=None)
     status.add_argument("--json", action="store_true", help="print machine-readable JSON")
 
+    update = commands.add_parser("update", help="fast-forward this checkout from origin and restart its service")
+    update.add_argument("--check", action="store_true",
+                        help="report the current and available commit without changing anything")
+
     profile = commands.add_parser("profile", help="report the facts an agent needs before writing")
     profile_commands = profile.add_subparsers(dest="profile_command", required=True)
     check = profile_commands.add_parser("check", help="read-only pre-write check")
@@ -325,6 +329,33 @@ def run_demo(args) -> int:
     password = read_password("Demo admin password: ")
     initialize_demo_workspace(resolve_workspace(args.workspace), username=args.username, password=password)
     print("Synthetic demo workspace initialized. Start the development server to sign in.")
+    return 0
+
+
+@guarded("update", "could not update this checkout.", refusals=(ValueError,))
+def run_update(args) -> int:
+    from repairlib.lifecycle.checkout import (
+        CheckoutError, current_commit, pull, remote_commit, restart_service, service_target,
+    )
+    from repairlib.lifecycle.service import SOURCE
+
+    repo = SOURCE.parent
+    if not (repo / ".git").exists():
+        raise CheckoutError("update applies to a Git checkout; an installed launcher uses the staged update recipe.")
+    now, available = current_commit(repo), remote_commit(repo)
+    if args.check:
+        print(f"checkout {now} · origin {available}")
+        return 0
+    old, new = pull(repo)
+    if old == new:
+        print(f"Already up to date at {old[:7]}.")
+        return 0
+    target = service_target()
+    if target is None:
+        print(f"Updated {old[:7]} → {new[:7]}; no registered service to restart.")
+        return 0
+    restart_service(*target)
+    print(f"Updated {old[:7]} → {new[:7]}; service restarted.")
     return 0
 
 

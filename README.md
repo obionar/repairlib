@@ -79,7 +79,7 @@ from anywhere; the symlink resolves back to this checkout. `REPAIRLIB_WORKSPACE`
 overrides the default workspace for any command. `setup`
 reads the first admin password from the terminal and takes the timezone from
 this machine unless `--timezone` is given. Open <http://127.0.0.1:8000>.
-Upgrade later with `git pull` and `bin/repairlib service restart`.
+Upgrade later with `bin/repairlib update`; it fast-forwards the checkout and restarts the service.
 
 The [installer](docs/operations.md#linux-install) remains available for a
 versioned installation with atomic staged updates and rollback.
@@ -98,7 +98,7 @@ bin/repairlib service install
 bin/repairlib service start
 ```
 
-Update with `git pull` in the checkout and `service restart`; nothing else moves.
+Update with `bin/repairlib update`; it refuses a dirty checkout, fast-forwards the branch, and restarts the registered service. A versioned installation updates with the staged recipe instead.
 To move to another machine, copy the whole checkout and its `data/` and
 `data-backups/` directories (owned by the service user, mode 0700), or clone
 again and copy those two directories, then install the service there.

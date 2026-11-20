@@ -22,8 +22,9 @@ from repairlib.cli.settings import register_settings_commands, run_settings_comm
 from repairlib.cli.users import register_user_commands, run_passwd_command, run_user_command
 from repairlib.cli.workspace import (
     register_workspace_commands, run_backup, run_demo, run_dev, run_doctor, run_maintenance, run_migrate,
-    run_profile, run_reconcile_files, run_setup, run_status, run_support,
+    run_profile, run_reconcile_files, run_setup, run_status, run_support, run_update,
 )
+from repairlib.lifecycle.checkout import version_text
 from repairlib.config import resolve_workspace
 
 # Commands that call shared domain operations as the local `cli` user: (runner, supports --dry-run).
@@ -42,6 +43,7 @@ CLIENT_COMMANDS = {
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="repairlib")
+    parser.add_argument("--version", action="version", version=version_text())
     parser.add_argument("--json", action="store_true", dest="global_json",
                         help="print machine-readable JSON for commands and errors")
     parser.add_argument("--dry-run", action="store_true", dest="dry_run",
@@ -118,7 +120,7 @@ def main(argv: Sequence[str] | None = None, *, update_state: dict | None = None)
         "service": run_service_command, "mcp": run_mcp_command, "support": run_support,
         "backup": run_backup, "profile": run_profile, "cleanup": run_maintenance,
         "reconcile-files": run_reconcile_files, "dev": run_dev, "migrate": run_migrate,
-        "setup": run_setup,
+        "setup": run_setup, "update": run_update,
         "status": lambda a: run_status(a, update_state), "doctor": lambda a: run_doctor(a, update_state),
     }
     return handlers[command](args)

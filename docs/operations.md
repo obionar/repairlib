@@ -244,6 +244,16 @@ Initialize the workspace, then run in the foreground or register with the platfo
 
 Check `http://127.0.0.1:8000/health`; Ctrl+C stops the foreground process. To register a service, stop it and follow the [systemd](#linux-service-lifecycle) or [OpenRC](#openrc-system-service-on-alpine) steps with the same launcher and workspace.
 
+## Update a checkout or an installation
+
+A source checkout updates with `bin/repairlib update`: it refuses a dirty tree, checks out the
+tracked branch with `--ff-only`, then restarts the registered service (systemd user unit or
+OpenRC script) and reports the old and new commits. `bin/repairlib update --check` prints both
+commits without changing anything.
+
+An installation created by `scripts/install.py` keeps immutable generations and updates with the
+staged recipe below; never `git pull` inside an installation.
+
 ## Check a private installation for update blockers
 
 From the local source checkout, set `repairlib_target` to the existing private
