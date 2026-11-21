@@ -599,11 +599,11 @@ def repair_routes(workspace: Path, templates, key: bytearray) -> APIRouter:
     @router.get("/{repair_id}/attachments/{attachment_id}/content")
     def attachment_content(request: Request, repair_id: int, attachment_id: int, inline: bool = False):
         try:
-            found, path = attachments.attachment_content(workspace, access(request), repair_id,
-                                                         attachment_id, inline=inline)
+            found, source = attachments.attachment_content(workspace, access(request), repair_id,
+                                                            attachment_id, inline=inline)
         except RepairError as error:
             return failure(request, error)
-        return file_response(found, path, inline=inline,
+        return file_response(found, source, inline=inline,
                              if_none_match=request.headers.get("if-none-match"))
 
     def save_attachment_metadata(request, repair_id, attachment_id, form, action, change, mutate):

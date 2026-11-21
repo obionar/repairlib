@@ -56,8 +56,10 @@ stdin — never from an argument. `demo reset --confirm` reseeds a synthetic dem
 - **Money** is decimal EUR in arguments (`12.50`) and integer cents in JSON. **Quantities**
   are decimal with up to three places in arguments and integer milli-units in JSON
   (`1` = 1000). No floats, no thousands separators.
-- **`--json`** prints one object. Failures print `{"error": {"code", "message", "fields"}}`;
-  branch on `code`, never on the message. Exit codes: 0 ok, 1 local/blocked, 2 usage,
+- **`--json`**, where supported, prints the command result or a structured operation error
+  `{"error": {"code", "message", "fields"}}`; branch on `code`, never on the message.
+  Argument-parser failures can print usage text on stderr instead, even with `--json`.
+  Exit codes: 0 ok, 1 local/blocked, 2 usage,
   3 unavailable/busy, 4 unauthenticated (HTTP only), 5 forbidden, 6 not found,
   7 conflict (stale revision, key reuse, archived/deleted, stock, print receipt),
   8 invalid fields.
@@ -73,31 +75,41 @@ stdin — never from an argument. `demo reset --confirm` reseeds a synthetic dem
   test` can reach paper. Get explicit authorization, use synthetic content, and never
   retry an uncertain print automatically: the same key and revisions return the receipt.
 
-## Workflow (synthetic example)
+## Workflow (synthetic example using `jq`)
 
 ```sh
-WS="/tmp/shop-workspace"
+set -eu
+# Set WS to the already-initialized disposable demo from above.
+: "${WS:?Set WS to the disposable demo workspace}"
 repairlib profile check --workspace "$WS"          # exit 1 = blockers; do not write yet
 
-repairlib customers create --workspace "$WS" --key customer-1 \
-  --name "Synthetic Customer" --phone "+357 555 0100" --json     # note the id
-repairlib repairs create --workspace "$WS" --key repair-1 --customer 1 \
+customer=$(repairlib customers create --workspace "$WS" --key customer-1 \
+  --name "Synthetic Customer" --phone "+357 555 0100" --json)
+customer_id=$(printf '%s\n' "$customer" | jq -er .id)
+repair=$(repairlib repairs create --workspace "$WS" --key repair-1 --customer "$customer_id" \
   --device-type Laptop --brand Acme --model K1 \
-  --reported-issue "Does not power on" --json                    # note id and revision
-repairlib repairs add-entry 1 --workspace "$WS" --key entry-1 \
+  --reported-issue "Does not power on" --json)
+repair_id=$(printf '%s\n' "$repair" | jq -er .id)
+revision() {
+  record=$(repairlib repairs show "$repair_id" --workspace "$WS" --json) || return
+  printf '%s\n' "$record" | jq -er .revision
+}
+repairlib repairs add-entry "$repair_id" --workspace "$WS" --key entry-1 \
   --kind work --body "Opened the case and checked the jack."
 
-repairlib repairs add-charge 1 --workspace "$WS" --key charge-1 --kind labor \
-  --description "Replace power jack" --quantity 1 --unit-price 45.00
-repairlib repairs fees 1 --workspace "$WS" --key fees-1 --revision 1 \
-  --diagnosis 20 --repair 45
-repairlib repairs charges 1 --workspace "$WS" --json             # totals in cents
+rev=$(revision)
+repairlib repairs fees "$repair_id" --workspace "$WS" --key fees-1 --revision "$rev" --diagnosis 20 --repair 45
+repairlib repairs charges "$repair_id" --workspace "$WS" --json  # totals in cents
 
-repairlib repairs stage 1 --workspace "$WS" --key stage-1 --revision 2 --stage in_progress
-repairlib repairs stage 1 --workspace "$WS" --key stage-2 --revision 3 --stage repaired
-repairlib repairs payment 1 --workspace "$WS" --key paid-1 --revision 4
-repairlib repairs pickup 1 --workspace "$WS" --key pickup-1 --revision 5
-repairlib repairs show 1 --workspace "$WS"
+rev=$(revision)
+repairlib repairs stage "$repair_id" --workspace "$WS" --key stage-1 --revision "$rev" --stage in_progress
+rev=$(revision)
+repairlib repairs stage "$repair_id" --workspace "$WS" --key stage-2 --revision "$rev" --stage repaired
+rev=$(revision)
+repairlib repairs payment "$repair_id" --workspace "$WS" --key paid-1 --revision "$rev"
+rev=$(revision)
+repairlib repairs pickup "$repair_id" --workspace "$WS" --key pickup-1 --revision "$rev"
+repairlib repairs show "$repair_id" --workspace "$WS"
 ```
 
 `repairs fees` and the stage/pickup/payment commands bump the repair revision, so re-read
@@ -111,8 +123,8 @@ Stage transitions: `new` → `in_progress|waiting_parts|lab_test|no_repair`;
 `waiting_parts` → `in_progress|lab_test|no_repair`; `lab_test` →
 `in_progress|waiting_parts|customer_test|repaired|no_repair`; `customer_test` →
 `in_progress|repaired|no_repair`; `repaired|no_repair` → `in_progress` only, and only
-with `--reason`. Pickup, payment and archive require a terminal stage (pickup/payment) or
-work on any stage (archive). `--undo` reverses pickup, payment and archive.
+with `--reason`. Payment requires `repaired` or `no_repair`; pickup is independent of stage
+and archive works at any stage. `--undo` reverses pickup, payment and archive.
 
 ## Reference index
 

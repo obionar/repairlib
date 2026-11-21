@@ -150,6 +150,10 @@ repairlib backup schedule --workspace "$repairlib_workspace"
 
 The stopped snapshot and the archive hold the exclusive maintenance lock through publication; the online snapshot holds the shared lock. All verify the staged backup and publish it with owner-only POSIX permissions under a new name in an existing owner-only directory outside the workspace; the destination filesystem must support hard links. The database-only snapshot is unencrypted, sensitive and holds attachment metadata but not the files. Keep it owner-writable for verification. Both verification paths check supported prior schemas in place and leave the backup unchanged.
 
+The destination filesystem must also support syncing directories. If a directory sync fails after
+publication, the command reports failure but leaves the output in place. Verify it and make
+another backup on a working filesystem before relying on it.
+
 ## Restore a full workspace backup
 
 Choose a new workspace path inside the private recovery directory:
@@ -162,19 +166,23 @@ repairlib status --workspace "$repairlib_restored"
 
 Restore verifies the full archive while staging the database and retained originals next to the destination; the verified workspace and its maintenance lock become visible together with owner-only permissions. The destination must be absent, its parent must exist, be owner-only and have a path without symlinks. Existing destinations are refused, including empty directories and running workspaces. Restore needs Linux, procfs and filesystem support for atomic no-replace directory rename.
 
-If interrupted, check the destination before retrying. An interruption after publication leaves the complete workspace in place. Abrupt termination can leave a private `.restore-*` staging directory beside the destination; once the restore process has stopped, the owner can remove it. Treat staged copies as sensitive.
+If interrupted, check the destination before retrying. An interruption after publication leaves the
+complete workspace in place. If the final parent directory sync fails, the command reports failure
+but does not delete the published workspace; verify it before use. Abrupt termination can leave a
+private `.restore-*` staging directory beside the destination; once the restore process has stopped,
+the owner can remove it. Treat staged copies as sensitive.
 
 The restored database keeps its archived schema, records, settings, password hashes, sessions and API tokens. A current-schema restore enables SQLite WAL before publication and is ready to start; an older schema needs explicit migration. Restore accepts full workspace backups only; portable shop archives use the preview and import operations above.
 
 ## Upgrade a development workspace
 
-Stop every app process for the disposable workspace. Create and verify a full backup and rehearse restoring it into a new disposable destination with the commands above. Then upgrade the existing workspace, optionally requiring a verified backup of the current schema:
+Stop every app process for the disposable workspace. Create and verify a full backup and rehearse restoring it into a new disposable destination with the commands above. Then upgrade the existing workspace, optionally requiring a verified backup that matches its contents:
 
 ```sh
 repairlib migrate --workspace "$repairlib_workspace"
 repairlib migrate --workspace "$repairlib_workspace" --backup "$repairlib_recovery/repairlib.zip"
 ```
 
-`migrate` explicitly upgrades any supported older schema to the current one (`status` shows both) and enables SQLite WAL; fresh setup creates the current schema and startup never migrates. With `--backup`, the archive is verified under the maintenance lock before any write, its schema must equal the workspace's, and a missing, corrupt or mismatched archive is refused with the database unchanged.
+`migrate` explicitly upgrades any supported older schema to the current one (`status` shows both) and enables SQLite WAL; fresh setup creates the current schema and startup never migrates. With `--backup`, RepairLib verifies the backup under the maintenance lock before any write and checks that its schema and committed database contents match the stopped workspace, including changes still in the WAL. A missing, corrupt, stale or unrelated backup is refused with the database unchanged. Take a fresh backup if anything was written after the last one. Keep it outside the workspace and use a full archive if the workspace has retained attachments.
 
 For a recovery rehearsal, run `migrate` against `"$repairlib_restored"` and rerun `status` and `doctor` there. Check representative records and download retained originals before using the restored workspace. If migration is interrupted, keep the verified backup, stop workspace processes and rerun `migrate` so SQLite can resolve any rollback journal. The rehearsal covers process interruption on Linux; power-loss recovery has not been verified.

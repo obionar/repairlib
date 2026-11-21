@@ -3,8 +3,11 @@
 from dataclasses import asdict
 from datetime import UTC, datetime, timedelta
 from hashlib import sha256
+import os
 from pathlib import Path
+import re
 import shutil
+from typing import BinaryIO
 import unicodedata
 
 from repairlib.config import DISK_RESERVE_BYTES
@@ -14,9 +17,11 @@ from repairlib.contracts import (
 from repairlib.domain.customers import MAX_ID, authorized
 from repairlib.domain.replay import replay as replay_receipt
 from repairlib.domain.repairs import RepairAccess, RepairError, find_repair, find_unarchived_repair
+from repairlib.lifecycle.operations import private_subdirectory
 from repairlib.lifecycle.workspace import (
-    WorkspaceError, database_path, maintenance_lock, workspace_status,
+    ACTIVE, WorkspaceError, database_path, maintenance_lock, workspace_status,
 )
+from repairlib.paths import check_database_files
 from repairlib.storage import attachments, blobs, repairs, settings
 
 # Hard ceiling; each shop's bounded settings (default 256 MiB upload, 8 MiB inline
@@ -115,7 +120,7 @@ def write_chunk(upload: blobs.StagedBlob, chunk: bytes) -> None:
 
 def commit_upload(workspace: Path, access: RepairAccess, repair_id: int, upload: blobs.StagedBlob,
                   *, filename: str, entry_id: int | None, key: str) -> Attachment:
-    """Publish staged bytes and record them; any failure removes the uncommitted file."""
+    """Publish original bytes before committing their metadata."""
     try:
         upload.finish()
         name = normalize_filename(filename)
@@ -142,7 +147,9 @@ def commit_upload(workspace: Path, access: RepairAccess, repair_id: int, upload:
             audit(db, principal, access.source, token_label, operation, created.id,
                   {"repair_id": repair_id, "entry_id": entry_id, "filename": name,
                    "size_bytes": upload.size, "sha256": upload.sha256})
-        upload.keep()
+            # From this point the transaction may commit. If its outcome is
+            # uncertain, keep the original; reconciliation can remove orphans.
+            upload.keep()
         return created
     finally:
         upload.discard()
@@ -198,7 +205,8 @@ def read_attachment(workspace: Path, access: RepairAccess, repair_id: int, attac
 
 
 def attachment_content(workspace: Path, access: RepairAccess, repair_id: int, attachment_id: int,
-                       *, inline: bool) -> tuple[Attachment, Path]:
+                       *, inline: bool) -> tuple[Attachment, BinaryIO]:
+    """Open the verified original, without reopening its path after authorization."""
     with authorized(workspace, access) as (db, principal, _, _):
         found, storage_name = find_attachment(db, principal.shop_id, repair_id, attachment_id)
         shop_id = principal.shop_id
@@ -206,11 +214,24 @@ def attachment_content(workspace: Path, access: RepairAccess, repair_id: int, at
         raise RepairError(410, "purged", "The attachment bytes were purged; its record and history remain.")
     if inline and not found.previewable:
         raise RepairError(415, "not_previewable", "Only small PNG, JPEG, GIF or WebP images preview inline.")
-    path = blobs.blob_path(workspace, shop_id, storage_name)
-    if not path.is_file() or path.is_symlink():
+    path = blobs.blob_path(Path(), shop_id, storage_name)
+    try:
+        with private_subdirectory(workspace, *path.parts[:-1]) as directory:
+            if directory is None:
+                raise FileNotFoundError
+            fd = os.open(path.name, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK | os.O_CLOEXEC,
+                         dir_fd=directory)
+            try:
+                info = os.fstat(fd)
+                if not blobs.managed_file(info) or info.st_size != found.size_bytes:
+                    raise OSError("Attachment storage does not match metadata.")
+                return found, os.fdopen(fd, "rb")
+            except BaseException:
+                os.close(fd)
+                raise
+    except OSError:
         raise RepairError(503, "file_unavailable",
-                          "The attachment file is unavailable. Ask the owner to run file reconciliation.")
-    return found, path
+                          "The attachment file is unavailable. Ask the owner to run file reconciliation.") from None
 
 
 def review_metadata(db, principal, repair_id: int, attachment_id: int, operation: str, key: str,
@@ -370,24 +391,37 @@ def reconcile_files(workspace: Path) -> dict:
         if workspace_status(workspace) != "initialized":
             raise WorkspaceError("Workspace must be initialized and use the current schema.")
         path = database_path(workspace)
+        check_database_files(path)
         recorded = attachments.all_stored(path)
-        staging = blobs.staging_files(workspace)
-        for leftover in staging:
-            leftover.unlink()
-        known = {(shop_id, name) for shop_id, _, name, _ in recorded}
-        orphans = 0
-        for shop_id, names in blobs.stored_names(workspace).items():
-            for name in names - {n for s, n in known if s == shop_id}:
-                blobs.shop_directory(workspace, shop_id).joinpath(name).unlink()
-                orphans += 1
-        missing, mismatched = [], []
+        known: dict[str, list[tuple[int, str, str]]] = {}
         for shop_id, attachment_id, name, digest in recorded:
-            actual = blobs.file_digest(blobs.blob_path(workspace, shop_id, name))
-            if actual is None:
-                missing.append(attachment_id)
-            elif actual != digest:
-                mismatched.append(attachment_id)
-        report = {"checked": len(recorded), "removed_staging": len(staging),
-                  "removed_orphans": orphans, "missing": missing, "mismatched": mismatched}
+            directory = blobs.blob_path(workspace, shop_id, name).parent.name
+            known.setdefault(directory, []).append((attachment_id, name, digest))
+        missing, mismatched = [], []
+        staging = orphans = 0
+        with private_subdirectory(workspace, ACTIVE, blobs.FILES) as files:
+            if files is None:
+                missing = [attachment_id for _, attachment_id, _, _ in recorded]
+            else:
+                with private_subdirectory(files, blobs.STAGING) as stages:
+                    if stages is not None:
+                        staging = blobs.remove_unreferenced(stages, blobs.UPLOAD_PART)
+                for directory in sorted(known.keys() | set(os.listdir(files))):
+                    if not re.fullmatch(r"shop-[1-9][0-9]*", directory):
+                        continue
+                    rows = known.get(directory, ())
+                    with private_subdirectory(files, directory) as shop:
+                        if shop is None:
+                            missing.extend(attachment_id for attachment_id, _, _ in rows)
+                            continue
+                        for attachment_id, name, digest in rows:
+                            actual = blobs.file_digest(shop, name)
+                            if actual is None:
+                                missing.append(attachment_id)
+                            elif actual != digest:
+                                mismatched.append(attachment_id)
+                        orphans += blobs.remove_unreferenced(shop, blobs.STORAGE_NAME, {name for _, name, _ in rows})
+        report = {"checked": len(recorded), "removed_staging": staging,
+                  "removed_orphans": orphans, "missing": sorted(missing), "mismatched": sorted(mismatched)}
         attachments.audit_reconciliation(path, report)
         return report

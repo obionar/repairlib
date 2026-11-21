@@ -17,6 +17,7 @@ from repairlib.lifecycle.checkout import (
 )
 from repairlib.lifecycle.service import check_path, ignored_in_checkout, overlaps
 from repairlib.lifecycle.workspace import WorkspaceError, maintenance_lock, migrate_workspace
+from repairlib.paths import sync_directory
 
 BOOT = (
     "import sys; sys.path.insert(0, sys.argv.pop(1)); "
@@ -36,7 +37,7 @@ def check_candidate(workspace: str, backup: str, fd: str = "") -> None:
     lock_fd = int(fd) if fd else None
     path = Path(workspace)
     try:
-        migrate_workspace(path, check_backup=lambda schema: verify_restore_point(Path(backup), schema),
+        migrate_workspace(path, check_backup=lambda schema: verify_restore_point(Path(backup), schema, workspace=path),
                           lock_fd=lock_fd)
         checked_doctor(path, lock_fd)
     except (CheckoutError, WorkspaceError, OSError) as error:
@@ -49,14 +50,6 @@ def run_candidate(repo: Path, workspace: Path, backup: Path, lock_fd: int | None
     done = subprocess.run(args + [str(fd) for fd in fds], capture_output=True, text=True, pass_fds=fds)
     if done.returncode:
         raise CheckoutError(done.stderr.strip() or "The new revision did not pass migration and doctor.")
-
-
-def sync_directory(path: Path) -> None:
-    fd = os.open(path, os.O_DIRECTORY | os.O_RDONLY)
-    try:
-        os.fsync(fd)
-    finally:
-        os.close(fd)
 
 
 def journal(path: Path, state: dict, stage: str) -> None:

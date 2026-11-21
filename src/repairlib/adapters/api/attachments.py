@@ -83,9 +83,9 @@ def attachment_routes(workspace: Path, access_dependency) -> APIRouter:
     def content(repair_id: int, attachment_id: int,
                 access: Annotated[RepairAccess, Depends(access_dependency)], inline: bool = False,
                 if_none_match: Annotated[str | None, Header()] = None):
-        found, path = attachments.attachment_content(workspace, access, repair_id, attachment_id,
-                                                     inline=inline)
-        return file_response(found, path, inline=inline, if_none_match=if_none_match)
+        found, source = attachments.attachment_content(workspace, access, repair_id, attachment_id,
+                                                        inline=inline)
+        return file_response(found, source, inline=inline, if_none_match=if_none_match)
 
     @router.post("/{attachment_id}/detach", response_model=Attachment, openapi_extra=body_schema(DETACH))
     def detach(repair_id: int, attachment_id: int,

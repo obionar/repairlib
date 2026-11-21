@@ -5,7 +5,18 @@ import json
 import sys
 import warnings
 
+from repairlib import money
+from repairlib.client.local import ClientError
+
 WORKSPACE_HELP = "workspace directory (defaults to the standard RepairLib state directory)"
+
+
+def parse_cents_option(value: str, flag: str) -> int:
+    """Identify a bad money option without disguising it as a workspace failure."""
+    try:
+        return money.parse_cents(value)
+    except ValueError as error:
+        raise ClientError(f"{flag}: {error}", 8) from None
 
 
 def add_workspace(command) -> None:

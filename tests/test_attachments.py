@@ -1,6 +1,6 @@
 """S3 repair attachment gates: original bytes, limits, isolation and crash windows."""
 
-from contextlib import closing
+from contextlib import closing, contextmanager
 from hashlib import sha256
 import json
 import re
@@ -12,6 +12,7 @@ from uuid import uuid4
 
 from argon2 import PasswordHasher
 
+from repairlib.adapters.api import attachments as attachment_api
 from repairlib.domain import attachments as attachment_domain
 from repairlib.lifecycle.workspace import maintenance_lock
 from repairlib.storage import attachments as attachment_storage, initialization
@@ -125,6 +126,37 @@ class AttachmentTests(TokenFixture, unittest.TestCase):
         self.assertEqual(self.snapshot("SELECT COUNT(*) FROM audit_events WHERE operation='attachment.create'"),
                          [(3,)])
         self.assertNotIn(PASSWORD, json.dumps(self.snapshot("SELECT changes FROM audit_events")))
+
+    def test_download_keeps_the_open_original_and_refuses_linked_storage(self):
+        with self.client() as client:
+            _, auth = self.admin_auth(client)
+            repair_id = self.repair(client, auth)["id"]
+            result = self.upload(client, auth, repair_id, ORIGINAL)
+            self.assertEqual(result.status_code, 201, result.text)
+            url = f"{API}/{repair_id}/attachments/{result.json()['id']}/content"
+            path, = self.stored_files()
+            replacement = b"x" * len(ORIGINAL)
+            response = attachment_api.file_response
+
+            def replace_path_after_open(found, source, **options):
+                path.rename(path.with_suffix(".saved"))
+                path.write_bytes(replacement)
+                return response(found, source, **options)
+
+            with patch.object(attachment_api, "file_response", side_effect=replace_path_after_open):
+                download = client.get(url, headers=auth)
+            self.assertEqual((download.status_code, download.content), (200, ORIGINAL))
+
+            # A private external directory could also contain an unrelated file
+            # with the right name and byte length. Never follow the directory.
+            shop = path.parent
+            outside = self.workspace.parent / "other-files"
+            shop.rename(outside)
+            shop.symlink_to(outside, target_is_directory=True)
+            refused = client.get(url, headers=auth)
+            self.assertEqual(refused.status_code, 503, refused.text)
+            self.assertEqual(refused.json()["error"]["code"], "file_unavailable")
+            self.assertEqual((outside / path.name).read_bytes(), replacement)
 
     def test_low_disk_refuses_declared_uploads_before_staging_and_cleans_streams(self):
         from types import SimpleNamespace
@@ -691,7 +723,7 @@ class AttachmentTests(TokenFixture, unittest.TestCase):
                 self.assertEqual(failed.json()["error"]["code"], "server_error")
         self.assertEqual(len(self.stored_files()), 2)
         files = self.workspace / "state" / "files"
-        staging = files / ".staging" / "interrupted.part"
+        staging = files / ".staging" / ("b" * 32 + ".part")
         staging.write_bytes(b"partial upload")
         orphan = files / "shop-1" / ("a" * 32)
         orphan.write_bytes(b"published but never committed")
@@ -720,7 +752,88 @@ class AttachmentTests(TokenFixture, unittest.TestCase):
             self.assertEqual(client.get(f"{API}/{repair['id']}/attachments/{kept['id']}/content",
                                         headers=auth).content, ORIGINAL)
             self.assertEqual(client.get(f"{API}/{repair['id']}/attachments/{lost['id']}/content",
-                                        headers=auth).status_code, 503)
+                                         headers=auth).status_code, 503)
+
+    def test_post_commit_error_keeps_original_for_idempotent_retry(self):
+        authorized = attachment_domain.authorized
+
+        @contextmanager
+        def fail_after_commit(*args, **kwargs):
+            with authorized(*args, **kwargs) as scope:
+                yield scope
+            if kwargs.get("write"):
+                raise sqlite3.OperationalError("Synthetic failure after commit")
+
+        with self.client() as client:
+            _, auth = self.admin_auth(client)
+            repair_id = self.repair(client, auth)["id"]
+            key = "retry-after-commit"
+            with patch.object(attachment_domain, "authorized", fail_after_commit):
+                self.assertEqual(self.upload(client, auth, repair_id, ORIGINAL, key=key).status_code, 500)
+            self.assertEqual(self.snapshot("SELECT COUNT(*) FROM attachments"), [(1,)])
+            self.assertEqual([path.read_bytes() for path in self.stored_files()], [ORIGINAL])
+            retry = self.upload(client, auth, repair_id, ORIGINAL, key=key)
+            self.assertEqual(retry.status_code, 201, retry.text)
+            attachment_id = retry.json()["id"]
+            content = client.get(f"{API}/{repair_id}/attachments/{attachment_id}/content", headers=auth)
+            self.assertEqual((content.status_code, content.content), (200, ORIGINAL))
+            self.assertEqual(self.snapshot("SELECT COUNT(*) FROM attachments"), [(1,)])
+
+    def test_reconciliation_refuses_linked_storage_and_preserves_unmanaged_files(self):
+        files = self.db.parent / "files"
+        files.mkdir()
+        stages = files / ".staging"
+        outside = self.workspace.parent / "outside"
+        outside.mkdir()
+        original = outside / ("a" * 32 + ".part")
+        original.write_bytes(b"must stay")
+        stages.symlink_to(outside, target_is_directory=True)
+        with self.assertRaises(OSError):
+            attachment_domain.reconcile_files(self.workspace)
+        self.assertEqual(original.read_bytes(), b"must stay")
+
+        stages.unlink()
+        stages.mkdir()
+        unrelated = stages / "notes.txt"
+        unrelated.write_bytes(b"keep staging notes")
+        abandoned = stages / ("b" * 32 + ".part")
+        abandoned.write_bytes(b"uncommitted upload")
+        shop = files / "shop-1"
+        shop.mkdir()
+        also_unrelated = shop / "notes.txt"
+        also_unrelated.write_bytes(b"keep shop notes")
+        linked = shop / ("c" * 32)
+        linked.symlink_to(original)
+        orphan = shop / ("d" * 32)
+        orphan.write_bytes(b"unreferenced original")
+        report = attachment_domain.reconcile_files(self.workspace)
+        self.assertEqual((report["removed_staging"], report["removed_orphans"]), (1, 1))
+        self.assertFalse(abandoned.exists() or orphan.exists())
+        self.assertTrue(linked.is_symlink())
+        self.assertEqual(original.read_bytes(), b"must stay")
+        self.assertEqual(unrelated.read_bytes(), b"keep staging notes")
+        self.assertEqual(also_unrelated.read_bytes(), b"keep shop notes")
+
+    def test_first_upload_does_not_commit_if_a_new_parent_cannot_be_synced(self):
+        directories = []
+        state = self.db.parent
+        sync = attachment_domain.blobs.sync_directory
+
+        def fail_sync(path):
+            directories.append(path)
+            if path == state:
+                raise OSError("Synthetic state directory sync failure")
+            sync(path)
+
+        with self.client() as client:
+            _, auth = self.admin_auth(client)
+            repair_id = self.repair(client, auth)["id"]
+            with patch.object(attachment_domain.blobs, "sync_directory", fail_sync):
+                response = self.upload(client, auth, repair_id, ORIGINAL)
+            self.assertEqual(response.status_code, 500)
+            self.assertEqual(directories, [state / "files" / "shop-1", state / "files", state])
+            self.assertEqual(self.snapshot("SELECT COUNT(*) FROM attachments"), [(0,)])
+            self.assertEqual(self.stored_files(), [])
 
     def test_populated_schema_nine_upgrade_and_failed_migration_rollback(self):
         restored = self.workspace.parent / "restore"

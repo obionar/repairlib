@@ -12,7 +12,7 @@ from tempfile import NamedTemporaryFile
 from pydantic import TypeAdapter
 
 from repairlib import money
-from repairlib.cli.common import add_revision, add_workspace, display_name
+from repairlib.cli.common import add_revision, add_workspace, display_name, parse_cents_option
 from repairlib.cli.printer import label_result
 from repairlib.client import local
 from repairlib.contracts import (
@@ -474,11 +474,11 @@ def _charges(ctx, args):
 @executes("fees")
 def _fees(ctx, args):
     details = {}
-    with plain_numbers():
-        for name, value in (("diagnosis", args.diagnosis), ("labor", args.repair),
-                            ("discount", args.discount)):
-            if value is not None:
-                details[name] = money.parse_cents(value)
+    for name, value in (("diagnosis", args.diagnosis), ("labor", args.repair),
+                        ("discount", args.discount)):
+        if value is not None:
+            flag = "--repair" if name == "labor" else f"--{name}"
+            details[name] = parse_cents_option(value, flag)
     return local.set_fees(ctx, args.id, details, args.revision, args.key)
 
 

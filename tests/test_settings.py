@@ -18,6 +18,48 @@ API = "/api/v1/settings"
 
 
 class SettingsTests(TokenFixture, unittest.TestCase):
+    def run_cli(self, *args):
+        return subprocess.run([*COMMAND, *args, "--workspace", str(self.workspace), "--json"],
+                              text=True, capture_output=True, timeout=15, env=python_env())
+
+    def test_bad_fee_arguments_name_the_flag_and_use_json_validation(self):
+        cases = [
+            (("repairs", "fees", "1"), flag)
+            for flag in ("--diagnosis", "--repair", "--discount")
+        ] + [(("settings", "edit"), "--diagnosis-fee")]
+        for command, flag in cases:
+            with self.subTest(flag=flag):
+                result = self.run_cli(*command, "--revision", "1", "--key", uuid4().hex, flag, "abc")
+                self.assertEqual(result.returncode, 8, result.stderr)
+                self.assertEqual(result.stderr, "")
+                error = json.loads(result.stdout)["error"]
+                self.assertEqual(error["code"], "client_error")
+                self.assertIn(flag, error["message"])
+        self.assertEqual(self.snapshot("SELECT diagnosis_fee_cents, revision FROM shop_settings"), [(2000, 1)])
+
+    def test_cli_diagnosis_fee_is_stable_on_retry_after_later_edits(self):
+        def cli(*args):
+            result = self.run_cli("settings", *args)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            return json.loads(result.stdout)
+
+        old_request = ("edit", "--revision", "1", "--key", "settings-old", "--name", "Before fee edit")
+        edited = cli(*old_request)
+        self.assertEqual((edited["revision"], edited["diagnosis_fee_cents"]), (2, 2000))
+        new_request = ("edit", "--revision", "2", "--key", "settings-new", "--diagnosis-fee", "31.25")
+        updated = cli(*new_request)
+        self.assertEqual((updated["revision"], updated["diagnosis_fee_cents"]), (3, 3125))
+        self.assertEqual(cli("show"), updated)
+        self.assertEqual(cli(*old_request), edited)
+        self.assertEqual(cli(*new_request), updated)
+
+        # Older builds stored the settings fields without the fee.
+        with closing(sqlite3.connect(self.db)) as db, db:
+            db.execute("UPDATE settings_requests SET result = json_remove(result, '$.diagnosis_fee_cents')")
+        self.assertEqual(cli(*old_request), edited | {"diagnosis_fee_cents": None})
+        self.assertEqual(cli(*new_request), updated)
+        self.assertEqual(cli("show"), updated)
+
     def admin_auth(self, client):
         self.sign_in(client)
         token = issued_secret(client.post(ACCOUNT, data=self.issue_form(client)))
@@ -123,12 +165,12 @@ class SettingsTests(TokenFixture, unittest.TestCase):
 
             self.assertEqual(cli("show"), {"name": "Synthetic", "timezone": "UTC", "revision": 1,
                                            "max_upload_mib": 256, "inline_preview_mib": 8, "language": "",
-                                           "address": "", "phone": "", "terms": ""})
+                                           "address": "", "phone": "", "terms": "", "diagnosis_fee_cents": 2000})
             key = uuid4().hex
             edited = cli("edit", "--revision", "1", "--key", key, "--timezone", "Europe/Athens")
             self.assertEqual(edited, {"name": "Synthetic", "timezone": "Europe/Athens", "revision": 2,
                                       "max_upload_mib": 256, "inline_preview_mib": 8, "language": "",
-                                      "address": "", "phone": "", "terms": ""})
+                                      "address": "", "phone": "", "terms": "", "diagnosis_fee_cents": 2000})
             self.assertEqual(cli("edit", "--revision", "1", "--key", key,
                                  "--timezone", "Europe/Athens"), edited)
             cli("edit", "--revision", "1", "--key", uuid4().hex, "--name", "Stale", code=7)
@@ -159,4 +201,3 @@ class SettingsTests(TokenFixture, unittest.TestCase):
                 self.assertIn(line, plain)
             cleared = json.loads(cli("edit", "--revision", "2", "--key", uuid4().hex, "--address", ""))
             self.assertEqual((cleared["address"], cleared["phone"]), ("", "+357 22 000000"))
-

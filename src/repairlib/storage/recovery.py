@@ -3,6 +3,7 @@
 import os
 import sqlite3
 from contextlib import closing, contextmanager, nullcontext
+from hashlib import sha256
 from pathlib import Path
 from shutil import copyfile
 from tempfile import TemporaryDirectory
@@ -59,6 +60,45 @@ def copy_database(source: Path, destination: Path) -> None:
                 raise SnapshotError("Could not make the SQLite snapshot independent of sidecars.")
     except sqlite3.Error as error:
         raise SnapshotError("Could not copy the workspace SQLite database.") from error
+
+
+def database_contents_digest(path: Path, staging: Path) -> bytes:
+    """Compare committed rows independently of WAL mode, file headers and page layout."""
+    has_wal = sidecar(path, "-wal").exists()
+    inputs = private_database_input(path, staging, ".match-wal-") if has_wal else nullcontext(path)
+    mode = "ro" if has_wal else "ro&immutable=1"
+    digest = sha256()
+
+    def add(row: tuple) -> None:
+        # SQLite's default Python scalars have type-distinct representations;
+        # repr also preserves embedded NULs and escapes row delimiters.
+        digest.update(repr(row).encode("utf-8") + b"\n")
+
+    def quoted(name: str) -> str:
+        return '"' + name.replace('"', '""') + '"'
+
+    try:
+        with inputs as source, closing(connect(source.absolute(), mode)) as db:
+            db.execute("PRAGMA trusted_schema = OFF")
+            for row in schema_objects(db):
+                add(row)
+            for name, without_rowid in db.execute(
+                "SELECT name, wr FROM pragma_table_list "
+                "WHERE schema = 'main' AND type = 'table' AND name != 'sqlite_schema' ORDER BY name"
+            ):
+                add((name,))
+                if without_rowid:
+                    primary = [quoted(column) for (column,) in db.execute(
+                        "SELECT name FROM pragma_table_xinfo(?) WHERE pk > 0 ORDER BY pk", (name,),
+                    )]
+                    query = f"SELECT * FROM {quoted(name)} ORDER BY {', '.join(primary)}"
+                else:
+                    query = f"SELECT _rowid_, * FROM {quoted(name)} ORDER BY _rowid_"
+                for row in db.execute(query):
+                    add(row)
+    except (sqlite3.Error, UnicodeError) as error:
+        raise SnapshotError("Could not compare the committed SQLite contents to the backup.") from error
+    return digest.digest()
 
 
 def online_wait(deadline: float):

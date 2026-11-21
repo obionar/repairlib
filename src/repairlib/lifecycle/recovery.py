@@ -6,8 +6,8 @@ from contextlib import contextmanager
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-from repairlib.lifecycle.operations import check_database_files
 from repairlib.lifecycle.workspace import DATABASE, WorkspaceError, database_path, maintenance_lock, offline_lock
+from repairlib.paths import check_database_files
 from repairlib.storage.recovery import (
     SIDECAR_SUFFIXES, SnapshotError, copy_database, online_copy_database, sidecar,
     verify_database_snapshot,
@@ -39,12 +39,22 @@ def verify_snapshot(path: Path) -> int:
 def publish_backup(staged: Path, output: Path) -> None:
     with staged.open("rb") as handle:
         os.fsync(handle.fileno())
+    fd = os.open(output.parent, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW | os.O_CLOEXEC)
     try:
-        os.link(staged, output)
-    except FileExistsError as error:
-        raise WorkspaceError("Backup output already exists.") from error
-    except OSError as error:
-        raise WorkspaceError("Could not publish the backup.") from error
+        require_private(os.fstat(fd), stat.S_ISDIR)
+        try:
+            os.link(staged, output.name, dst_dir_fd=fd)
+        except FileExistsError as error:
+            raise WorkspaceError("Backup output already exists.") from error
+        except OSError as error:
+            raise WorkspaceError("Could not publish the backup.") from error
+        try:
+            os.fsync(fd)
+        except OSError as error:
+            raise WorkspaceError("Backup was published, but its directory could not be synced. "
+                                 "Verify the file and make another backup before relying on it.") from error
+    finally:
+        os.close(fd)
 
 
 @contextmanager

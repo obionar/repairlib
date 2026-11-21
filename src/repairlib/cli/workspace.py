@@ -337,9 +337,10 @@ def run_dev(args) -> int:
 
 @guarded("migrate", "could not access workspace state.", refusals=(ValueError,))
 def run_migrate(args) -> int:
+    workspace = resolve_workspace(args.workspace)
     check = None if args.backup is None else (
-        lambda schema: verify_restore_point(args.backup.expanduser(), schema))
-    verified = migrate_workspace(resolve_workspace(args.workspace), check_backup=check)
+        lambda schema: verify_restore_point(args.backup.expanduser(), schema, workspace=workspace))
+    verified = migrate_workspace(workspace, check_backup=check)
     if verified:
         print(verified)
     print("Workspace schema is current.")

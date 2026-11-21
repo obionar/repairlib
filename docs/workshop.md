@@ -140,7 +140,12 @@ repairlib repairs unlink-attachment 1 1 2 --revision 3 --key unlink-1 --json
 
 API: `POST /api/v1/repairs/ID/attachments?filename=NAME` (raw bytes body); `GET …/attachments/ID/content` (`?inline=1` previews an image); `PATCH …/attachments/ATTACHMENT` with `revision` and `caption` (empty clears); `POST …/attachments/ATTACHMENT/links` with `revision`, `entry_id`, `linked` (true adds, false removes). The response includes the sorted `entry_ids` array and the compatibility field `entry_id` (first ID or null).
 
-An interrupted upload can leave unrecorded bytes. With every app process for the workspace stopped, run `repairlib reconcile-files --workspace "$repairlib_workspace"`. It removes only files no live record references (including bytes from an interrupted purge), verifies every recorded SHA-256, writes a maintenance audit event, and exits 2 listing attachment IDs whose bytes are missing or changed, which it preserves for recovery.
+An interrupted upload can leave unrecorded bytes. With every app process for the workspace stopped,
+run `repairlib reconcile-files --workspace "$repairlib_workspace"`. It removes only regular,
+owner-owned files with RepairLib-generated names that no live record references (including bytes
+from an interrupted purge). It does not follow linked storage directories or remove unrelated
+files. It verifies recorded SHA-256 hashes, writes a maintenance audit event, and exits 2 when
+recorded originals are missing or changed. Run `doctor` to investigate unfamiliar storage entries.
 
 ## Print repair summaries and labels
 

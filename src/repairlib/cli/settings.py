@@ -4,7 +4,7 @@ from dataclasses import asdict
 import json
 import sys
 
-from repairlib.cli.common import add_revision, add_workspace
+from repairlib.cli.common import add_revision, add_workspace, parse_cents_option
 from repairlib import money
 from repairlib.client import local
 
@@ -46,17 +46,17 @@ def run_settings_command(args) -> int:
                 if (value := getattr(args, name)) is not None:
                     details[name] = value
             diagnosis_fee = (None if args.diagnosis_fee is None
-                             else money.parse_cents(args.diagnosis_fee))
-            current = local.edit_settings(ctx, details, args.key, diagnosis_fee_cents=diagnosis_fee)
-            diagnosis_fee = local.show_settings_page(ctx)[1]
+                             else parse_cents_option(args.diagnosis_fee, "--diagnosis-fee"))
+            current, diagnosis_fee = local.edit_settings_page(ctx, details, args.key, diagnosis_fee_cents=diagnosis_fee)
         if args.json:
-            print(json.dumps(asdict(current), ensure_ascii=False))
+            print(json.dumps(asdict(current) | {"diagnosis_fee_cents": diagnosis_fee}, ensure_ascii=False))
         else:
+            fee = "not recorded in this receipt" if diagnosis_fee is None else f"{money.format_cents(diagnosis_fee)} EUR"
             print(f"Shop\t{current.name}\nTimezone\t{current.timezone}\n"
                   f"Max upload\t{current.max_upload_mib} MiB\nInline preview\t{current.inline_preview_mib} MiB\n"
                   f"Language\t{current.language}\nAddress\t{one_line(current.address)}\n"
                   f"Phone\t{one_line(current.phone)}\nTerms\t{one_line(current.terms)}\n"
-                  f"Diagnosis fee\t{money.format_cents(diagnosis_fee)} EUR\n"
+                  f"Diagnosis fee\t{fee}\n"
                   f"Revision\t{current.revision}")
     except (OSError, ValueError):
         print("settings: Could not read the workspace.", file=sys.stderr)
