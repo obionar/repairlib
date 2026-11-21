@@ -1,37 +1,381 @@
 [
-  {"name":"Professor Wobblewhisk","repairs":[
-    {"device_type":"Laptop","brand":"Snoozabyte","model":"NapBook Pro", "serial":"DEMO-SN-0001", "display_device":"Snoozabyte NapBook Pro", "notes":"Power adapter included.", "reported_issue":"Goes to sleep during meetings. Asks for five more minutes on wake.","stage":"in_progress","work":"Reproduced the issue with a 42-slide presentation. Technician also fell asleep."},
-    {"device_type":"Mouse","brand":"Crumb Circuit","model":"Nibble 3000", "serial":"DEMO-SN-0002", "display_device":"Crumb Circuit Nibble 3000", "notes":"USB receiver included.", "reported_issue":"Double-clicks whenever anyone says cheese.","stage":"new"}]},
-  {"name":"Countess Beepatrice Von Bloop","repairs":[
-    {"device_type":"Printer","brand":"Papergeist","model":"HauntJet 404", "serial":"DEMO-SN-0003", "display_device":"Papergeist HauntJet 404", "notes":"Test print left in the tray.", "reported_issue":"Prints BOO on page two and insists page one never existed.","stage":"waiting_parts","work":"Ordered a new paper sensor. Ghost not included."}]},
-  {"name":"Barnaby Buttonmuffin","repairs":[
-    {"device_type":"Keyboard","brand":"Clackosaurus","model":"RoarBoard Mini", "serial":"DEMO-SN-0004", "display_device":"Clackosaurus RoarBoard Mini", "notes":"Detachable cable supplied.", "reported_issue":"Caps Lock physically growls. Space bar requests a bigger office.","stage":"lab_test","work":"Replaced the Caps Lock switch. Growling now within office tolerance."}]},
-  {"name":"Captain Fizzlebuckle","repairs":[
-    {"device_type":"Router","brand":"Wi-Fly By Night","model":"Packet Parrot", "serial":"DEMO-SN-0005", "display_device":"Wi-Fly By Night Packet Parrot", "notes":"Customer supplied the power adapter.", "reported_issue":"Repeats every packet three times and demands a cracker.","stage":"customer_test","work":"Disabled legacy repeater mode. Customer is testing on the upstairs landing."},
-    {"device_type":"Power bank","brand":"Zap & Yawn","model":"Almost Full 9000", "serial":"DEMO-SN-0006", "display_device":"Zap & Yawn Almost Full 9000", "notes":"USB-C cable supplied.", "reported_issue":"Shows 99 percent until you plug something in. Then it needs a lie-down.","stage":"no_repair","work":"Pack failed its load test. Replacement recommended; awaiting pickup."}]},
-  {"name":"Lady Noodlepop","repairs":[
-    {"device_type":"Tablet","brand":"Slurpware","model":"SoupPad XL", "serial":"DEMO-SN-0007", "display_device":"Slurpware SoupPad XL", "notes":"Protective case left on.", "reported_issue":"Touchscreen registers every swipe as stirring clockwise.","stage":"repaired","work":"Replaced the touch digitizer. Confirmed taps and swipes work without a ladle."}]},
-  {"name":"Doctor Quibblecrank","repairs":[
-    {"device_type":"Game controller","brand":"Button Goblin","model":"Drift Lord II", "serial":"DEMO-SN-0008", "display_device":"Button Goblin Drift Lord II", "notes":"Test on a wired connection first.", "reported_issue":"The left stick drifts toward the snack cupboard.","stage":"repaired","picked_up":true,"work":"Fitted a new stick module. Customer collected it after a drift-free test."}]},
-  {"name":"Marmalade Snortlewick","repairs":[
-    {"device_type":"Smart speaker","brand":"Echo Pickle","model":"Gherkin One", "serial":"DEMO-SN-0009", "display_device":"Echo Pickle Gherkin One", "notes":"Power lead included.", "reported_issue":"Answers every question with a dramatic sigh and a weather forecast for Mars.","stage":"new"}]},
-  {"name":"Penelope Sprocketpants","repairs":[
-    {"device_type":"Monitor","brand":"Pixel Pudding","model":"WobbleView 27", "serial":"DEMO-SN-0010", "display_device":"Pixel Pudding WobbleView 27", "notes":"Stand and power cord supplied.", "reported_issue":"Shows last Tuesday in the top-left corner of every window.","stage":"waiting_parts","work":"Confirmed panel persistence on a second input. Waiting for a replacement panel."},
-    {"device_type":"USB hub","brand":"Portly Penguin","model":"Hubba Hubba 7", "serial":"DEMO-SN-0011", "display_device":"Portly Penguin Hubba Hubba 7", "notes":"Upstream cable supplied.", "reported_issue":"Only recognizes USB sticks introduced by their full legal name.","stage":"in_progress","work":"Intermittent connection isolated to port four. Testing the upstream cable next."}]},
-  {"name":"Reginald Oopsington","repairs":[
-    {"device_type":"Label printer","brand":"Sticker Toad","model":"RibbitRoll 2", "serial":"DEMO-SN-0012", "display_device":"Sticker Toad RibbitRoll 2", "notes":"One roll of labels supplied.", "reported_issue":"Prints every serial number as PROPERTY OF THE TOAD.","stage":"repaired","work":"Cleared the custom label template. Test labels now show the actual serial."}]},
-  {"name":"Sir Crumpet McTickle","repairs":[
-    {"device_type":"Alarm clock","brand":"Dawn Defiance","model":"Snooze Union Local 7", "serial":"DEMO-SN-0013", "display_device":"Dawn Defiance Snooze Union Local 7", "notes":"Check operation on batteries too.", "reported_issue":"Rings at noon and displays a note saying mornings were not in its contract.","stage":"new"},
-    {"device_type":"Headphones","brand":"Ear Bureau","model":"Left on Read 2", "serial":"DEMO-SN-0014", "display_device":"Ear Bureau Left on Read 2", "notes":"Audio cable included.", "reported_issue":"Left earcup plays music. Right earcup occasionally says, 'I hear you.'","stage":"lab_test","work":"Replaced the damaged jack. Both channels now play music and neither offers emotional support."}]},
-  {"name":"Juniper Flapdoodle","repairs":[
-    {"device_type":"E-reader","brand":"Plot Twist Electronics","model":"SpoilerLeaf", "serial":"DEMO-SN-0015", "display_device":"Plot Twist Electronics SpoilerLeaf", "notes":"Cover supplied.", "reported_issue":"Jumps to the last page and puts 'I told you so' in the margin.","stage":"customer_test","work":"Replaced the sticky page-turn switch. Customer requested a spoiler-free test book."}]},
-  {"name":"Mayor Puddle von Biscuit","repairs":[
-    {"device_type":"Handheld console","brand":"Pixel Ferret","model":"Pocket Panic", "serial":"DEMO-SN-0016", "display_device":"Pixel Ferret Pocket Panic", "notes":"Charger supplied.", "reported_issue":"Pauses during boss fights to recommend a sensible bedtime.","stage":"in_progress","work":"Found a worn pause button. The bedtime advice appears to be a separate issue."},
-    {"device_type":"Webcam","brand":"Blink Tax","model":"Meeting Witness", "serial":"DEMO-SN-0017", "display_device":"Blink Tax Meeting Witness", "notes":"Test with the original USB cable.", "reported_issue":"Tracks houseplants perfectly but blurs anyone presenting quarterly results.","stage":"repaired","work":"Reset the autofocus profile. Confirmed sharp footage of one technician and a very photogenic fern."}]},
-  {"name":"Gertrude Twiddlefizz","repairs":[
-    {"device_type":"Digital scale","brand":"Measure Twice-ish","model":"GrudgeGram 500", "serial":"DEMO-SN-0018", "display_device":"Measure Twice-ish GrudgeGram 500", "notes":"Check zero before calibration.", "reported_issue":"Weighs flour accurately but adds 30 grams of disappointment to every cake.","stage":"waiting_parts","work":"Load cell drifts under sustained weight. Ordered a replacement with no opinion about baking."}]},
-  {"name":"Inspector Muffinbolt","repairs":[
-    {"device_type":"External drive","brand":"Archive Raccoon","model":"Probably Backed Up", "serial":"DEMO-SN-0019", "display_device":"Archive Raccoon Probably Backed Up", "notes":"USB cable included.", "reported_issue":"Clicks twice and only mounts on Wednesdays if the USB cable is wearing a rubber band.","stage":"no_repair","picked_up":true,"work":"Confirmed mechanical failure. Returned the drive unopened for specialist recovery."}]},
-  {"name":"Agatha Knobbleplunk","repairs":[
-    {"device_type":"Thermostat","brand":"Sweater Logic","model":"DramaStat 21", "serial":"DEMO-SN-0020", "display_device":"Sweater Logic DramaStat 21", "notes":"Mounting plate supplied.", "reported_issue":"Sets the room to 21 degrees, then drops to 16 whenever someone says 'cozy.'","stage":"repaired","work":"Disabled the faulty voice shortcut. Verified a stable setpoint through three deliberate uses of the word cozy."}]}
+  {
+    "name": "Elena Papadopoulou",
+    "phone": "+357 22 000 101",
+    "email": "elena.papadopoulou@example.com",
+    "address": "12 Onasagorou Street, 1010 Nicosia",
+    "notes": "Repeat customer. Prefers a phone call before any part is ordered.",
+    "repairs": [
+      {
+        "device_type": "Laptop",
+        "brand": "Lenovo",
+        "model": "ThinkPad T14 Gen 2",
+        "serial": "DEMO-SN-0001",
+        "display_device": "Lenovo ThinkPad T14 Gen 2",
+        "reported_issue": "Will not charge with either of two USB-C adapters. Works from the dock.",
+        "notes": "Original 65 W adapter and cable included in the bag.",
+        "stage": "in_progress",
+        "technician": "technician",
+        "warranty_until": "2027-03-14",
+        "work": [
+          {"kind": "work", "body": "Measured 5 V on both adapters and no negotiation on CC. Cleaned the barrel of the left port."},
+          {"kind": "test", "body": "Right-hand USB-C port charges at 61 W with the bench supply."}
+        ],
+        "parts": [{"sku": "DEMO-USBC-PORT", "quantity": 1, "billed": 1}],
+        "labor": [{"description": "Power path diagnosis", "quantity": 1, "unit_price_cents": 2500, "notes": "Two adapters bench-tested."}],
+        "fee_cents": 1800
+      },
+      {
+        "device_type": "Smartphone",
+        "brand": "Apple",
+        "model": "iPhone 12 mini",
+        "serial": "DEMO-SN-0002",
+        "display_device": "Apple iPhone 12 mini",
+        "reported_issue": "Cracked screen after a fall on the stairs. Touch still works.",
+        "notes": "Face ID and both cameras were tested at intake and work.",
+        "stage": "new"
+      }
+    ]
+  },
+  {
+    "name": "Christos Georgiou",
+    "phone": "+357 22 000 102",
+    "email": "christos.georgiou@example.com",
+    "address": "48 Makarios Avenue, 2025 Nicosia",
+    "notes": "Brings devices in during the morning. Invoice to the company, not to him.",
+    "repairs": [
+      {
+        "device_type": "Laptop",
+        "brand": "Dell",
+        "model": "XPS 13 9310",
+        "serial": "DEMO-SN-0003",
+        "display_device": "Dell XPS 13 9310",
+        "reported_issue": "Fan runs at full speed from power-on and the case gets very hot.",
+        "notes": "Windows 11 installed, local account only, no recovery password supplied.",
+        "stage": "waiting_parts",
+        "technician": "technician",
+        "work": [
+          {"kind": "work", "body": "Removed the base panel. Heatsink fins are packed with dust and the fan bearing is dry."},
+          {"kind": "contact", "body": "Called the customer: a replacement fan is required, about three working days."}
+        ],
+        "parts": [{"sku": "DEMO-FAN-12", "quantity": 1, "billed": 1}],
+        "fee_cents": 1800
+      },
+      {
+        "device_type": "Tablet",
+        "brand": "Samsung",
+        "model": "Galaxy Tab A8",
+        "serial": "DEMO-SN-0004",
+        "display_device": "Samsung Galaxy Tab A8",
+        "reported_issue": "Charges only when the cable is held at an angle.",
+        "notes": "Child's tablet, cosmetic scratches on the back, no case supplied.",
+        "stage": "repaired",
+        "technician": "technician",
+        "paid": true,
+        "picked_up": true,
+        "work": [
+          {"kind": "work", "body": "Replaced the USB-C port and cleaned the charge flex connector."},
+          {"kind": "test", "body": "Charged from 3% to 100% with the customer cable, no movement needed."},
+          {"kind": "handover", "body": "Explained that the original cable is worn and should be replaced."}
+        ],
+        "parts": [{"sku": "DEMO-USBC-PORT", "quantity": 1, "billed": 1}],
+        "discount": {"kind": "percent", "value": 10},
+        "fee_cents": 1800
+      }
+    ]
+  },
+  {
+    "name": "Maria Ioannou",
+    "phone": "+357 22 000 103",
+    "email": "maria.ioannou@example.com",
+    "address": "7 Ayios Antonios Street, 3052 Limassol",
+    "notes": "Waits for the device in the shop when the repair is quick.",
+    "repairs": [
+      {
+        "device_type": "Monitor",
+        "brand": "Dell",
+        "model": "UltraSharp U2720Q",
+        "serial": "DEMO-SN-0005",
+        "display_device": "Dell UltraSharp U2720Q",
+        "reported_issue": "Left third of the panel shows a green tint after ten minutes.",
+        "notes": "Stand, power cable and USB-C cable supplied. Serial on the back confirmed.",
+        "stage": "lab_test",
+        "technician": "technician",
+        "warranty_until": "2026-12-31",
+        "work": [
+          {"kind": "work", "body": "Reproduced the tint on two inputs and with two cables. Panel itself is suspect."},
+          {"kind": "test", "body": "Ran the panel on the bench for four hours: tint returns at 38 degrees C."}
+        ],
+        "fee_cents": 1800
+      },
+      {
+        "device_type": "Printer",
+        "brand": "Brother",
+        "model": "HL-L2350DW",
+        "serial": "DEMO-SN-0006",
+        "display_device": "Brother HL-L2350DW",
+        "reported_issue": "Prints a dark band down the right side and jams on the second page.",
+        "notes": "One third-party toner cartridge installed, not the original.",
+        "stage": "customer_test",
+        "technician": "technician",
+        "work": [
+          {"kind": "work", "body": "Replaced the fuser and cleaned the paper path. Dark band was a scored drum."},
+          {"kind": "contact", "body": "Customer is testing twenty pages of invoices at the office."}
+        ],
+        "parts": [{"sku": "DEMO-FUSER-KIT", "quantity": 1, "billed": 1}],
+        "fee_cents": 1800
+      }
+    ]
+  },
+  {
+    "name": "Andreas Andreou",
+    "phone": "+357 22 000 104",
+    "email": "andreas.andreou@example.com",
+    "address": "3 Thermopylon Street, 6017 Larnaca",
+    "notes": "Owns three shops; asks for one invoice per device.",
+    "repairs": [
+      {
+        "device_type": "Laptop",
+        "brand": "Apple",
+        "model": "MacBook Air M1",
+        "serial": "DEMO-SN-0007",
+        "display_device": "Apple MacBook Air M1",
+        "reported_issue": "Screen has a bright spot and one dead line at the bottom.",
+        "notes": "Battery health 89%. Charger supplied.",
+        "stage": "repaired",
+        "technician": "technician",
+        "paid": true,
+        "picked_up": true,
+        "work": [
+          {"kind": "work", "body": "Fitted a replacement display assembly and transferred the camera bracket."},
+          {"kind": "test", "body": "TrueTone, brightness steps, camera and sleep wake all pass."},
+          {"kind": "handover", "body": "Customer inspected the panel and paid by card."}
+        ],
+        "parts": [{"sku": "DEMO-SCR-61", "quantity": 1, "billed": 1}],
+        "labor": [{"description": "Display assembly fitting", "quantity": 1, "unit_price_cents": 4500, "notes": "Includes camera bracket transfer."}],
+        "discount": {"kind": "amount", "value": 1000},
+        "fee_cents": 1800
+      },
+      {
+        "device_type": "Smartphone",
+        "brand": "Samsung",
+        "model": "Galaxy S22",
+        "serial": "DEMO-SN-0008",
+        "display_device": "Samsung Galaxy S22",
+        "reported_issue": "Battery lasts half a day and the phone shuts down at 15%.",
+        "notes": "Water damage indicators are white. Original back glass has a hairline crack.",
+        "stage": "repaired",
+        "technician": "technician",
+        "work": [
+          {"kind": "work", "body": "Battery health reported 71%. Removed the old cell without damaging the coil."},
+          {"kind": "test", "body": "Full charge, forty minutes of video and a cold boot at 5% all pass."}
+        ],
+        "parts": [{"sku": "DEMO-BAT-45", "quantity": 1, "billed": 1}],
+        "fee_cents": 1800
+      },
+      {
+        "device_type": "External drive",
+        "brand": "Samsung",
+        "model": "T7 Shield 1 TB",
+        "serial": "DEMO-SN-0009",
+        "display_device": "Samsung T7 Shield 1 TB",
+        "reported_issue": "Clicks and drops from the system whenever a large file is copied.",
+        "notes": "Customer was told at intake that data recovery is not part of this repair.",
+        "stage": "no_repair",
+        "technician": "technician",
+        "paid": true,
+        "picked_up": true,
+        "work": [
+          {"kind": "work", "body": "Drive reports reallocated sectors and fails a full-surface read. Controller is sealed."},
+          {"kind": "handover", "body": "Returned unopened. Customer will send it to a recovery lab."}
+        ],
+        "fee_cents": 1800
+      }
+    ]
+  },
+  {
+    "name": "Sofia Christodoulou",
+    "phone": "+357 22 000 105",
+    "email": "sofia.christodoulou@example.com",
+    "address": "21 Stadiou Street, 1010 Nicosia",
+    "notes": "Books repairs by email and asks for written estimates.",
+    "repairs": [
+      {
+        "device_type": "Laptop",
+        "brand": "Asus",
+        "model": "ZenBook 14 UX425",
+        "serial": "DEMO-SN-0010",
+        "display_device": "Asus ZenBook 14 UX425",
+        "reported_issue": "About ten keys do not register unless the deck is pressed down.",
+        "notes": "UK layout. Laptop sleeve and charger included.",
+        "stage": "customer_test",
+        "technician": "technician",
+        "warranty_until": "2027-01-20",
+        "work": [
+          {"kind": "work", "body": "Replaced the keyboard deck. Ribbon was creased under the right speaker."},
+          {"kind": "contact", "body": "Emailed the customer to test the number row and the arrow cluster at home."}
+        ],
+        "parts": [{"sku": "DEMO-KB-UK", "quantity": 1, "billed": 1}],
+        "fee_cents": 1800
+      },
+      {
+        "device_type": "Headphones",
+        "brand": "Sony",
+        "model": "WH-1000XM4",
+        "serial": "DEMO-SN-0011",
+        "display_device": "Sony WH-1000XM4",
+        "reported_issue": "Right earcup crackles when noise cancelling is enabled.",
+        "notes": "Carry case, cable and airplane adapter supplied.",
+        "stage": "lab_test",
+        "technician": "technician",
+        "work": [
+          {"kind": "work", "body": "Crackle follows the noise-cancelling board, not the driver. Reseated the ribbon."},
+          {"kind": "test", "body": "Two hours with ANC on: one crackle in the first minute, none after."}
+        ],
+        "fee_cents": 1800
+      }
+    ]
+  },
+  {
+    "name": "Nikos Vasiliou",
+    "phone": "+357 22 000 106",
+    "email": "nikos.vasiliou@example.com",
+    "address": "9 Kennedy Avenue, 1087 Nicosia",
+    "notes": "Pays cash. Collects on Saturdays only.",
+    "repairs": [
+      {
+        "device_type": "Game console",
+        "brand": "Sony",
+        "model": "PlayStation 5",
+        "serial": "DEMO-SN-0012",
+        "display_device": "Sony PlayStation 5",
+        "reported_issue": "Shuts down after twenty minutes in games and the fan is very loud.",
+        "notes": "Vertical stand and one controller supplied. Games stay with the customer.",
+        "stage": "in_progress",
+        "technician": "technician",
+        "work": [
+          {"kind": "work", "body": "Removed the side panels and the heatsink. Vents almost fully blocked with dust and pet hair."},
+          {"kind": "note", "body": "Liquid metal looks intact. Do not tilt the console while the cooler is off."}
+        ],
+        "parts": [{"sku": "DEMO-PASTE", "quantity": 1, "billed": 1}],
+        "fee_cents": 1800
+      },
+      {
+        "device_type": "Smartphone",
+        "brand": "Apple",
+        "model": "iPhone 13",
+        "serial": "DEMO-SN-0013",
+        "display_device": "Apple iPhone 13",
+        "reported_issue": "Battery drops from 80% to 20% during a video call.",
+        "notes": "Back glass cracked at the corner; customer declined that repair.",
+        "stage": "waiting_parts",
+        "technician": "technician",
+        "work": [
+          {"kind": "work", "body": "Battery health 74% and a rising internal resistance. Ordered an original cell."},
+          {"kind": "contact", "body": "SMS sent with the part lead time and the pickup window."}
+        ],
+        "fee_cents": 1800
+      }
+    ]
+  },
+  {
+    "name": "Anna Michaelidou",
+    "phone": "+357 22 000 107",
+    "email": "anna.michaelidou@example.com",
+    "address": "5 Griva Digeni Avenue, 3106 Limassol",
+    "notes": "School account. Purchase order number required on the invoice.",
+    "repairs": [
+      {
+        "device_type": "Laptop",
+        "brand": "HP",
+        "model": "ProBook 450 G8",
+        "serial": "DEMO-SN-0014",
+        "display_device": "HP ProBook 450 G8",
+        "reported_issue": "No picture on the internal screen, external HDMI works fine.",
+        "notes": "School asset tag 0442. Charger and VGA adapter included.",
+        "stage": "repaired",
+        "technician": "technician",
+        "paid": true,
+        "picked_up": true,
+        "warranty_until": "2027-06-30",
+        "work": [
+          {"kind": "work", "body": "Replaced the display cable; the old one had a pinched section behind the hinge."},
+          {"kind": "test", "body": "Full brightness, lid angle sweep and a fifty-cycle open and close check."},
+          {"kind": "handover", "body": "Signed out on the school purchase order, copy filed in the ticket."}
+        ],
+        "parts": [{"sku": "DEMO-HINGE-KIT", "quantity": 1, "billed": 1}],
+        "fee_cents": 1800
+      },
+      {
+        "device_type": "Printer",
+        "brand": "Canon",
+        "model": "PIXMA TS705",
+        "serial": "DEMO-SN-0015",
+        "display_device": "Canon PIXMA TS705",
+        "reported_issue": "Black ink stops printing halfway down a page, colour is fine.",
+        "notes": "Compatible cartridges fitted by the customer. Nozzle check supplied.",
+        "stage": "new"
+      },
+      {
+        "device_type": "Desktop",
+        "brand": "Custom build",
+        "model": "Ryzen 5 5600 / B550",
+        "serial": "DEMO-SN-0016",
+        "display_device": "Custom desktop, Ryzen 5 5600",
+        "reported_issue": "Random restarts under load, no blue screen.",
+        "notes": "Power cable included. Customer asked to preserve the Windows installation.",
+        "stage": "no_repair",
+        "technician": "technician",
+        "work": [
+          {"kind": "work", "body": "Power supply drops the 12 V rail to 11.1 V under load. Board and RAM test clean."},
+          {"kind": "handover", "body": "Customer collects it and will replace the power supply himself."}
+        ],
+        "fee_cents": 1800
+      }
+    ]
+  },
+  {
+    "name": "Kostas Theodorou",
+    "phone": "+357 22 000 108",
+    "email": "kostas.theodorou@example.com",
+    "address": "40 Poseidonos Avenue, 8042 Paphos",
+    "notes": "New customer from the Paphos shop referral. Email invoice only.",
+    "repairs": [
+      {
+        "device_type": "Laptop",
+        "brand": "Acer",
+        "model": "Aspire 5 A515",
+        "serial": "DEMO-SN-0017",
+        "display_device": "Acer Aspire 5 A515",
+        "reported_issue": "Slow since an update and the fan is noisy at idle.",
+        "notes": "One 256 GB NVMe drive, no external backup supplied.",
+        "stage": "repaired",
+        "technician": "technician",
+        "work": [
+          {"kind": "work", "body": "Cloned the drive to a 1 TB SSD, replaced the fan and removed two startup programs."},
+          {"kind": "test", "body": "Cold boot 24 s, idle fan inaudible, drive at 34 degrees C after an hour."}
+        ],
+        "parts": [{"sku": "DEMO-SSD-1TB", "quantity": 1, "billed": 1}, {"sku": "DEMO-FAN-12", "quantity": 1, "billed": 1}],
+        "fee_cents": 1800
+      },
+      {
+        "device_type": "Tablet",
+        "brand": "Apple",
+        "model": "iPad Air 4",
+        "serial": "DEMO-SN-0018",
+        "display_device": "Apple iPad Air 4",
+        "reported_issue": "Digitizer does not respond along the left edge in portrait.",
+        "notes": "Pencil supplied to test. Case left at home.",
+        "stage": "customer_test",
+        "technician": "technician",
+        "work": [
+          {"kind": "work", "body": "Replaced the digitiser and transferred the home button bracket."},
+          {"kind": "test", "body": "Touch sweep across all four edges and a Pencil line test pass."}
+        ],
+        "parts": [{"sku": "DEMO-SCR-61", "quantity": 1, "billed": 1}],
+        "discount": {"kind": "percent", "value": 5},
+        "fee_cents": 1800
+      }
+    ]
+  }
 ]
