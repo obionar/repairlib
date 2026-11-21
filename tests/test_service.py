@@ -125,6 +125,7 @@ class UserServiceTests(unittest.TestCase):
             return self.health_ok
 
         with (patch.dict(os.environ, {"XDG_CONFIG_HOME": str(self.config)}),
+              patch(module + "using_openrc", return_value=False),
               patch("subprocess.run", side_effect=self.supervisor),
               patch(module + "owns_listener", owns_listener),
               patch(module + "health_ready", health_ready),
