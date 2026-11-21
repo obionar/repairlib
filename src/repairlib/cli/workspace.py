@@ -212,7 +212,7 @@ def run_links(args) -> int:
     try:
         links = install_links(args.executable or default_executable(), APP_ROOT / "skills" / "repairlib",
                               Path.home())
-    except LinkError as error:
+    except (LinkError, OSError) as error:
         print(f"links: {error}", file=sys.stderr)
         return 1
     blocked = [link for link in links.values() if link["status"] == "blocked"]

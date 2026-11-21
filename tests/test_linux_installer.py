@@ -932,9 +932,20 @@ sys.exit(code)
         skill = home / ".agents/skills/repairlib"
         self.assertEqual([link["status"] for link in report["links"]], ["created", "created"])
         self.assertEqual(command.resolve(), (self.target / "repairlib").resolve())
-        self.assertEqual(skill.resolve(), (self.target / "generation/source/skills/repairlib").resolve())
+        self.assertEqual(skill.resolve(), (self.repo / "skills/repairlib").resolve())
         self.assertTrue((skill / "SKILL.md").is_file())
         self.assertEqual(json.loads((self.target / "install.json").read_text()), report)
+
+    def test_an_unwritable_home_link_is_reported_and_keeps_the_installation(self):
+        home = self.root / "home"
+        (home / ".local").mkdir(parents=True)
+        (home / ".local" / "bin").write_text("not a directory")
+        with patch.object(self.installer, "provision", side_effect=self.local_runtime):
+            report = self.installer.install(self.repo / "scripts/install.py", "HEAD", self.target, home=home)
+        self.assertEqual(report["links"][0]["status"], "blocked")
+        self.assertIn("reason", report["links"][0])
+        self.assertTrue((self.target / "repairlib").is_file())
+        self.assertTrue((self.target / "generation/source/skills/repairlib/SKILL.md").is_file())
 
     def test_install_without_a_home_writes_no_links(self):
         with patch.object(self.installer, "provision", side_effect=self.local_runtime):
