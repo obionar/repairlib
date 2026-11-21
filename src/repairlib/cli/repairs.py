@@ -222,6 +222,13 @@ def register_repair_commands(commands) -> None:
     discount.add_argument("--kind", choices=money.DISCOUNT_KINDS, required=True)
     discount.add_argument("--value", default="0", help="EUR for amount, whole points for percent")
     discount.add_argument("--key", required=True)
+    fees = actions.add_parser("fees", help="set the diagnosis and repair fees")
+    fees.add_argument("id", type=int)
+    add_revision(fees)
+    fees.add_argument("--diagnosis", help="diagnosis fee in EUR")
+    fees.add_argument("--repair", help="repair labour cost in EUR")
+    fees.add_argument("--discount", help="discount in EUR")
+    fees.add_argument("--key", required=True)
     purge = actions.add_parser("purge-attachment",
                                help="admin: delete bytes detached for 30+ days, keeping the record")
     purge.add_argument("id", type=int)
@@ -229,7 +236,8 @@ def register_repair_commands(commands) -> None:
     add_revision(purge)
     purge.add_argument("--key", required=True)
     for command in (listing, create, show, label, send, edit, stage, entries, activity, add, correct, device, history,
-                    files, attach, download, detach, caption, charge_list, add_charge, consume, edit_charge, discount, purge,
+                    files, attach, download, detach, caption, charge_list, add_charge, consume, edit_charge, discount,
+                    fees, purge,
                     return_status, *returns, *flag_commands, *visibility_commands, *charge_visibility, *link_commands):
         add_common(command)
 
@@ -463,6 +471,16 @@ def _charges(ctx, args):
     return local.charge_summary(ctx, args.id, include_consumption=args.include_consumption)
 
 
+@executes("fees")
+def _fees(ctx, args):
+    details = {}
+    for name, value in (("diagnosis", args.diagnosis), ("labor", args.repair),
+                        ("discount", args.discount)):
+        if value is not None:
+            details[name] = money.parse_cents(value)
+    return local.set_fees(ctx, args.id, details, args.revision, args.key)
+
+
 @executes("add-charge")
 def _add_charge(ctx, args):
     return local.create_charge(ctx, args.id, charge_amounts(args), args.key)
@@ -581,7 +599,7 @@ def _show_added_entry(result, args, ctx):
     print(f"Added work entry {result.id} by {display_name(result.author_username)}.")
 
 
-@renders("charges", "discount")
+@renders("charges", "discount", "fees")
 def _show_charges(result, args, ctx):
     for item in result.items:
         state = " (removed)" if item.deleted else ""
@@ -591,10 +609,12 @@ def _show_charges(result, args, ctx):
               f"{money.format_milli(item.quantity_milli)} {item.unit}\t"
               f"{money.format_cents(item.unit_price_cents)}\t{money.format_cents(item.line_total_cents)}"
               f"{consumed}")
-    print(f"Parts {money.format_cents(result.parts_subtotal_cents)}, labor "
-          f"{money.format_cents(result.labor_subtotal_cents)}, discount "
-          f"{money.format_cents(result.discount_cents)}, total {money.format_cents(result.total_cents)} EUR"
-          f" (discount revision {result.discount_revision}).")
+    fees = local.ticket_fees(ctx, args.id)
+    # Every labour charge above the diagnosis is repair work, including free-text labour rows.
+    repair = result.labor_subtotal_cents - fees["diagnosis"]
+    print(f"Diagnosis {money.format_cents(fees['diagnosis'])}, repair {money.format_cents(repair)}, "
+          f"parts {money.format_cents(fees['parts'])}, discount {money.format_cents(fees['discount_cents'])}, "
+          f"total {money.format_cents(fees['total_cents'])} EUR (discount revision {result.discount_revision}).")
 
 
 @renders("consume-part")
@@ -657,8 +677,10 @@ def _show_repair(result, args, ctx):
         print(f"Warranty return of\t{result.warranty_repair_id}")
     print(f"Pickup\t{'Picked up ' + result.picked_up_at if result.picked_up_at else 'In shop'}")
     print(f"Archive\t{'Archived ' + result.archived_at if result.archived_at else 'Active'}")
+    fees = local.ticket_fees(ctx, result.id)
+    print(f"Diagnosis\t{money.format_cents(fees['diagnosis'])} EUR")
+    print(f"Repair cost\t{money.format_cents(summary.labor_subtotal_cents - fees['diagnosis'])} EUR")
     print(f"Parts\t{money.format_cents(summary.parts_subtotal_cents)} EUR")
-    print(f"Labor\t{money.format_cents(summary.labor_subtotal_cents)} EUR")
     print(f"Discount\t{money.format_cents(summary.discount_cents)} EUR")
     print(f"Total\t{money.format_cents(summary.total_cents)} EUR (not a payment)")
 

@@ -184,8 +184,13 @@ def show_settings(ctx) -> ShopSettings:
     return run(ctx, settings.read_settings)
 
 
-def edit_settings(ctx, details, key) -> ShopSettings:
-    return run(ctx, settings.update_settings, parse(SettingsPatch, details), key=key)
+def show_settings_page(ctx) -> tuple[ShopSettings, int]:
+    return run(ctx, settings.read_settings_page)
+
+
+def edit_settings(ctx, details, key, diagnosis_fee_cents=None) -> ShopSettings:
+    return run(ctx, settings.update_settings, parse(SettingsPatch, details), key=key,
+               diagnosis_fee_cents=diagnosis_fee_cents)
 
 
 def show_printer(ctx) -> PrinterSettings:
@@ -381,6 +386,16 @@ def charge_summary(ctx, repair_id, *, include_consumption=False) -> ChargeSummar
     if include_consumption:
         return summary
     return replace(summary, items=[without_consumption(item) for item in summary.items])
+
+
+def ticket_fees(ctx, repair_id) -> dict:
+    return run(ctx, charges.ticket_fees, repair_id)[0]
+
+
+def set_fees(ctx, repair_id, details, revision, key) -> ChargeSummary:
+    run(ctx, charges.set_fees, repair_id, diagnosis=details.get("diagnosis"),
+        labor=details.get("labor"), discount=details.get("discount"), revision=revision, key=key)
+    return charge_summary(ctx, repair_id)
 
 
 def show_charge(ctx, repair_id, charge_id, *, include_consumption=False) -> Charge:

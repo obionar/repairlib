@@ -5,6 +5,7 @@ import json
 import sys
 
 from repairlib.cli.common import add_revision, add_workspace
+from repairlib import money
 from repairlib.client import local
 
 
@@ -23,6 +24,7 @@ def register_settings_commands(commands) -> None:
     edit.add_argument("--address", help="shop address printed on the handover; empty clears it")
     edit.add_argument("--phone", help="shop phone printed on the handover; empty clears it")
     edit.add_argument("--terms", help="terms printed on the handover; empty clears it")
+    edit.add_argument("--diagnosis-fee", help="default bench diagnosis fee in EUR")
     for command in (show, edit):
         add_workspace(command)
         command.add_argument("--json", action="store_true", help="print machine-readable JSON")
@@ -36,14 +38,17 @@ def run_settings_command(args) -> int:
     try:
         ctx = local.open_workspace(args.workspace)
         if args.settings_action == "show":
-            current = local.show_settings(ctx)
+            current, diagnosis_fee = local.show_settings_page(ctx)
         else:
             details = {"revision": args.revision}
             for name in ("name", "timezone", "max_upload_mib", "inline_preview_mib",
                          "language", "address", "phone", "terms"):
                 if (value := getattr(args, name)) is not None:
                     details[name] = value
-            current = local.edit_settings(ctx, details, args.key)
+            diagnosis_fee = (None if args.diagnosis_fee is None
+                             else money.parse_cents(args.diagnosis_fee))
+            current = local.edit_settings(ctx, details, args.key, diagnosis_fee_cents=diagnosis_fee)
+            diagnosis_fee = local.show_settings_page(ctx)[1]
         if args.json:
             print(json.dumps(asdict(current), ensure_ascii=False))
         else:
@@ -51,6 +56,7 @@ def run_settings_command(args) -> int:
                   f"Max upload\t{current.max_upload_mib} MiB\nInline preview\t{current.inline_preview_mib} MiB\n"
                   f"Language\t{current.language}\nAddress\t{one_line(current.address)}\n"
                   f"Phone\t{one_line(current.phone)}\nTerms\t{one_line(current.terms)}\n"
+                  f"Diagnosis fee\t{money.format_cents(diagnosis_fee)} EUR\n"
                   f"Revision\t{current.revision}")
     except (OSError, ValueError):
         print("settings: Could not read the workspace.", file=sys.stderr)

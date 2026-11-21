@@ -33,7 +33,7 @@
               <label class="rl-sr-only" for="phone">{{ _('Phone') }}</label>
               <input id="phone" name="phone" value="{{ details.get('phone', '') }}" placeholder="{{ _('Phone') }}" maxlength="40"{% if field_errors.get('phone') %} aria-invalid="true" aria-describedby="phone-error"{% endif %}>
               {% if field_errors.get('phone') %}<span id="phone-error">{{ _(field_errors.phone) }}</span>{% endif %}
-              <label for="diagnosis_fee">{{ _('Default labour fee (EUR)') }}</label>
+              <label for="diagnosis_fee">{{ _('Default diagnosis fee (EUR)') }}</label>
               <input id="diagnosis_fee" name="diagnosis_fee" value="{{ details.get('diagnosis_fee', '') }}" inputmode="decimal" maxlength="16"{% if field_errors.get('diagnosis_fee') %} aria-invalid="true" aria-describedby="diagnosis-fee-error"{% endif %}>
               {% if field_errors.get('diagnosis_fee') %}<span id="diagnosis-fee-error">{{ _(field_errors.diagnosis_fee) }}</span>{% endif %}
               <label class="rl-sr-only" for="terms">{{ _('Terms') }}</label>

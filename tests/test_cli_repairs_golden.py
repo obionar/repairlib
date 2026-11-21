@@ -98,6 +98,8 @@ def transcript() -> str:
         s.run("repairs", "restore-charge", "1", "2", "--revision", "2", "--reason", "keep", "--key", "k")
         s.run("repairs", "discount", "1", "--revision", "0", "--kind", "percent", "--value", "10", "--key", "k")
         s.run("repairs", "discount", "1", "--revision", "1", "--kind", "none", "--key", "k", json_out=True)
+        s.run("repairs", "fees", "1", "--revision", str(R()), "--diagnosis", "20", "--repair", "45.50", "--key", "k")
+        s.run("repairs", "show", "1")
         # stock-linked parts
         s.run("repairs", "consume-part", "1", "1", "--repair-revision", str(R()), "--item-revision", "2",
               "--consumed-quantity", "2", "--billed-quantity", "2", "--key", "k")

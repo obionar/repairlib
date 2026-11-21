@@ -132,7 +132,7 @@ def append_charge(db, principal, repair_id: int, values: dict) -> Charge:
     return created
 
 
-PROTECTED = {"labor": "Labour"}
+PROTECTED = {"diagnosis": "Diagnosis", "labor": "Labour"}
 
 
 def ticket_fees(workspace: Path, access: RepairAccess, repair_id: int):
@@ -146,30 +146,39 @@ def ticket_fees(workspace: Path, access: RepairAccess, repair_id: int):
             stored[key] = next((item.unit_price_cents for item in summary.items
                                 if item.id == charge_id and not item.deleted), 0)
         default = shop_settings.diagnosis_fee(db, principal.shop_id)
-        proposed = stored["labor"] if "labor" in linked else default  # An explicit zero stays zero.
-        return {"labor": stored["labor"],
-                "labor_input": proposed,
+        # An explicit zero stays zero; the bench diagnosis is proposed until the technician saves.
+        proposed = {"diagnosis": stored["diagnosis"] if "diagnosis" in linked else default,
+                    "labor": stored["labor"] if "labor" in linked else 0}
+        other = summary.subtotal_cents - stored["diagnosis"] - stored["labor"]
+        return {"diagnosis": stored["diagnosis"],
+                "diagnosis_input": proposed["diagnosis"],
+                "labor": stored["labor"],
+                "labor_input": proposed["labor"],
                 "parts": summary.parts_subtotal_cents,
                 "total_cents": summary.total_cents,
-                "pending_total_cents": proposed + summary.subtotal_cents - stored["labor"] - summary.discount_cents,
+                "pending_total_cents": sum(proposed.values()) + other - summary.discount_cents,
                 "discount_cents": summary.discount_cents,
                 "discount_amount": summary.discount_value if summary.discount_kind == "amount" else 0,
                 "default_cents": default,
                 "revision": repair.revision}, can_write and repair.archived_at is None
 
 
-def set_fees(workspace: Path, access: RepairAccess, repair_id: int, *, labor: int,
-             discount: int | None, revision: int, key: str) -> None:
+def set_fees(workspace: Path, access: RepairAccess, repair_id: int, *, diagnosis: int | None = None,
+             labor: int | None = None, discount: int | None, revision: int, key: str) -> None:
     if not 1 <= revision < MAX_ID:
         raise RepairError(422, "validation", "Supply the reviewed repair revision.")
-    if type(labor) is not int or not 0 <= labor <= money.MAX_CENTS:
-        raise RepairError(422, "validation", "Check the amounts.",
-                          {"labor": "Enter an amount from 0 to 100000000.00."})
+    for name, amount in (("diagnosis", diagnosis), ("labor", labor)):
+        if amount is not None and (type(amount) is not int or not 0 <= amount <= money.MAX_CENTS):
+            raise RepairError(422, "validation", "Check the amounts.",
+                              {name: "Enter an amount from 0 to 100000000.00."})
     if discount is not None and (type(discount) is not int or not 0 <= discount <= money.MAX_CENTS):
         raise RepairError(422, "validation", "Check the discount.",
                           {"discount": "Enter an amount from 0 to 100000000.00."})
     with authorized(workspace, access, write=True) as (db, principal, token_label, _):
-        payload = {"repair_id": repair_id, "revision": revision, "labor": labor}
+        payload = {"repair_id": repair_id, "revision": revision}
+        for name, amount in (("diagnosis", diagnosis), ("labor", labor)):
+            if amount is not None:
+                payload[name] = amount
         if discount is not None:
             payload["discount"] = discount
         fingerprint, previous = replay_receipt(db, principal, "repair", "repair.update", key, payload,
@@ -181,7 +190,9 @@ def set_fees(workspace: Path, access: RepairAccess, repair_id: int, *, labor: in
             raise RepairError(409, "stale_revision", "The repair changed. Review the latest version.")
         changes = {}
         charged = repairs.fee_charge_ids(db, principal.shop_id, repair_id)
-        for name, amount in (("labor", labor),):
+        for name, amount in (("diagnosis", diagnosis), ("labor", labor)):
+            if amount is None:
+                continue
             values = normalize(ChargeInput(kind="labor", description=PROTECTED[name],
                                            quantity_milli=1000, unit_price_cents=amount))
             charge_id = charged.get(name)

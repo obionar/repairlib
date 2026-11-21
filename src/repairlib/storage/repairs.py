@@ -355,15 +355,20 @@ def list_entries(db, shop_id: int, repair_id: int, before: int | None, limit: in
     return [entry_record(row) for row in rows]
 
 
+FEE_COLUMNS = {"diagnosis": "diagnosis_charge_id", "labor": "labor_charge_id"}
+
+
 def fee_charge_ids(db, shop_id: int, repair_id: int) -> dict[str, int | None]:
-    row = db.execute("SELECT labor_charge_id FROM repair_fees WHERE shop_id = ? AND repair_id = ?",
-                     (shop_id, repair_id)).fetchone()
-    return {} if row is None else {"labor": row[0]}
+    row = db.execute("SELECT diagnosis_charge_id, labor_charge_id FROM repair_fees "
+                     "WHERE shop_id = ? AND repair_id = ?", (shop_id, repair_id)).fetchone()
+    return {} if row is None else {"diagnosis": row[0], "labor": row[1]}
 
 
 def save_fee(db, shop_id: int, repair_id: int, charge_id: int | None, name: str) -> None:
-    if name != "labor":
-        raise ValueError(f"Unknown fee: {name}")
-    db.execute("""INSERT INTO repair_fees(shop_id, repair_id, labor_charge_id) VALUES (?, ?, ?)
-        ON CONFLICT (shop_id, repair_id) DO UPDATE SET labor_charge_id = excluded.labor_charge_id""",
+    try:
+        column = FEE_COLUMNS[name]
+    except KeyError:
+        raise ValueError(f"Unknown fee: {name}") from None
+    db.execute(f"""INSERT INTO repair_fees(shop_id, repair_id, {column}) VALUES (?, ?, ?)
+        ON CONFLICT (shop_id, repair_id) DO UPDATE SET {column} = excluded.{column}""",
                (shop_id, repair_id, charge_id))

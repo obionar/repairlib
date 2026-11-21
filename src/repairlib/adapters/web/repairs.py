@@ -508,16 +508,16 @@ def repair_routes(workspace: Path, templates, key: bytearray) -> APIRouter:
     def repair_fees(request: Request, repair_id: int, form: Annotated[dict[str, str], Depends(fees_form)]):
         credential = access(request).credential
         check_csrf(request, form, csrf_token(key, f"repair.fees:{repair_id}", credential) if credential else None)
-        draft = {name: form.get(name, "") for name in ("labor", "discount")}
+        draft = {name: form.get(name, "") for name in ("diagnosis", "labor", "discount")}
         try:
             try:
                 amounts = {name: money.parse_cents(value.replace(",", ".") or "0")
                            for name, value in draft.items()}
             except ValueError as error:
                 raise RepairError(422, "validation", str(error)) from None
-            charges.set_fees(workspace, access(request), repair_id, labor=amounts["labor"],
-                             discount=amounts["discount"], revision=form_revision(form),
-                             key=form.get("key", ""))
+            charges.set_fees(workspace, access(request), repair_id, diagnosis=amounts["diagnosis"],
+                             labor=amounts["labor"], discount=amounts["discount"],
+                             revision=form_revision(form), key=form.get("key", ""))
         except RepairError as error:
             if error.status in (409, 422):
                 return detail_page(request, repair_id, status=error.status, fees_error=error, fees_draft=draft)

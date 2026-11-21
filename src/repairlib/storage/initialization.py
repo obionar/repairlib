@@ -46,6 +46,7 @@ MIGRATIONS = (
     "0035_diagnosis_default.sql",
     "0036_drop_estimates.sql",
     "0037_repair_fees.sql",
+    "0038_diagnosis_fee.sql",
 )
 SCHEMA_VERSION = len(MIGRATIONS)
 MIGRATION_DIR = Path(__file__).with_name("migrations")

@@ -129,7 +129,8 @@ class CliReadbackTests(TokenFixture, unittest.TestCase):
             self.assertEqual(fields["Stage"], "new")
             self.assertEqual(fields["Pickup"], "In shop")
             self.assertEqual(fields["Archive"], "Active")
-            self.assertEqual(fields["Labor"], "10.00 EUR")
+            self.assertEqual(fields["Diagnosis"], "0.00 EUR")
+            self.assertEqual(fields["Repair cost"], "10.00 EUR")
             self.assertEqual(fields["Total"], "10.00 EUR (not a payment)")
             self.assertIn("Revision\t", plain.stdout)
 

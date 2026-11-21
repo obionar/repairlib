@@ -62,53 +62,29 @@ For a Linux install outside the source checkout, see
 
 ## Quick start
 
-With the packages above installed, one clone, one target and one service:
-
-```sh
-git clone https://github.com/obionar/repairlib.git
-cd repairlib
-bin/repairlib setup --shop "My Shop" --username owner
-bin/repairlib service install
-bin/repairlib service start
-```
-
-`bin/repairlib` runs this checkout with the workspace in `./data` and the
-listener on port 8000, so no paths or environment variables are needed. Link it
-once with `ln -s "$PWD/bin/repairlib" ~/.local/bin/repairlib` to run `repairlib`
-from anywhere; the symlink resolves back to this checkout. `REPAIRLIB_WORKSPACE`
-overrides the default workspace for any command. `setup`
-reads the first admin password from the terminal and takes the timezone from
-this machine unless `--timezone` is given. Open <http://127.0.0.1:8000>.
-Upgrade later with `bin/repairlib update`; it fast-forwards the checkout and restarts the service.
-
-The [installer](docs/operations.md#linux-install) remains available for a
-versioned installation with atomic staged updates and rollback.
-
-## Portable checkout
-
-The simplest deployment has no installer at all: clone the repository anywhere
-the operator owns, keep the workspace and its backups in a separate directory,
-and register the service from that checkout.
+Install the [packages above](#requirements), then copy-paste these four lines. Change only the
+shop name; the admin password is typed at the prompt and the timezone is read from this machine.
 
 ```sh
 git clone https://github.com/obionar/repairlib.git "$HOME/repairlib"
 cd "$HOME/repairlib"
 bin/repairlib setup --shop "My Shop" --username owner
-bin/repairlib service install
-bin/repairlib service start
+bin/repairlib service install && bin/repairlib service start
 ```
 
-Update with `bin/repairlib update`; it refuses a dirty checkout, fast-forwards the branch, and restarts the registered service. A versioned installation updates with the staged recipe instead.
-To move to another machine, copy the whole checkout and its `data/` and
-`data-backups/` directories (owned by the service user, mode 0700), or clone
-again and copy those two directories, then install the service there.
+Open <http://127.0.0.1:8000> and sign in as `owner`. `bin/repairlib` runs this checkout with its
+workspace in `./data` and listens on port 8000, so no paths or environment variables are needed;
+`REPAIRLIB_WORKSPACE` overrides the workspace for any command. `ln -s "$PWD/bin/repairlib"
+"$HOME/.local/bin/repairlib"` runs `repairlib` from anywhere; the symlink resolves back to this
+checkout.
 
-The workspace can be the checkout's own `data/` directory, which is already
-Git-ignored, so one folder carries both code and records. A workspace inside the
-checkout must be ignored: a branch switch or `git checkout` would otherwise
-overwrite shop records, and `git clean -xdf` still deletes ignored files, so keep
-a backup before cleaning. The installer's target is separate from its workspace
-for the same reason.
+Update later with `bin/repairlib update`: it refuses a dirty checkout, fast-forwards the branch and
+restarts the service. To move to another machine, copy the checkout with its `data/` and
+`data-backups/` directories, or clone again and copy those two directories, then reinstall the
+service. A workspace inside the checkout must stay Git-ignored: `git checkout` and `git clean -xdf`
+can overwrite or delete shop records, so keep a backup first. The
+[installer](docs/operations.md#linux-install) adds a versioned installation with atomic staged
+updates and rollback.
 
 ## Check
 

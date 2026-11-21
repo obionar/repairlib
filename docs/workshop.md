@@ -63,6 +63,12 @@ repairlib repairs list --queue pickup --stage repaired --json
 - `repairs show` summarises device, customer, technician, issue, stage, pickup and archive status and charge totals (not payments). `repairs edit` takes only desired changes plus the revision; `--clear-customer`/`--clear-technician` remove links. `repairs entries ID` marks deleted entries.
 - Stage: `repairs stage ID --revision N --stage STAGE --key KEY`; moving from `repaired` or `no_repair` back to `in_progress` also needs `--reason`.
 - Pickup is independent of stage: `repairs pickup ID --revision N --key KEY` records server time and signed-in user (no collector name or notes); `repairs archive ID …` archives; `--undo` reverses either. Activity shows who recorded or cleared it. Archived repairs stay readable; restore before editing intake or stage (pickup can still change).
+- The **Payment** window records three costs: **Diagnosis** (prefilled from the shop's default
+  diagnosis fee, editable), **Repair** (the technician's labour for the job) and **Parts** (read-only,
+  the sum of the parts charges). Save them with the form, or `repairs fees ID --revision N --key KEY
+  --diagnosis EUR --repair EUR --discount EUR`. The window's total and `repairs charges ID` report
+  the same amounts: diagnosis + repair + parts − discount. A saved amount stays until it is changed;
+  a zero diagnosis is stored as zero, not as the default.
 - Payment is a yes/no status on a finished repair (`repaired` or `no_repair`), not an amount:
   `repairs payment ID --revision N --key KEY` marks it paid and `--undo` marks it not paid.
   `repairs show --json` reports `payment_paid` (`null` until first recorded). The API route is

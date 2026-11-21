@@ -15,7 +15,7 @@ from test_web_repair_workspace import panel
 
 
 class WebSettingsFlowsTests(TokenFixture, unittest.TestCase):
-    def test_default_labour_fee_and_saved_ticket_amounts(self):
+    def test_default_diagnosis_fee_and_saved_ticket_amounts(self):
         with self.client() as client:
             self.sign_in(client)
             token = issued_secret(client.post(ACCOUNT, data=self.issue_form(client)))
@@ -34,12 +34,12 @@ class WebSettingsFlowsTests(TokenFixture, unittest.TestCase):
             repair = create(API, DEVICE)
             api, ticket = f"{API}/{repair['id']}", f"/repairs/{repair['id']}"
             action = ticket + "/fees"
-            self.assertRegex(panel(client.get(ticket), "payment-total"), r'name="labor"[^>]*value="20\.00"')
+            self.assertRegex(panel(client.get(ticket), "payment-total"), r'name="diagnosis"[^>]*value="20\.00"')
             change_default("25,00")
-            self.assertRegex(panel(client.get(ticket), "payment-total"), r'name="labor"[^>]*value="25\.00"')
+            self.assertRegex(panel(client.get(ticket), "payment-total"), r'name="diagnosis"[^>]*value="25\.00"')
             part = create(api + "/charges", PART)
             page = client.get(ticket)
-            fields = form_for(page, action) | {"labor": "35.50", "discount": "5"}
+            fields = form_for(page, action) | {"diagnosis": "20.00", "labor": "35.50", "discount": "5"}
             self.assertEqual(client.post(action, data=fields | {"labor": "-1"}).status_code, 422)
             stale = form_for(page, action) | {"labor": "1"}
             self.assertEqual(client.post(action, data=fields).status_code, 303)
@@ -48,9 +48,12 @@ class WebSettingsFlowsTests(TokenFixture, unittest.TestCase):
             change_default("30.00")
             summary = client.get(api + "/charges", headers=auth).json()
             self.assertEqual(summary["parts_subtotal_cents"], part["line_total_cents"])
-            self.assertEqual(summary["total_cents"], 3050 + part["line_total_cents"])
-            self.assertEqual(len(summary["items"]), 2)
-            self.assertRegex(panel(client.get(ticket), "payment-total"), r'name="labor"[^>]*value="35\.50"')
+            self.assertEqual(summary["total_cents"], 5050 + part["line_total_cents"])
+            self.assertEqual(len(summary["items"]), 3)
+            saved_form = panel(client.get(ticket), "payment-total")
+            # A saved diagnosis keeps its own amount even after the shop default changes.
+            self.assertRegex(saved_form, r'name="diagnosis"[^>]*value="20\.00"')
+            self.assertRegex(saved_form, r'name="labor"[^>]*value="35\.50"')
 
     def test_settings_groups_and_account_keep_roles_separate(self):
         with closing(sqlite3.connect(self.db)) as db, db:

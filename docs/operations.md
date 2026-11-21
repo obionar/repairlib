@@ -193,54 +193,61 @@ repairlib="$repairlib_target/repairlib"
 
 ### Install from a GitHub clone
 
-Pick a released commit or `origin/main`, keep the clone as the source of truth, and let the installer copy that commit into its own target:
+Change the two variables, then copy-paste the block. The installer copies the commit into its own
+target; the installed launcher keeps its workspace in `$HOME/.local/state/repairlib`, so no paths
+are needed after this.
 
 ```sh
-git clone https://github.com/obionar/repairlib.git repairlib-source
-git -C repairlib-source checkout --detach <commit>
-python3 -I -B repairlib-source/scripts/install.py --commit <commit> \
-  --target "$HOME/.local/opt/repairlib"
-"$HOME/.local/opt/repairlib/repairlib" setup --shop "My Shop" --timezone Europe/Nicosia --username owner
-"$HOME/.local/opt/repairlib/repairlib" service foreground --port 8000
+repairlib_source="$HOME/repairlib-source"
+repairlib_target="$HOME/.local/opt/repairlib"
+git clone https://github.com/obionar/repairlib.git "$repairlib_source"
+python3 -I -B "$repairlib_source/scripts/install.py" --commit HEAD --target "$repairlib_target"
+"$repairlib_target/repairlib" setup --shop "My Shop" --username owner
+"$repairlib_target/repairlib" service foreground --port 8000
 ```
 
-The installed launcher uses the default state directory `$HOME/.local/state/repairlib` unless
-`REPAIRLIB_WORKSPACE` names another one; `setup` creates it, so no `--workspace` is needed here
-or in the update recipe below. Check `http://127.0.0.1:8000/health`, then Ctrl+C stops the
-foreground process.
+Check `http://127.0.0.1:8000/health`; Ctrl+C stops the foreground process. Register the service
+instead of the last line when the app should keep running
+([Linux service lifecycle](#linux-service-lifecycle)). `--commit` takes a local Git revision
+(default `HEAD`); run the copy of `scripts/install.py` from that commit. The installer archives the
+commit into the target, checks that it starts on the installed packages, and records the exact
+commit and interpreter in `install.json`. The launcher runs `/usr/bin/python3` against the staged
+source; upgrade distribution packages through the distribution's package manager and rehearse an
+update before relying on it. Keep the target at its original path and workspace files and backups
+outside it. After an interruption that leaves a partial target, use a fresh path.
 
 ### Upgrade that installation from GitHub
 
-Stop the listener first. Fetch in the clone, then stage and activate the newer commit; staging refuses equal, older or non-descendant commits:
+Stop the listener first. Change nothing but the two variables from the install block; staging
+refuses equal, older or non-descendant commits.
 
 ```sh
-git -C repairlib-source fetch origin
-git -C repairlib-source checkout --detach origin/main
-repairlib_head="$(git -C repairlib-source rev-parse HEAD)"
-python3 -I -B repairlib-source/scripts/install.py --stage-update --commit "$repairlib_head" \
-  --target "$HOME/.local/opt/repairlib" --workspace "$HOME/.local/state/repairlib" \
-  --candidate "$HOME/.local/opt/repairlib-next"
-python3 -I -B repairlib-source/scripts/install.py --activate-update \
-  --target "$HOME/.local/opt/repairlib" --candidate "$HOME/.local/opt/repairlib-next"
-"$HOME/.local/opt/repairlib/repairlib" status --json
-"$HOME/.local/opt/repairlib/repairlib" doctor
+git -C "$repairlib_source" fetch origin
+git -C "$repairlib_source" checkout --detach origin/main
+repairlib_head="$(git -C "$repairlib_source" rev-parse HEAD)"
+python3 -I -B "$repairlib_source/scripts/install.py" --stage-update --commit "$repairlib_head" \
+  --target "$repairlib_target" --workspace "$HOME/.local/state/repairlib" \
+  --candidate "$repairlib_target-next"
+python3 -I -B "$repairlib_source/scripts/install.py" --activate-update \
+  --target "$repairlib_target" --candidate "$repairlib_target-next"
+"$repairlib_target/repairlib" status --json
+"$repairlib_target/repairlib" doctor
 ```
 
-Activation leaves writes closed. Start the selected listener with the stable launcher (no `--workspace`), then reopen writes from the checkout:
+Activation leaves writes closed. Start the selected listener with the stable launcher (no
+`--workspace`), then reopen writes from the checkout:
 
 ```sh
-"$HOME/.local/opt/repairlib/repairlib" service foreground --port 8000 &
-python3 -I -B repairlib-source/scripts/install.py --reopen-update \
-  --target "$HOME/.local/opt/repairlib" --candidate "$HOME/.local/opt/repairlib-next" --port 8000
-"$HOME/.local/opt/repairlib/repairlib" status --json
+"$repairlib_target/repairlib" service foreground --port 8000 &
+python3 -I -B "$repairlib_source/scripts/install.py" --reopen-update \
+  --target "$repairlib_target" --candidate "$repairlib_target-next" --port 8000
+"$repairlib_target/repairlib" status --json
 ```
 
 After the reopen the selection is the live installation: the same launcher runs ordinary CLI
 commands against its workspace (unit control stays with the user manager).
 
 On an OpenRC host, remove the registered service with `repairlib service remove --openrc-system` before staging; the installer refuses to stage while `/etc/init.d/repairlib` exists.
-
-`--commit` takes a local Git revision (default `HEAD`); run the copy of `scripts/install.py` from that commit. The installer archives the commit into the target, checks that it starts on the installed packages, and records the exact commit and interpreter in `install.json`. The launcher runs `/usr/bin/python3` against the staged source; upgrade distribution packages through the distribution's package manager and rehearse an update before relying on it. Keep the target at its original path and workspace files and backups outside it. After an interruption that leaves a partial target, use a fresh path.
 
 Initialize the workspace, then run in the foreground or register with the platform service manager (systemd user or OpenRC, below):
 
