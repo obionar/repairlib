@@ -546,6 +546,9 @@ Notes:
 
 - `service install` only registers the service; `service start` is the explicit
   start (separate commands; `service status` reports `started` when healthy).
+- `--workspace` is optional with the `bin/repairlib` launcher (the launcher
+  exports the workspace default, the checkout's `data/`); the explicit flag is
+  still valid.
 - Service logs go through syslog (`logger -t repairlib`); check the system log
   for `repairlib`, for example `grep repairlib /var/log/messages` where the
   distribution keeps that file.
