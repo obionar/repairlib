@@ -1054,7 +1054,6 @@ summary.obi-panel-bar:focus-visible { outline-color: var(--rl-surface); outline-
 .rl-manual-part-grid input { min-width: 0; width: 100%; }
 @media (min-width: 64rem) {
   .rl-repair-work-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; }
-  .rl-repair-work-grid > [aria-labelledby="stock-usage"] { order: 2; }
 }
 
 .rl-chip-strip {
@@ -1379,7 +1378,7 @@ summary.obi-panel-bar:focus-visible { outline-color: var(--rl-surface); outline-
 .rl-device-facts dt { font-size: .8125rem; }
 .rl-ticket-overview .rl-ticket-facts { grid-template-columns: repeat(auto-fill, minmax(min(100%, 14rem), 1fr)); }
 .rl-device-facts .rl-ticket-text { grid-column: 1 / -1; }
-.rl-ticket-issue { border-inline-start: 3px solid var(--rl-ink); padding: .5rem .75rem; background: var(--rl-canvas); }
+.rl-ticket-issue { grid-column: 1 / -1; border-inline-start: 3px solid var(--rl-ink); padding: .5rem .75rem; background: var(--rl-canvas); }
 .rl-ticket-issue dd { font-size: 1.0625rem; }
 .obi-entry-actions { font-size: .875rem; gap: 0 1.25rem; }
 .obi-entry-actions > a,

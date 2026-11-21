@@ -59,7 +59,7 @@ class WebRepairWorkspaceTests(TokenFixture, unittest.TestCase):
             with closing(sqlite3.connect(self.db)) as db:
                 self.assertEqual(db.execute("SELECT COUNT(*) FROM inventory_movements").fetchone()[0], 0)
 
-    def test_ticket_keeps_issue_with_intake_notes_and_status_last(self):
+    def test_ticket_keeps_issue_and_intake_notes_with_status_controls(self):
         with self.client() as client:
             _, auth = self.owner_auth(client)
             repair = self.repair(client, auth, serial="BENCH-0001", notes="Bring original cable")
@@ -68,14 +68,15 @@ class WebRepairWorkspaceTests(TokenFixture, unittest.TestCase):
             for text in ("Repair status", "Update status"):
                 self.assertIn(text, status)
             self.assertNotIn("Next step", status)
-            self.assertRegex(status, r'<dt>Reported issue:</dt>\s*<dd[^>]*>[^<]+</dd></div>\s*'
-                                     r'<div[^>]*><dt>Intake notes:</dt>')
+            self.assertIn('<dt>Reported issue:</dt>', status)
+            self.assertIn('<dt>Intake notes:</dt>', status)
             self.assertRegex(status, r'<div>\s*<dt>Serial:</dt>\s*<dd>BENCH-0001</dd>\s*</div>')
             self.assertIn("Bring original cable", status)
             self.assertIn('<option value="" selected disabled hidden>New</option>', status)
             self.assertNotIn('class="obi-status"', status)
-            self.assertLess(page.index('id="device-details"'), page.index('<dt>Reported issue:</dt>'))
-            self.assertLess(page.index('<dt>Intake notes:</dt>'), page.index('id="stage-form"'))
+            self.assertLess(status.index('<dt>Reported issue:</dt>'), status.index('id="ticket-controls"'))
+            self.assertLess(status.index('id="ticket-controls"'), status.index('id="device-details"'))
+            self.assertLess(status.index('id="stage-form"'), status.index('<dt>Intake notes:</dt>'))
             self.assertNotIn('id="repair-status-control"', status)
             controls = status.split('id="ticket-controls"', 1)[1]
             order = [controls.index(hook) for hook in ('id="stage-form"', 'id="pickup-state"',
