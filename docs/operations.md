@@ -266,8 +266,11 @@ Check `http://127.0.0.1:8000/health`; Ctrl+C stops the foreground process. To re
   workspace.
 - **Backups.** `repairlib backup snapshot --workspace … --output …` takes a database-only snapshot
   while stopped, or with `--online` while the app runs; `repairlib backup verify <archive>` proves
-  a snapshot restores. The scheduled backup keeps `<workspace>-backups` fresh; `doctor` reports
-  whether the last verified backup is stale.
+  a snapshot is valid. `backup schedule` is not registered automatically: configure a cron job
+  or timer as described in [Data transfer and recovery](data.md#daily-online-snapshots).
+  It creates database-only snapshots in `<workspace>-backups`, not attachment backups.
+  `doctor` reports whether the last verified snapshot is stale. Use a full offline archive
+  for retained attachments as well.
 - **Disk.** The app reserves 1 GiB of free space and reports it in `status`; `cleanup` removes
   stale uploads, expired sessions and old request receipts while stopped.
 - **Health.** `repairlib doctor --workspace …` is the single read-only check: schema, SQLite
