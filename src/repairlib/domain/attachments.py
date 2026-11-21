@@ -223,7 +223,7 @@ def attachment_content(workspace: Path, access: RepairAccess, repair_id: int, at
                          dir_fd=directory)
             try:
                 info = os.fstat(fd)
-                if not blobs.managed_file(info) or info.st_mode & 0o077 or info.st_size != found.size_bytes:
+                if not blobs.managed_file(info) or info.st_size != found.size_bytes:
                     raise OSError("Attachment storage does not match metadata.")
                 return found, os.fdopen(fd, "rb")
             except BaseException:
