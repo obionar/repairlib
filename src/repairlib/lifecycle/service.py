@@ -20,6 +20,7 @@ import sys
 from tempfile import NamedTemporaryFile, TemporaryDirectory
 import time
 
+from repairlib.lifecycle.checkout import PENDING, READY
 from repairlib.lifecycle.workspace import SETUP_STATES, WorkspaceError, maintenance_lock, workspace_schema
 from repairlib.storage.initialization import SCHEMA_VERSION
 
@@ -209,6 +210,16 @@ def private_control(control: Path, *, create: bool) -> bool:
 
 def foreground(workspace: Path, port: int, *, listener_state: Callable[[], dict] | None = None,
                listener_id: str | None = None) -> int:
+    # Supervised restarts (including at boot) must not start a half-updated checkout.
+    pending = SOURCE.parent / ".git" / PENDING
+    if os.path.lexists(pending):
+        try:
+            state = json.loads(pending.read_text(encoding="utf8"))
+            verified = isinstance(state, dict) and state.get("stage") == READY
+        except (OSError, ValueError):
+            verified = False
+        if not verified:
+            raise WorkspaceError("Checkout update is pending. See interrupted checkout updates in docs/operations.md.")
     state, _ = workspace_schema(workspace)
     if hint := setup_hint(state):
         raise WorkspaceError(hint)

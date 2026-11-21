@@ -13,7 +13,7 @@ from repairlib.lifecycle.backup_archive import MAX_ATTACHMENTS, RESTORE_STAGE_PR
 from repairlib.lifecycle.backup_schedule import backup_line, backup_state
 from repairlib.lifecycle.operations import check_database_files, private_subdirectory, workspace_disk_free_bytes
 from repairlib.lifecycle.workspace import (
-    ACTIVE, STAGE_PREFIX, WorkspaceError, database_path, maintenance_lock, workspace_schema,
+    ACTIVE, STAGE_PREFIX, WorkspaceError, database_path, offline_lock, workspace_schema,
 )
 from repairlib.storage.blobs import FILES, STAGING, blob_path
 from repairlib.storage.recovery import database_diagnostics, sidecar
@@ -182,7 +182,7 @@ def check_attachments(report: DoctorReport, rows: list[tuple] | None) -> None:
                     report.unsafe_storage += 1
 
 
-def diagnose_workspace(explicit: str | Path | None = None) -> DoctorReport:
+def diagnose_workspace(explicit: str | Path | None = None, *, lock_fd: int | None = None) -> DoctorReport:
     workspace = resolve_workspace(explicit)
     report = DoctorReport("invalid", workspace, disk_free_bytes=workspace_disk_free_bytes(workspace),
                           backup=backup_state(workspace))
@@ -199,7 +199,7 @@ def diagnose_workspace(explicit: str | Path | None = None) -> DoctorReport:
         if path.parent.is_symlink():
             return report
 
-        with maintenance_lock(workspace, exclusive=True, create=False):
+        with offline_lock(workspace, lock_fd):
             report.setup_staging = sum(1 for _ in workspace.glob(f"{STAGE_PREFIX}*"))
             check_database_files(path)
             report.status, version = workspace_schema(workspace)

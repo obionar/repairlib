@@ -281,29 +281,65 @@ Check `http://127.0.0.1:8000/health`; Ctrl+C stops the foreground process. To re
 
 ## Update a checkout or an installation
 
-A source checkout updates with `bin/repairlib update`: it refuses a dirty tree, checks out the
-current branch from the same-named branch on `origin` with `--ff-only`, then restarts the registered service (systemd user unit or
-OpenRC script) and reports the old and new commits. `bin/repairlib update --check` prints both
-the checkout and origin commits for the current branch without changing anything. Both commands
-need access to the configured Git `origin`; SSH remotes may require an unlocked key. A missing
-remote branch, detached HEAD or unreachable remote is reported as an error.
+If your checkout is also your installation directory, run these as the service owner,
+not as root:
 
-The checkout updater refuses before changing the checkout if migration files or
-`storage/initialization.py` differ from the origin revision. It does not perform
-automatic backup, restore rehearsal or migration, and this file check is not a
-guarantee of schema compatibility. It changes checkout files before restarting the
-service, so do not use it as a zero-downtime update for a live workshop. For
-schema changes, stop writers and follow the explicit procedure below instead.
+```sh
+bin/repairlib update --check   # compare the current branch with its branch on origin
+bin/repairlib update           # update the checkout, workspace and registered service
+```
 
-Before updating a workspace containing records, stop its writers and make and verify a backup
-as described in [Data transfer and recovery](data.md). If the checkout has uncommitted changes
-or local commits that diverge from origin, the update refuses to proceed; preserve your work
-and reconcile it in Git before retrying. If the checkout advances but the service restart
-fails, the command reports that distinction: inspect the service status and logs before retrying
-the restart. An up-to-date checkout does not restart the service.
+An update requires a regular Git checkout (not a linked worktree), exactly one RepairLib-managed
+OpenRC system service or systemd user unit pointing at that checkout, and one initialized workspace
+already compatible with the installed revision. The command does not manage foreground-only
+deployments, other workspaces, or install OS/Python dependencies. Both commands use the configured
+Git `origin`; SSH may require an unlocked key. OpenRC uses the existing non-interactive privilege
+rules for service stop/start.
+
+The updater fetches and pins the same-named origin branch. It refuses dirty or diverged checkouts,
+never discards local commits, and does nothing to the service if there is no incoming fast-forward.
+With an incoming commit it:
+
+1. Stops the service and runs `doctor` under the exclusive workspace maintenance lock.
+2. Creates and verifies a full archive, including retained attachments, in a private
+   `.repairlib-recovery-*` directory **beside** the checkout. It restores the archive to a
+   disposable workspace and tests migration and `doctor` there with the incoming code.
+3. Fast-forwards to the exact commit that passed rehearsal, migrates the live workspace if
+   needed, and runs `doctor` again before allowing service startup.
+4. Starts a previously running service and verifies that it owns the listener and `/health`
+   reports ready. A deliberately stopped service stays stopped.
+
+Plan for downtime throughout the checks and enough space for the archive, restored copy, and
+temporary checkout. The archive is retained and unencrypted; keep a copy off-host in secure
+storage. Don't run other Git commands, direct SQLite writers, or manual supervisor actions during
+the update. The workspace lock coordinates RepairLib processes, not raw SQLite or Git commands.
 
 An installation created by `scripts/install.py` keeps immutable generations and updates with the
 staged recipe below; never `git pull` inside an installation.
+
+### Recover an interrupted checkout update
+
+If the update fails after it begins, it reports the stage and backup location and leaves
+`.git/repairlib-update-pending.json` in the checkout. The record survives an interrupted process;
+it lists the old and new commits, workspace, backend, last stage and intended archive path.
+Another update is blocked while the record exists. Managed startup is blocked until the workspace
+has passed the post-update checks. Check the service status even if the last message said it
+was stopped: a stop or start could have been interrupted.
+
+1. Make sure the previous updater has exited and stop all writers. Read the record and compare
+   `git rev-parse HEAD` and `git status` with it. Don't assume that a failure reverted either
+   the files or the schema.
+2. If the archive exists, run `bin/repairlib backup verify /path/to/backup.zip`. If a restore is
+   needed, [restore into a new workspace](data.md#restore-a-full-workspace-backup) and verify it before making
+   any switch. No update step restores over an existing workspace.
+3. Run `bin/repairlib doctor --workspace /path/to/workspace` with the checkout you intend to run.
+   If HEAD is the new commit and `doctor` says only that an explicit migration is needed, first
+   diagnose why the update failed. Follow [explicit migration](data.md#upgrade-a-development-workspace)
+   with the verified pre-update archive, then rerun `doctor`. If `doctor` fails for any other
+   reason, keep the service stopped. Don't switch back to old code on a migrated workspace.
+4. Only once HEAD and the workspace are known good, move the pending record into the private
+   recovery directory for reference, then start the service if desired. Use the workspace, port,
+   and backend from the record and confirm `service status` and `/health`. Keep the archive.
 
 ## Check a private installation for update blockers
 

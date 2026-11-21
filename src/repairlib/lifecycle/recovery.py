@@ -7,7 +7,7 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 
 from repairlib.lifecycle.operations import check_database_files
-from repairlib.lifecycle.workspace import DATABASE, WorkspaceError, database_path, maintenance_lock
+from repairlib.lifecycle.workspace import DATABASE, WorkspaceError, database_path, maintenance_lock, offline_lock
 from repairlib.storage.recovery import (
     SIDECAR_SUFFIXES, SnapshotError, copy_database, online_copy_database, sidecar,
     verify_database_snapshot,
@@ -49,7 +49,7 @@ def publish_backup(staged: Path, output: Path) -> None:
 
 @contextmanager
 def staged_workspace_snapshot(workspace: Path, output: Path, *, database_only: bool,
-                              online: bool = False):
+                              online: bool = False, lock_fd: int | None = None):
     """Yield a verified snapshot while holding the lock through publication."""
     if workspace.is_symlink() or not workspace.is_dir():
         raise WorkspaceError("Backup creation requires an existing workspace directory.")
@@ -65,7 +65,10 @@ def staged_workspace_snapshot(workspace: Path, output: Path, *, database_only: b
     if database_only:
         require_no_sidecars(output)
 
-    with maintenance_lock(workspace, exclusive=not online, create=False):
+    if online and lock_fd is not None:
+        raise ValueError("An inherited workspace lock is only for offline backups.")
+    lock = maintenance_lock(workspace, exclusive=False, create=False) if online else offline_lock(workspace, lock_fd)
+    with lock:
         source = database_path(workspace)
         require_private(source.parent.lstat(), stat.S_ISDIR)
         check_database_files(source)

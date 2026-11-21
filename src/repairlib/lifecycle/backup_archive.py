@@ -303,9 +303,11 @@ def verify_archive(handle: BinaryIO, staging: Path, *, restore: bool = False) ->
 
 
 @contextmanager
-def archived_workspace(workspace: Path, output: Path, *, maximum_schema: int | None = None):
+def archived_workspace(workspace: Path, output: Path, *, maximum_schema: int | None = None,
+                       lock_fd: int | None = None):
     """Publish a verified backup and hold the source lock through its caller's rehearsal."""
-    with staged_workspace_snapshot(workspace, output, database_only=False) as (database, version, output):
+    with staged_workspace_snapshot(workspace, output, database_only=False,
+                                   lock_fd=lock_fd) as (database, version, output):
         if maximum_schema is not None and version > maximum_schema:
             raise WorkspaceError("Workspace schema is newer than the installed runtime supports.")
         staged = database.with_name("backup.zip")

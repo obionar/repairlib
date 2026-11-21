@@ -92,7 +92,7 @@ def register_workspace_commands(commands) -> None:
     status.add_argument("--workspace", default=None)
     status.add_argument("--json", action="store_true", help="print machine-readable JSON")
 
-    update = commands.add_parser("update", help="fast-forward this checkout from origin and restart its service")
+    update = commands.add_parser("update", help="back up, rehearse and update this checkout and its service")
     update.add_argument("--check", action="store_true",
                         help="report the current and available commit without changing anything")
 
@@ -336,9 +336,7 @@ def run_demo(args) -> int:
 
 @guarded("update", "could not update this checkout.", refusals=(ValueError, CheckoutError))
 def run_update(args) -> int:
-    from repairlib.lifecycle.checkout import (
-        CheckoutError, current_commit, pull, remote_commit, restart_service, service_target,
-    )
+    from repairlib.lifecycle.checkout import current_commit, remote_commit
     from repairlib.lifecycle.service import SOURCE
 
     repo = SOURCE.parent
@@ -348,21 +346,16 @@ def run_update(args) -> int:
         now, available = current_commit(repo), remote_commit(repo)
         print(f"checkout {now} · origin {available}")
         return 0
-    old, new = pull(repo)
+    from repairlib.lifecycle.checkout_update import update_checkout
+
+    old, new, service, backup = update_checkout(
+        repo, progress=lambda stage: print(f"Update: {stage}…", file=sys.stderr, flush=True),
+    )
     if old == new:
         print(f"Already up to date at {old[:7]}.")
         return 0
-    target = service_target()
-    if target is None:
-        print(f"Updated {old[:7]} → {new[:7]}; no registered service to restart.")
-        return 0
-    try:
-        restart_service(*target)
-    except CheckoutError as error:
-        raise CheckoutError(
-            f"Checkout updated {old[:7]} → {new[:7]}, but service restart failed: {error}"
-        ) from error
-    print(f"Updated {old[:7]} → {new[:7]}; service restarted.")
+    print(f"Updated {old[:7]} → {new[:7]}; service {service}.")
+    print(f"Verified full backup: {backup}")
     return 0
 
 

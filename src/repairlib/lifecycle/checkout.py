@@ -1,4 +1,4 @@
-"""Keep a source checkout current and restart its service afterwards."""
+"""Git and registered-service discovery for checkout updates."""
 
 from __future__ import annotations
 
@@ -6,22 +6,22 @@ from functools import lru_cache
 import json
 import os
 from pathlib import Path
-import re
 import shlex
 import subprocess
+import sys
 
-UNIT = "repairlib.service"
-OPENRC_SCRIPT = Path("/etc/init.d/repairlib")
-ARGUMENTS = re.compile(r"--workspace\s+(?:'([^']*)'|\"([^\"]*)\"|(\S+)).*?--port\s+(\d+)")
+PENDING = "repairlib-update-pending.json"
+READY = "start and verify service"
 
 
 class CheckoutError(Exception):
     """The checkout cannot be updated safely."""
 
 
-def git(repo: Path, *arguments: str) -> str:
+def git(repo: Path, *arguments: str, pass_fds: tuple[int, ...] = ()) -> str:
     try:
-        done = subprocess.run(["git", "-C", str(repo), *arguments], capture_output=True, text=True)
+        done = subprocess.run(["git", "-C", str(repo), *arguments], capture_output=True, text=True,
+                              pass_fds=pass_fds)
     except OSError as error:
         raise CheckoutError("git is not available.") from error
     if done.returncode:
@@ -52,56 +52,71 @@ def remote_commit(repo: Path) -> str:
     return out.split()[0][:7]
 
 
-def pull(repo: Path) -> tuple[str, str]:
-    """Fetch and fast-forward this checkout; return the old and new commits."""
-    if git(repo, "status", "--porcelain"):
-        raise CheckoutError("The checkout has uncommitted changes; commit or discard them first.")
-    before = git(repo, "rev-parse", "HEAD")
-    branch = current_branch(repo)
-    git(repo, "fetch", "--quiet", "origin")
-    changed_schema = git(
-        repo, "diff", "--name-only", before, f"origin/{branch}", "--",
-        "src/repairlib/storage/migrations", "src/repairlib/storage/initialization.py",
-    )
-    if changed_schema:
-        raise CheckoutError(
-            "The update changes database schema files; the checkout was not changed. "
-            "Stop the service, create and verify a full backup, and follow the explicit "
-            "migration procedure in docs/data.md before restarting."
-        )
-    git(repo, "merge", "--ff-only", "--quiet", f"origin/{branch}")
-    return before, git(repo, "rev-parse", "HEAD")
+def checkout_state(repo: Path) -> tuple[str, str]:
+    if git(repo, "status", "--porcelain", "--untracked-files=all"):
+        raise CheckoutError("The checkout has uncommitted changes; commit or move them first.")
+    if any(entry.startswith("S ") or entry[:1].islower()
+           for entry in git(repo, "ls-files", "-v", "-z").split("\0")):
+        raise CheckoutError("Clear Git skip-worktree and assume-unchanged flags before updating.")
+    for marker in ("MERGE_HEAD", "CHERRY_PICK_HEAD", "REVERT_HEAD", "rebase-apply", "rebase-merge", "sequencer"):
+        if (repo / ".git" / marker).exists():
+            raise CheckoutError("Finish the Git operation already in progress before updating.")
+    return current_branch(repo), git(repo, "rev-parse", "HEAD")
+
+
+def fetch_update(repo: Path, branch: str, before: str) -> str:
+    """Fetch the current origin branch, checking the exact commit we'll rehearse."""
+    git(repo, "fetch", "--quiet", "--no-tags", "origin", f"refs/heads/{branch}")
+    after = git(repo, "rev-parse", "FETCH_HEAD^{commit}")
+    base = git(repo, "merge-base", before, after)
+    if base == after:
+        return before
+    if base != before:
+        raise CheckoutError("Local and origin histories diverged; reconcile them before updating.")
+    return after
 
 
 def parse_service_target(text: str) -> tuple[Path, int] | None:
     """Workspace and port from a unit or init script, when both are present."""
     for line in text.splitlines():
-        if not line.startswith("ExecStart="):
-            continue
         try:
-            args = shlex.split(line.removeprefix("ExecStart=").removeprefix(":"))
-            workspace = args[args.index("--workspace") + 1].replace("%%", "%")
+            if line.startswith("ExecStart="):
+                args = shlex.split(line.removeprefix("ExecStart=").removeprefix(":"))
+                args = [arg.replace("%%", "%") for arg in args]
+            elif line.startswith("command_args="):
+                words, = shlex.split(line.removeprefix("command_args="))
+                args = shlex.split(words)
+            else:
+                continue
+            workspace = args[args.index("--workspace") + 1]
             port = int(args[args.index("--port") + 1])
             return Path(workspace), port
         except (ValueError, IndexError):
             return None
-    match = ARGUMENTS.search(text)
-    if match is None:
-        return None
-    return Path(next(group for group in match.groups()[:3] if group)), int(match.group(4))
+    return None
 
 
-def service_target() -> tuple[Path, int, bool] | None:
-    """Workspace, port and backend of a registered service, when one can be read."""
-    candidates = [(Path.home() / ".config" / "systemd" / "user" / UNIT, False), (OPENRC_SCRIPT, True)]
+def service_target() -> tuple[Path, int, bool]:
+    """Discover arguments only; the service CLI separately verifies exact registration."""
+    from repairlib.lifecycle.service import OPENRC_INITD, OPENRC_SERVICE, UNIT, using_openrc
+
+    config = Path(os.environ.get("XDG_CONFIG_HOME") or Path.home() / ".config")
+    candidates = [(config / "systemd" / "user" / UNIT, False), (OPENRC_INITD / OPENRC_SERVICE, True)]
+    targets = []
     for path, openrc in candidates:
         try:
-            parsed = parse_service_target(path.read_text(encoding="utf8"))
-        except OSError:
+            info = path.lstat()
+        except FileNotFoundError:
             continue
-        if parsed is not None:
-            return *parsed, openrc
-    return None
+        if path.is_symlink() or not path.is_file() or info.st_size > 65536:
+            raise CheckoutError("Refusing an invalid service registration.")
+        parsed = parse_service_target(path.read_text(encoding="utf8"))
+        if parsed is None:
+            raise CheckoutError("Could not read workspace and port from the registered service.")
+        targets.append((*parsed, openrc))
+    if len(targets) != 1 or (not targets[0][2] and using_openrc()):
+        raise CheckoutError("Automatic checkout updates require exactly one managed OpenRC or systemd user service.")
+    return targets[0]
 
 
 @lru_cache(maxsize=1)
@@ -120,17 +135,19 @@ def version_text() -> str:
     return f"repairlib {base}" + (f" ({commit})" if commit else "")
 
 
-def restart_service(workspace: Path, port: int, openrc: bool) -> None:
-    """Restart the registered service through the existing service command."""
-    environment = dict(os.environ, PYTHONPATH=str(Path(__file__).resolve().parents[2]))
-    done = subprocess.run(["/usr/bin/python3", "-m", "repairlib", "service", "restart",
-                           "--workspace", str(workspace), "--port", str(port)]
-                          + (["--openrc-system"] if openrc else []),
-                          capture_output=True, text=True, env=environment)
-    if done.returncode:
-        try:
-            report = json.loads(done.stdout)
-        except (ValueError, TypeError):
-            report = None
+def service_command(repo: Path, action: str, target: tuple[Path, int, bool]) -> dict:
+    """Use the service CLI's identity, supervisor, listener and health checks."""
+    workspace, port, openrc = target
+    done = subprocess.run(
+        [sys.executable, "-I", "-B", str(repo / "bin" / "repairlib"), "service", action,
+         "--workspace", str(workspace), "--port", str(port)] + (["--openrc-system"] if openrc else []),
+        capture_output=True, text=True,
+    )
+    try:
+        report = json.loads(done.stdout)
+    except ValueError:
+        report = None
+    if done.returncode or not isinstance(report, dict):
         detail = report.get("error") if isinstance(report, dict) else None
-        raise CheckoutError(done.stderr.strip() or detail or "The service did not restart.")
+        raise CheckoutError(done.stderr.strip() or detail or f"Could not confirm service {action}.")
+    return report

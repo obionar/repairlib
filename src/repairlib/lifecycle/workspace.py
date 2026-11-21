@@ -51,7 +51,7 @@ def workspace_status(workspace: Path) -> str:
 
 
 @contextmanager
-def maintenance_lock(workspace: Path, *, exclusive: bool, create: bool = True) -> Iterator[None]:
+def maintenance_lock(workspace: Path, *, exclusive: bool, create: bool = True) -> Iterator[int]:
     if fcntl is None:
         raise WorkspaceError("Workspace locking is unavailable on this platform.")
     flags = os.O_CLOEXEC | os.O_NOFOLLOW | os.O_NONBLOCK
@@ -68,7 +68,7 @@ def maintenance_lock(workspace: Path, *, exclusive: bool, create: bool = True) -
             fcntl.flock(fd, mode | fcntl.LOCK_NB)
         except BlockingIOError as error:
             raise WorkspaceError("Workspace maintenance is in progress or the app is running.") from error
-        yield
+        yield fd
     finally:
         os.close(fd)
 
@@ -133,11 +133,32 @@ def create_workspace(
             publish_state(stage, workspace / ACTIVE)
 
 
-def migrate_workspace(workspace: Path, *, check_backup: Callable[[int], str] | None = None) -> str | None:
+@contextmanager
+def offline_lock(workspace: Path, inherited: int | None = None) -> Iterator[int]:
+    """Use an exclusive workspace lock, optionally passed by the checkout updater."""
+    if inherited is None:
+        with maintenance_lock(workspace, exclusive=True, create=False) as fd:
+            yield fd
+        return
+    held, current = os.fstat(inherited), (workspace / LOCK).lstat()
+    if not stat.S_ISREG(held.st_mode) or not os.path.samestat(held, current):
+        raise WorkspaceError("The inherited workspace lock does not match this workspace.")
+    try:
+        if fcntl is None:
+            raise WorkspaceError("Workspace locking is unavailable on this platform.")
+        fcntl.flock(inherited, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except BlockingIOError as error:
+        raise WorkspaceError("The inherited workspace lock is unavailable.") from error
+    yield inherited
+
+
+def migrate_workspace(workspace: Path, *, check_backup: Callable[[int], str] | None = None,
+                      lock_fd: int | None = None) -> str | None:
     """Upgrade explicitly; `check_backup` runs under the lock, before any write, with the current schema."""
     if workspace_status(workspace) not in {"initialized", "upgrade_required"}:
         raise WorkspaceError("Workspace schema is unavailable or unsupported.")
-    with maintenance_lock(workspace, exclusive=True):
+    lock = maintenance_lock(workspace, exclusive=True) if lock_fd is None else offline_lock(workspace, lock_fd)
+    with lock:
         status = workspace_status(workspace)
         if status == "upgrade_required":
             verified = None
