@@ -85,6 +85,12 @@ def normalize_limit(name: str, value: int) -> int:
 
 def update_settings(workspace: Path, access: SettingsAccess, patch: SettingsPatch, *,
                     key: str, diagnosis_fee_cents: int | None = None) -> ShopSettings:
+    return update_settings_page(workspace, access, patch, key=key,
+                                diagnosis_fee_cents=diagnosis_fee_cents)[0]
+
+
+def update_settings_page(workspace: Path, access: SettingsAccess, patch: SettingsPatch, *,
+                         key: str, diagnosis_fee_cents: int | None = None) -> tuple[ShopSettings, int | None]:
     validate_key(key)
     if not 1 <= patch.revision < MAX_ID:
         raise SettingsError(422, "validation", "Supply the reviewed settings revision.")
@@ -105,20 +111,25 @@ def update_settings(workspace: Path, access: SettingsAccess, patch: SettingsPatc
         db, principal, token_label,
     ):
         current = settings.find(db, principal.shop_id)
+        current_fee = settings.diagnosis_fee(db, principal.shop_id)
         before = vars(current).copy()
         if diagnosis_fee_cents is not None:
             if type(diagnosis_fee_cents) is not int or not 0 <= diagnosis_fee_cents <= money.MAX_CENTS:
                 raise SettingsError(422, "validation", "Check the shop settings.",
                                     {"diagnosis_fee": "Amount is out of range."})
             values["diagnosis_fee_cents"] = diagnosis_fee_cents
-            before["diagnosis_fee_cents"] = settings.diagnosis_fee(db, principal.shop_id)
+            before["diagnosis_fee_cents"] = current_fee
         payload = {"revision": patch.revision, "fields": values}
         fingerprint = sha256(json.dumps(payload, sort_keys=True).encode()).hexdigest()
         previous = settings.previous_request(db, principal.shop_id, principal.user_id, key)
         if previous is not None:
             if previous["fingerprint"] != fingerprint:
                 raise SettingsError(409, "conflict", "This key already belongs to a different request.")
-            return ShopSettings(**json.loads(previous["result"]))
+            result = json.loads(previous["result"])
+            # Older receipts do not record the fee. An explicit fee in the
+            # identical request is known; otherwise do not substitute today's fee.
+            fee = result.pop("diagnosis_fee_cents", diagnosis_fee_cents)
+            return ShopSettings(**result), fee
         if current.revision != patch.revision:
             raise SettingsError(409, "stale_revision", "The settings changed. Review the latest version.")
         changes = {name: {"before": before[name], "after": value}
@@ -137,8 +148,9 @@ def update_settings(workspace: Path, access: SettingsAccess, patch: SettingsPatc
         if updated is None:
             raise SettingsError(409, "stale_revision", "The settings changed. Review the latest version.")
         if "diagnosis_fee_cents" in changes:
-            settings.set_diagnosis_fee(db, principal.shop_id, changes["diagnosis_fee_cents"]["after"])
-        settings.save_result(db, principal.shop_id, principal.user_id, key, fingerprint, updated)
+            current_fee = changes["diagnosis_fee_cents"]["after"]
+            settings.set_diagnosis_fee(db, principal.shop_id, current_fee)
+        settings.save_result(db, principal.shop_id, principal.user_id, key, fingerprint, updated, current_fee)
         settings.audit(db, principal.shop_id, principal.user_id, principal.username,
                        access.source, token_label, changes)
-        return updated
+        return updated, current_fee

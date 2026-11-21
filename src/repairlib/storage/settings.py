@@ -1,5 +1,6 @@
 """Shop-owned settings and atomic, replayable configuration changes."""
 
+from dataclasses import dataclass
 import json
 from pathlib import Path
 import sqlite3
@@ -69,9 +70,15 @@ def previous_request(db, shop_id: int, actor_id: int, key: str):
     return request_ledger.find(db, "settings", shop_id, actor_id, None, key)
 
 
+@dataclass(frozen=True, kw_only=True)
+class SettingsReceipt(ShopSettings):
+    diagnosis_fee_cents: int
+
+
 def save_result(db, shop_id: int, actor_id: int, key: str, fingerprint: str,
-                result: ShopSettings) -> None:
-    request_ledger.store(db, "settings", shop_id, actor_id, None, key, fingerprint, result)
+                result: ShopSettings, diagnosis_fee_cents: int) -> None:
+    receipt = SettingsReceipt(**vars(result), diagnosis_fee_cents=diagnosis_fee_cents)
+    request_ledger.store(db, "settings", shop_id, actor_id, None, key, fingerprint, receipt)
 
 
 def audit(db, shop_id: int, actor_id: int, username: str, source: str,

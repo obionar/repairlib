@@ -193,6 +193,11 @@ def edit_settings(ctx, details, key, diagnosis_fee_cents=None) -> ShopSettings:
                diagnosis_fee_cents=diagnosis_fee_cents)
 
 
+def edit_settings_page(ctx, details, key, diagnosis_fee_cents=None) -> tuple[ShopSettings, int | None]:
+    return run(ctx, settings.update_settings_page, parse(SettingsPatch, details), key=key,
+               diagnosis_fee_cents=diagnosis_fee_cents)
+
+
 def show_printer(ctx) -> PrinterSettings:
     return run(ctx, printing.read_printer)
 
