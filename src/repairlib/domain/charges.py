@@ -221,7 +221,11 @@ def set_fees(workspace: Path, access: RepairAccess, repair_id: int, *, diagnosis
             before_summary = build_summary(db, principal, repair_id)
             if (before_summary.discount_kind, before_summary.discount_value) != ("amount", discount):
                 if discount:
-                    money.discount("amount", discount, before_summary.subtotal_cents)
+                    try:
+                        money.discount("amount", discount, before_summary.subtotal_cents)
+                    except ValueError as error:
+                        raise RepairError(409, "discount_exceeds_subtotal",
+                                          f"{error} Change the discount first.") from None
                 if not charges.save_discount(db, principal.shop_id, repair_id, "amount" if discount else "none",
                                              discount, before_summary.discount_revision):
                     raise RepairError(409, "stale_revision", "The discount changed. Review the latest totals.")

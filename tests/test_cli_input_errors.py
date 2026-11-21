@@ -69,5 +69,14 @@ class CliInputErrorTests(unittest.TestCase):
         self.cli("portable", "preview", self.root, code=8)
 
 
+    def test_fees_reports_a_malformed_amount_as_invalid_input(self):
+        result = subprocess.run(
+            [*COMMAND, "repairs", "fees", str(self.repair), "--revision", "1",
+             "--key", "fee-key", "--discount", "abc", "--workspace", str(self.workspace)],
+            capture_output=True, text=True, env=python_env(), timeout=30)
+        self.assertEqual(result.returncode, 8, (result.stdout, result.stderr))
+        self.assertIn("plain non-negative number", result.stderr)
+        self.assertNotIn("workspace", result.stderr.lower())
+
 if __name__ == "__main__":
     unittest.main()
