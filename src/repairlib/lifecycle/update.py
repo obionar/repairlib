@@ -27,6 +27,7 @@ from repairlib.lifecycle.service import (
     registered_unit, service_paths, unit_bytes,
 )
 from repairlib.lifecycle.workspace import ACTIVE, LOCK, WorkspaceError, maintenance_lock, migrate_workspace
+from repairlib.paths import sync_directory
 from repairlib.storage.initialization import SCHEMA_VERSION, migration_content
 
 
@@ -91,6 +92,7 @@ def publish_bytes(path: Path, content: bytes, mode: int = 0o600) -> None:
             file.flush()
             os.fsync(file.fileno())
             os.replace(pending, path)
+            sync_directory(path.parent)
         finally:
             pending.unlink(missing_ok=True)
 
@@ -107,6 +109,30 @@ def read_selection(descriptor: Path) -> dict:
     return selection
 
 
+def selection_reader(descriptor: Path, selection: dict):
+    """Allow writes only after the visible open descriptor has become durable."""
+    synced_open = False
+
+    def listener_state() -> dict:
+        nonlocal synced_open
+        phase = "unavailable"
+        try:
+            current = read_selection(descriptor)
+            state = current["state"]
+            if state in ("ready", "reopening", "open") and current == (selection | {"state": state}):
+                if state == "open" and not synced_open:
+                    # A listener can observe rename before the installer has
+                    # synced it. Flush the directory before admitting any writes.
+                    sync_directory(descriptor.parent)
+                    synced_open = True
+                phase = state
+        except (OSError, ValueError, TypeError, KeyError, WorkspaceError):
+            pass
+        return {"update_phase": phase, "writes_open": phase == "open"}
+
+    return listener_state
+
+
 def launch_selected() -> int:
     from repairlib.__main__ import main
     from repairlib.lifecycle.service import foreground
@@ -121,17 +147,7 @@ def launch_selected() -> int:
     except (OSError, ValueError, TypeError, KeyError, WorkspaceError):
         raise SystemExit("RepairLib update selection changed. Run installer recovery.") from None
 
-    def listener_state() -> dict:
-        phase = "unavailable"
-        try:
-            current = read_selection(descriptor)
-            state = current["state"]
-            if state in ("ready", "reopening", "open") and current == (selection | {"state": state}):
-                phase = state
-        except (OSError, ValueError, TypeError, KeyError, WorkspaceError):
-            pass
-        return {"update_phase": phase, "writes_open": phase == "open"}
-
+    listener_state = selection_reader(descriptor, selection)
     state = listener_state()
     if state["update_phase"] == "unavailable":
         raise SystemExit("RepairLib update selection changed. Run installer recovery.")
@@ -332,6 +348,7 @@ def update_selection(action: str, target: Path, stage: dict, launcher: str | Non
             check_clone()
             if previous_selection is None:
                 descriptor.unlink()
+                sync_directory(descriptor.parent)
             else:
                 publish_bytes(descriptor, previous_selection.encode("utf-8"))
         return {"state": "original" if previous_selection is None else "open",

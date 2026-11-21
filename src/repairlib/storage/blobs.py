@@ -8,7 +8,7 @@ import re
 import secrets
 import stat
 
-from repairlib.paths import ACTIVE
+from repairlib.paths import ACTIVE, sync_directory
 
 FILES = "files"
 STAGING = ".staging"
@@ -39,14 +39,6 @@ def private_directory(path: Path) -> None:
     path.mkdir(mode=0o700, parents=True, exist_ok=True)
     if path.is_symlink() or not path.is_dir():
         raise OSError("Attachment storage directory is invalid.")
-
-
-def sync_directory(path: Path) -> None:
-    fd = os.open(path, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0))
-    try:
-        os.fsync(fd)
-    finally:
-        os.close(fd)
 
 
 class StagedBlob:

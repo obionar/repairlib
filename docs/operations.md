@@ -407,7 +407,11 @@ python3 -I -B scripts/install.py --reopen-update \
 "$repairlib" status --json
 ```
 
-The installer checks the staged workspace fingerprints, probes the listener and atomically records `open`; the same listener then serves the normal authenticated app. If the probe fails or the worker exits before publishing `open`, requests stay closed and the command can be retried while the listener runs.
+The installer checks the staged workspace fingerprints, probes the listener and atomically
+records `open`. The listener won't admit writes until it can sync the selection directory.
+If the probe fails or the worker exits before publishing `open`, requests stay closed and
+the command can be retried while the listener runs. If syncing fails after `open` becomes
+visible, treat the candidate as selected and use recovery to verify it in place.
 
 For recovery, stop the candidate listener and use the matching installer:
 

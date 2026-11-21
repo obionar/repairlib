@@ -1,4 +1,5 @@
 """Workspace file layout shared by storage, domain and lifecycle (a leaf module)."""
+import os
 import stat
 from pathlib import Path
 
@@ -8,6 +9,14 @@ DATABASE = "repairlib.sqlite3"
 
 def database_path(workspace: Path) -> Path:
     return workspace / ACTIVE / DATABASE
+
+
+def sync_directory(path: Path) -> None:
+    fd = os.open(path, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0))
+    try:
+        os.fsync(fd)
+    finally:
+        os.close(fd)
 
 
 def check_database_files(path: Path) -> None:
