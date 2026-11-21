@@ -494,20 +494,20 @@ reboot persistence and power-loss validation remain open.
 
 ## Laptop deployment on postmarketOS / OpenRC
 
-Verified on this machine: postmarketOS v26.06 (Alpine-based), aarch64, with OpenRC
-and no systemd. The OpenRC system service is selected automatically; it runs as
-the invoking user on loopback port 8000, and the workspace lives in the
-checkout's `data/` directory.
+Rehearsed on postmarketOS v26.06 (Alpine-based), aarch64, with OpenRC.
+The OpenRC system service is selected automatically; it runs as the invoking user
+on loopback port 8000, and the workspace defaults to the checkout's `data/`
+directory. Registering and controlling the service requires non-interactive
+`sudo` or `doas`, as described above.
 
-Prerequisites: the stock Python 3 and the distribution packages. They are already
-installed on this machine; from scratch:
+Install the stock Python 3 and distribution packages if needed:
 
 ```sh
 sudo apk add python3 py3-fastapi py3-jinja2 uvicorn py3-pydantic \
   py3-httpx py3-argon2-cffi py3-python-multipart tzdata
 ```
 
-From the checkout root (`/home/ian/Dev/repairlib`):
+From the checkout root:
 
 ```sh
 # 1. Initialize the workspace and the first admin. Setup reads the admin
@@ -517,18 +517,34 @@ bin/repairlib setup --shop "My Shop" --username owner
 
 # 2. Register the root-supervised OpenRC service: writes /etc/init.d/repairlib
 #    and adds `repairlib` to the default runlevel. This step does not start it.
-bin/repairlib service install --workspace /home/ian/Dev/repairlib/data
+bin/repairlib service install
 
 # 3. Explicit start: runs `sudo rc-service repairlib start` and waits until
 #    the app is ready.
-bin/repairlib service start --workspace /home/ian/Dev/repairlib/data
+bin/repairlib service start
 ```
+
+To use `repairlib` from any directory, link the launcher once from the checkout
+root. Make sure `~/.local/bin` is on your `PATH` and the destination does not
+already exist:
+
+```sh
+mkdir -p "$HOME/.local/bin"
+ln -s "$PWD/bin/repairlib" "$HOME/.local/bin/repairlib"
+```
+
+The link resolves to this checkout, so keep the checkout at that path. The
+launcher selects its `data/` workspace even when invoked elsewhere; set
+`REPAIRLIB_WORKSPACE` to override it. For a registered service, use the same
+workspace and port as at registration.
 
 Verify the deployment:
 
 ```sh
 sudo rc-service repairlib status
 #  * status: started
+repairlib service status
+# JSON includes "service": "running" and "health": "ready"
 curl http://127.0.0.1:8000/health
 # {"status":"ok","state":"initialized","ready":true,"workspace_exists":true}
 rc-update show default | grep repairlib
@@ -536,16 +552,18 @@ rc-update show default | grep repairlib
 ```
 
 The browser app is served at http://127.0.0.1:8000; `GET /` redirects to the
-`/login` page. Without the supervised service, run in the foreground:
+`/login` page. To run in the foreground instead, stop the supervised service
+first so it does not occupy the same port:
 
 ```sh
-bin/repairlib service foreground --workspace /home/ian/Dev/repairlib/data
+repairlib service stop
+repairlib service foreground
 ```
 
 Notes:
 
 - `service install` only registers the service; `service start` is the explicit
-  start (separate commands; `service status` reports `started` when healthy).
+  start (separate commands; `repairlib service status` reports `running` when healthy).
 - `--workspace` is optional with the `bin/repairlib` launcher (the launcher
   exports the workspace default, the checkout's `data/`); the explicit flag is
   still valid.
