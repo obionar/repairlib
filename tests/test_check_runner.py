@@ -174,6 +174,24 @@ class CheckRunnerTests(unittest.TestCase):
             self.assertEqual(missing.returncode, 1, missing.stderr)
             self.assertIn("test_architecture.py", missing.stderr)
 
+    def test_default_check_skips_slow_installer_modules_until_full(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "test_quick.py").write_text(
+                "import unittest\nclass Quick(unittest.TestCase):\n    def test_quick(self): pass\n", encoding="utf-8")
+            (root / "test_linux_installer.py").write_text(
+                "import unittest\nclass Slow(unittest.TestCase):\n"
+                "    def test_slow(self): self.fail('full-only failure')\n", encoding="utf-8")
+            command = [sys.executable, "-B", str(CHECK), "--tests", tmp]
+            for jobs in ("1", "2"):
+                with self.subTest(jobs=jobs):
+                    default = subprocess.run([*command, "--jobs", jobs], capture_output=True, text=True, timeout=15)
+                    self.assertEqual(default.returncode, 0, default.stderr)
+                    self.assertNotIn("full-only failure", default.stderr)
+                    full = subprocess.run([*command, "--jobs", jobs, "--full"], capture_output=True, text=True, timeout=15)
+                    self.assertEqual(full.returncode, 1, full.stderr)
+                    self.assertIn("full-only failure", full.stderr)
+
 
 if __name__ == "__main__":
     unittest.main()

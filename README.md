@@ -98,8 +98,9 @@ python3 scripts/check.py
 The standard-library runner discovers tests under `tests/` and exits nonzero if
 any fail. Test workspaces are disposable. The runner disables bytecode writes.
 Use `python3 scripts/check.py --fast` for the local smoke suite; run the full
-command before committing. On a multicore machine, `python3 scripts/check.py
---jobs 6` runs the full suite with six module workers (about two minutes on six cores); the default stays serial.
+command before committing. It runs one test module per CPU (about two minutes on
+six cores); `--jobs 1` runs serially. The slow installer integration tests run
+only with `--full`; use it when changing the installer or before a release.
 With Git and Podman, `python3 scripts/check.py --distro debian` (or `alpine`)
 checks committed `HEAD` in a disposable clone using that distribution's stock
 packages. It does not mount the original checkout or test uncommitted changes.
