@@ -1,6 +1,6 @@
 """S3 repair attachment gates: original bytes, limits, isolation and crash windows."""
 
-from contextlib import closing
+from contextlib import closing, contextmanager
 from hashlib import sha256
 import json
 import re
@@ -720,7 +720,53 @@ class AttachmentTests(TokenFixture, unittest.TestCase):
             self.assertEqual(client.get(f"{API}/{repair['id']}/attachments/{kept['id']}/content",
                                         headers=auth).content, ORIGINAL)
             self.assertEqual(client.get(f"{API}/{repair['id']}/attachments/{lost['id']}/content",
-                                        headers=auth).status_code, 503)
+                                         headers=auth).status_code, 503)
+
+    def test_post_commit_error_keeps_original_for_idempotent_retry(self):
+        authorized = attachment_domain.authorized
+
+        @contextmanager
+        def fail_after_commit(*args, **kwargs):
+            with authorized(*args, **kwargs) as scope:
+                yield scope
+            if kwargs.get("write"):
+                raise sqlite3.OperationalError("Synthetic failure after commit")
+
+        with self.client() as client:
+            _, auth = self.admin_auth(client)
+            repair_id = self.repair(client, auth)["id"]
+            key = "retry-after-commit"
+            with patch.object(attachment_domain, "authorized", fail_after_commit):
+                self.assertEqual(self.upload(client, auth, repair_id, ORIGINAL, key=key).status_code, 500)
+            self.assertEqual(self.snapshot("SELECT COUNT(*) FROM attachments"), [(1,)])
+            self.assertEqual([path.read_bytes() for path in self.stored_files()], [ORIGINAL])
+            retry = self.upload(client, auth, repair_id, ORIGINAL, key=key)
+            self.assertEqual(retry.status_code, 201, retry.text)
+            attachment_id = retry.json()["id"]
+            content = client.get(f"{API}/{repair_id}/attachments/{attachment_id}/content", headers=auth)
+            self.assertEqual((content.status_code, content.content), (200, ORIGINAL))
+            self.assertEqual(self.snapshot("SELECT COUNT(*) FROM attachments"), [(1,)])
+
+    def test_first_upload_does_not_commit_if_a_new_parent_cannot_be_synced(self):
+        directories = []
+        state = self.db.parent
+        sync = attachment_domain.blobs.sync_directory
+
+        def fail_sync(path):
+            directories.append(path)
+            if path == state:
+                raise OSError("Synthetic state directory sync failure")
+            sync(path)
+
+        with self.client() as client:
+            _, auth = self.admin_auth(client)
+            repair_id = self.repair(client, auth)["id"]
+            with patch.object(attachment_domain.blobs, "sync_directory", fail_sync):
+                response = self.upload(client, auth, repair_id, ORIGINAL)
+            self.assertEqual(response.status_code, 500)
+            self.assertEqual(directories, [state / "files" / "shop-1", state / "files", state])
+            self.assertEqual(self.snapshot("SELECT COUNT(*) FROM attachments"), [(0,)])
+            self.assertEqual(self.stored_files(), [])
 
     def test_populated_schema_nine_upgrade_and_failed_migration_rollback(self):
         restored = self.workspace.parent / "restore"

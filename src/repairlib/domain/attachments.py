@@ -115,7 +115,7 @@ def write_chunk(upload: blobs.StagedBlob, chunk: bytes) -> None:
 
 def commit_upload(workspace: Path, access: RepairAccess, repair_id: int, upload: blobs.StagedBlob,
                   *, filename: str, entry_id: int | None, key: str) -> Attachment:
-    """Publish staged bytes and record them; any failure removes the uncommitted file."""
+    """Publish original bytes before committing their metadata."""
     try:
         upload.finish()
         name = normalize_filename(filename)
@@ -142,7 +142,9 @@ def commit_upload(workspace: Path, access: RepairAccess, repair_id: int, upload:
             audit(db, principal, access.source, token_label, operation, created.id,
                   {"repair_id": repair_id, "entry_id": entry_id, "filename": name,
                    "size_bytes": upload.size, "sha256": upload.sha256})
-        upload.keep()
+            # From this point the transaction may commit. If its outcome is
+            # uncertain, keep the original; reconciliation can remove orphans.
+            upload.keep()
         return created
     finally:
         upload.discard()

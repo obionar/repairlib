@@ -89,6 +89,10 @@ class StagedBlob:
         self.final = final
         self.staged.unlink()
         sync_directory(directory)
+        # The first upload may also have created shop-N and files. Persist each
+        # directory entry before SQLite can commit a reference to the blob.
+        sync_directory(directory.parent)
+        sync_directory(directory.parent.parent)
         return storage_name
 
     def discard(self) -> None:
