@@ -288,6 +288,13 @@ the checkout and origin commits for the current branch without changing anything
 need access to the configured Git `origin`; SSH remotes may require an unlocked key. A missing
 remote branch, detached HEAD or unreachable remote is reported as an error.
 
+The checkout updater refuses before changing the checkout if migration files or
+`storage/initialization.py` differ from the origin revision. It does not perform
+automatic backup, restore rehearsal or migration, and this file check is not a
+guarantee of schema compatibility. It changes checkout files before restarting the
+service, so do not use it as a zero-downtime update for a live workshop. For
+schema changes, stop writers and follow the explicit procedure below instead.
+
 Before updating a workspace containing records, stop its writers and make and verify a backup
 as described in [Data transfer and recovery](data.md). If the checkout has uncommitted changes
 or local commits that diverge from origin, the update refuses to proceed; preserve your work

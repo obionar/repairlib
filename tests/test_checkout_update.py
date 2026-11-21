@@ -54,6 +54,19 @@ class PullTests(unittest.TestCase):
         with self.assertRaises(CheckoutError):
             pull(self.work)
 
+    def test_schema_change_is_refused_before_checkout_changes(self):
+        before = git(self.work, "rev-parse", "HEAD")
+        migration = self.other / "src/repairlib/storage/migrations/0039_change.sql"
+        migration.parent.mkdir(parents=True)
+        migration.write_text("SELECT 1;\n", encoding="utf8")
+        git(self.other, "add", str(migration))
+        git(self.other, "commit", "-q", "-m", "migration")
+        git(self.other, "push", "-q", "origin", "HEAD:main")
+        with self.assertRaisesRegex(CheckoutError, "checkout was not changed"):
+            pull(self.work)
+        self.assertEqual(git(self.work, "rev-parse", "HEAD"), before)
+        self.assertFalse((self.work / "src/repairlib/storage/migrations/0039_change.sql").exists())
+
     def test_check_uses_current_branch(self):
         git(self.work, "checkout", "-q", "-b", "other")
         git(self.work, "push", "-q", "origin", "other")

@@ -59,6 +59,16 @@ def pull(repo: Path) -> tuple[str, str]:
     before = git(repo, "rev-parse", "HEAD")
     branch = current_branch(repo)
     git(repo, "fetch", "--quiet", "origin")
+    changed_schema = git(
+        repo, "diff", "--name-only", before, f"origin/{branch}", "--",
+        "src/repairlib/storage/migrations", "src/repairlib/storage/initialization.py",
+    )
+    if changed_schema:
+        raise CheckoutError(
+            "The update changes database schema files; the checkout was not changed. "
+            "Stop the service, create and verify a full backup, and follow the explicit "
+            "migration procedure in docs/data.md before restarting."
+        )
     git(repo, "merge", "--ff-only", "--quiet", f"origin/{branch}")
     return before, git(repo, "rev-parse", "HEAD")
 
