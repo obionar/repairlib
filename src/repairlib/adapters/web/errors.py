@@ -32,8 +32,11 @@ def typed_fields(form: dict[str, str]) -> list[tuple[str, str, str]]:
 def back_path(request: Request) -> str:
     """The page the person came from when it is on this origin, otherwise the dashboard."""
     referer = urlsplit(request.headers.get("referer", ""))
-    if (referer.scheme, referer.netloc) == (request.url.scheme, request.url.netloc) and referer.path.startswith("/") \
-            and not referer.path.startswith("//"):
+    # A leading backslash is a protocol-relative URL to browsers once normalised.
+    if ((referer.scheme, referer.netloc) == (request.url.scheme, request.url.netloc)
+            and referer.path.startswith("/") and not referer.path.startswith(("//", "/\\"))
+            and "\\" not in referer.path and referer.path.isprintable()
+            and referer.query.isprintable()):
         return referer.path + (f"?{referer.query}" if referer.query else "")
     return "/"
 

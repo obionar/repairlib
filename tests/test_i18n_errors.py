@@ -270,6 +270,21 @@ class ErrorPageTests(WebFixture, unittest.TestCase):
             self.assertIn("Χαμένο κείμενο", lost.text)
 
 
+class BackLinkTests(WebFixture, unittest.TestCase):
+    def test_error_page_back_link_never_leaves_the_origin(self):
+        with self.client() as client:
+            client.get("/")  # first request sets the session cookie
+            for referer in (r"https://evil.example/\evil.example",
+                            r"http://127.0.0.1/\evil.example",
+                            "http://127.0.0.1//evil.example"):
+                page = client.get("/no-such-page", headers={"Referer": referer})
+                self.assertEqual(page.status_code, 404)
+                self.assertNotIn("evil.example", page.text)
+                self.assertNotIn("/\\", page.text)
+            same = client.get("/no-such-page", headers={"Referer": "http://127.0.0.1/repairs?q=phone"})
+            self.assertIn('href="/repairs?q=phone"', same.text)
+
+
 class DateFormatTests(WebFixture, unittest.TestCase):
     def test_queue_dates_follow_the_language_without_time_or_age(self):
         with self.client() as client:
