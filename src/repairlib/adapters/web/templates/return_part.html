@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% set title = _('Review physical return') %}
+{% set ticket_context = repair_id %}
+{% block content %}
+  <h2>{{ review.description }}</h2>
+  <dl class="record-details">
+    <dt>{{ _('Originally consumed') }}</dt><dd>{{ review.consumed_quantity_milli|milli }} {{ review.unit }}</dd>
+    <dt>{{ _('Remaining to return') }}</dt><dd>{{ review.remaining_quantity_milli|milli }} {{ review.unit }}</dd>
+    <dt>{{ _('On hand') }}</dt><dd>{{ review.on_hand_milli|milli }} {{ review.unit }}</dd>
+  </dl>
+  {% if error %}
+    <p class="obi-notice" role="alert" id="form-error">{{ _(error) }}</p>
+    <p><a href="{{ request.url_for('return_part_review', repair_id=repair_id, charge_id=charge_id).path }}">{{ _('Open latest version') }}</a></p>
+  {% endif %}
+  {% for action, allowed, label in [
+    ('return_part_submit', review.can_return, _('Return physical part')),
+    ('intake_mistake_submit', review.can_correct_intake, _('Intake mistake: remove charge and return part')),
+  ] if allowed %}
+    {% set combined = action == 'intake_mistake_submit' %}
+    {% set values = forms[action] %}
+    {% set errors = field_errors if attempted == action else {} %}
+    <section aria-labelledby="{{ action }}-title">
+      <h2 id="{{ action }}-title">{{ label }}</h2>
+      {% if combined %}
+        <p>{{ _('Removes the whole charge and returns all remaining quantity from this consumption.') }}</p>
+      {% else %}
+        <p>{{ _('Returns stock and leaves the charge as recorded.') }}</p>
+      {% endif %}
+      <form method="post" action="{{ request.url_for(action, repair_id=repair_id, charge_id=charge_id).path }}"{% if attempted == action %} aria-describedby="form-error"{% endif %}>
+        {% for field in ('csrf', 'key', 'repair_revision', 'item_revision') %}
+          <input type="hidden" name="{{ field }}" value="{{ values[field] }}">
+        {% endfor %}
+        {% if combined %}
+          <input type="hidden" name="charge_revision" value="{{ values.charge_revision }}">
+        {% else %}
+          <label for="return-quantity">{{ _('Quantity returned') }}</label>
+          <input id="return-quantity" name="quantity" inputmode="decimal" required value="{{ values.quantity }}"{% if errors.quantity %} aria-invalid="true" aria-describedby="quantity-error"{% endif %}>
+          {% if errors.quantity %}<span id="quantity-error">{{ _(errors.quantity) }}</span>{% endif %}
+        {% endif %}
+        <label for="{{ action }}-reason">{{ _('Intake mistake reason') if combined else _('Return reason') }}</label>
+        <input id="{{ action }}-reason" name="reason" maxlength="200" required value="{{ values.reason }}"{% if errors.reason %} aria-invalid="true" aria-describedby="{{ action }}-reason-error"{% endif %}>
+        {% if errors.reason %}<span id="{{ action }}-reason-error">{{ _(errors.reason) }}</span>{% endif %}
+        <button type="submit">{{ label }}</button>
+      </form>
+    </section>
+  {% endfor %}
+  <p class="account-link"><a href="{{ request.url_for('repair_detail', repair_id=repair_id).path }}#payment-total">{{ _('Back to repair') }}</a></p>
+{% endblock %}

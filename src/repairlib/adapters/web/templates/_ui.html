@@ -1,0 +1,113 @@
+{% macro toast(message, tone='success', id='') %}
+  <details class="obi-toast" data-tone="{{ tone }}" open>
+    <summary><span aria-hidden="true">×</span><span class="rl-sr-only">{{ _('Dismiss') }}</span></summary>
+    <p{% if id %} id="{{ id }}"{% endif %} role="{{ 'alert' if tone == 'error' else 'status' }}">{{ _(message) }}</p>
+  </details>
+{% endmacro %}
+
+{% macro notice(message, tone='success') %}
+  {% if message %}
+    {% if tone in ('success', 'info') %}
+      {{ toast(message, tone) }}
+    {% else %}
+      <p class="obi-notice" data-tone="{{ tone }}" role="status">{{ _(message) }}</p>
+    {% endif %}
+  {% endif %}
+{% endmacro %}
+
+{% macro customer_notices(contact_warnings, possible_duplicate_id=none) %}
+  {% for warning in contact_warnings.values() %}{{ notice(warning, 'warning') }}{% endfor %}
+  {% if possible_duplicate_id %}
+    <p class="obi-notice" data-tone="warning" role="status">
+      {{ _('Possible duplicate customer.') }}
+      <a href="{{ request.url_for('customer_detail', customer_id=possible_duplicate_id).path }}">{{ _('Review existing customer') }}</a>
+    </p>
+  {% endif %}
+{% endmacro %}
+
+{% macro error(message, id) %}
+  <div class="obi-notice" data-tone="error" role="alert" id="{{ id }}">{{ _(message) }}</div>
+{% endmacro %}
+
+{% macro status(label, tone='info') %}
+  <span class="obi-status" data-tone="{{ tone }}">{{ _(label) }}</span>
+{% endmacro %}
+
+{% macro button(label, tone='') %}
+  <button type="submit" class="obi-button{% if tone %} obi-button--{{ tone }}{% endif %}">{{ _(label) }}</button>
+{% endmacro %}
+
+{% macro action(path, label, tone='') %}
+  <a href="{{ path }}" class="obi-button{% if tone %} obi-button--{{ tone }}{% endif %}">{{ _(label) }}</a>
+{% endmacro %}
+
+{% macro panel(id, title, count='', path='', link='', fold=false, expanded=true) %}
+  <section class="obi-panel" aria-labelledby="{{ id }}">
+    {% if fold %}
+      <details{% if expanded %} open{% endif %}>
+        <summary class="obi-panel-bar"><h2 id="{{ id }}">{{ _(title) }}{% if count %} <span class="obi-panel-count">{{ count }}</span>{% endif %}</h2></summary>
+        {{ caller() }}
+      </details>
+    {% else %}
+      <header class="obi-panel-bar">
+        <h2 id="{{ id }}">{{ _(title) }}{% if count %} <span class="obi-panel-count">{{ count }}</span>{% endif %}</h2>
+        {% if path %}<a href="{{ path }}">{{ _(link) }}</a>{% endif %}
+      </header>
+      {{ caller() }}
+    {% endif %}
+  </section>
+{% endmacro %}
+
+{% macro table(label, wide=false, css='') %}
+  {% if wide %}<p class="obi-table-hint">{{ _('Scroll the table to see more columns.') }}</p>{% endif %}
+  <div class="obi-table-scroll" tabindex="0" role="region" aria-label="{{ _(label) }}">
+    <table class="obi-table {{ css }}">{{ caller() }}</table>
+  </div>
+{% endmacro %}
+
+{% macro empty(message) %}
+  <p class="obi-panel-content">{{ _(message) }}</p>
+{% endmacro %}
+
+{% macro pager(path, filters, before, next_before, newest, older) %}
+  {% if before or next_before %}
+    <nav class="obi-pager" aria-label="{{ _('Pagination') }}">
+      {% if before %}<a href="{{ path }}{% if filters %}?{{ filters|urlencode }}{% endif %}">{{ _(newest) }}</a>{% endif %}
+      {% if next_before %}<a href="?{{ dict(filters, before=next_before)|urlencode }}">{{ _(older) }}</a>{% endif %}
+    </nav>
+  {% endif %}
+{% endmacro %}
+
+{% macro search(path, filtered) %}
+  <form class="obi-search" method="get" action="{{ path }}" role="search">
+    <div class="obi-search-fields">{{ caller() }}</div>
+    <div class="obi-actions">
+      {{ button('Search') }}
+      {% if filtered %}<a href="{{ path }}">{{ _('Clear filters') }}</a>{% endif %}
+    </div>
+  </form>
+{% endmacro %}
+
+{% macro search_input(id, label, value) %}
+  <div class="obi-field">
+    <label for="{{ id }}">{{ _(label) }}</label>
+    <input id="{{ id }}" name="q" value="{{ value }}" maxlength="100" type="search">
+  </div>
+{% endmacro %}
+
+{% macro select_filter(name, label, value, options) %}
+  <div class="obi-field">
+    <label for="filter-{{ name }}">{{ _(label) }}</label>
+    <select id="filter-{{ name }}" name="{{ name }}">
+      {% for key, text in options %}<option value="{{ key }}"{% if key == value %} selected{% endif %}>{{ _(text) }}</option>{% endfor %}
+    </select>
+  </div>
+{% endmacro %}
+
+{% macro local_time(value, date_only=false) %}
+  {% if value %}<time datetime="{{ value }}">{{ value|localtime(date_only=date_only) }}</time>{% endif %}
+{% endmacro %}
+
+{% macro discount_value(value) %}
+  {% if value.kind == 'none' %}{{ _('No discount') }}{% elif value.kind == 'percent' %}{{ value.value }}%{% elif value.value is number %}{{ value.value|cents }} EUR{% else %}{{ value.value }} EUR{% endif %}
+{% endmacro %}

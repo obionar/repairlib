@@ -1,0 +1,124 @@
+{% extends "base.html" %}
+{% import "_ui.html" as ui with context %}
+{% set title = _('Edit inventory item') if item_id else _('New inventory item') if form else _('Inventory') %}
+{% set register = page is defined or form is defined %}
+
+{% block content %}
+      {% if error %}<p class="obi-notice" role="alert" id="form-error">{{ _(error) }}</p>{% endif %}
+      {% if review_id %}
+        <p><a href="{{ request.url_for('inventory_detail', item_id=review_id).path }}">{{ _('Open latest version') }}</a></p>
+      {% elif form %}
+        {% set action = request.url_for('inventory_save', item_id=item_id) if item_id else request.url_for('inventory_create') %}
+        {% if stale %}
+          <p><a href="{{ request.url_for('inventory_edit', item_id=item_id).path }}">{{ _('Open latest version') }}</a></p>
+        {% endif %}
+        <form method="post" action="{{ action.path }}"{% if error %} aria-describedby="form-error"{% endif %}>
+          <input type="hidden" name="csrf" value="{{ csrf }}">
+          <input type="hidden" name="key" value="{{ request_key }}">
+          {% if item_id %}<input type="hidden" name="revision" value="{{ revision }}">{% endif %}
+          {% call ui.panel('inventory-form-details', 'Item') %}
+          <div class="obi-panel-body">
+            <div class="obi-intake-grid">
+              {% for field, label in [('sku', _('SKU')), ('description', _('Description')), ('category', _('Category')),
+                                      ('manufacturer', _('Manufacturer')), ('part_number', _('Part number')),
+                                      ('package', _('Package')), ('specifications', _('Specifications')),
+                                      ('bin', _('Bin')), ('unit', _('Unit')), ('low_stock', _('Low-stock threshold')),
+                                      ('purchase_cost', _('Purchase cost')),
+                                      ('selling_price', _('Selling price (EUR)'))] %}
+                <label class="rl-sr-only" for="{{ field }}">{{ label }}</label>
+                {% set invalid = field_errors.get(field) %}
+                {% if field == 'specifications' %}
+                  <textarea class="obi-span" id="{{ field }}" name="{{ field }}" placeholder="{{ label }}" maxlength="{{ limits[field] }}"{% if invalid %} aria-invalid="true" aria-describedby="{{ field }}-error"{% endif %}>{{ details.get(field, '') }}</textarea>
+                {% else %}
+                  <input id="{{ field }}" name="{{ field }}" value="{{ details.get(field, '') }}" placeholder="{{ label }}"{% if field in limits %} maxlength="{{ limits[field] }}"{% else %} inputmode="decimal"{% endif %}{% if field in ('sku', 'description', 'unit', 'selling_price') %} required{% endif %}{% if invalid %} aria-invalid="true" aria-describedby="{{ field }}-error"{% endif %}>
+                {% endif %}
+                {% if invalid %}<span id="{{ field }}-error">{{ _(invalid) }}</span>{% endif %}
+              {% endfor %}
+            </div>
+          </div>
+          {% endcall %}
+          <div class="obi-actions">
+            <button type="submit">{{ _('Save item') if item_id else _('Create item') }}</button>
+            <a href="{{ request.url_for('inventory_list').path }}">{{ _('Back to inventory') }}</a>
+          </div>
+        </form>
+      {% elif page %}
+        {% set path = request.url_for('inventory_list').path %}
+        {% call ui.panel('inventory-search-title', 'Search') %}
+        <form class="rl-compact-search" method="get" action="{{ path }}" role="search">
+          <label class="rl-sr-only" for="inventory-search">{{ _('Search SKU, description, manufacturer or part number') }}</label>
+          <input id="inventory-search" type="search" name="q" value="{{ query }}" maxlength="100" placeholder="{{ _('Search') }}">
+          {% if include_archived %}<input type="hidden" name="include_archived" value="true">{% endif %}
+          {% if low_stock %}<input type="hidden" name="low_stock" value="true">{% endif %}
+          <button type="submit" aria-label="{{ _('Search') }}">
+            <svg class="rl-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="10" cy="10" r="6"/><path d="m15 15 5 5"/></svg>
+          </button>
+        </form>
+        <details class="rl-search-filters"{% if category or include_archived or low_stock %} open{% endif %}>
+          <summary>{{ _('Filters') }}</summary>
+          <div class="obi-intake-grid">
+            <div class="obi-field">
+              <label for="filter-category">{{ _('Category') }}</label>
+              <input id="filter-category" name="category" value="{{ category }}" list="inventory-categories" maxlength="80">
+              <datalist id="inventory-categories">
+                {% for name in categories %}<option value="{{ name }}">{% endfor %}
+              </datalist>
+            </div>
+            <label class="obi-check" for="include-archived">
+              <input id="include-archived" type="checkbox" name="include_archived" value="true"{% if include_archived %} checked{% endif %}>
+              {{ _('Include archived items') }}
+            </label>
+            <label class="obi-check" for="low-stock">
+              <input id="low-stock" type="checkbox" name="low_stock" value="true"{% if low_stock %} checked{% endif %}>
+              {{ _('Low stock only (active items)') }}
+            </label>
+          </div>
+          <div class="obi-actions">
+            {{ ui.button('Apply filters') }}
+            {% if query or category or include_archived or low_stock %}<a href="{{ path }}">{{ _('Clear filters') }}</a>{% endif %}
+          </div>
+        </details>
+        {% endcall %}
+        {% call ui.panel('inventory-results', 'Inventory', path=request.url_for('inventory_new').path if can_write else '', link='New inventory item') %}
+          {% if page.items %}
+            {% call ui.table('Inventory', wide=true) %}
+              <thead><tr>
+                <th scope="col">{{ _('SKU') }}</th>
+                <th scope="col">{{ _('Category') }}</th>
+                <th scope="col">{{ _('Bin') }}</th>
+                <th scope="col" class="obi-number">{{ _('On hand') }}</th>
+                <th scope="col" class="obi-number">{{ _('Low-stock threshold') }}</th>
+                <th scope="col" class="obi-number">{{ _('Selling price (EUR)') }}</th>
+                {% if can_write %}<th scope="col" class="obi-number">{{ _('Purchase cost (EUR)') }}</th>{% endif %}
+              </tr></thead>
+              <tbody>
+                {% for item in page.items %}
+                  <tr>
+                    <th scope="row">
+                      <a class="obi-id" href="{{ request.url_for('inventory_detail', item_id=item.id).path }}">{{ item.sku }}</a>
+                      <span class="obi-row-detail">{{ item.description }}</span>
+                      {% if item.archived_at %}{{ ui.status('Archived') }}{% endif %}
+                    </th>
+                    <td>{{ item.category or '—' }}</td>
+                    <td>{{ item.bin or '—' }}</td>
+                    <td class="obi-number">
+                      {{ item.on_hand_milli|milli }} {{ item.unit }}
+                      {% if not item.archived_at and item.on_hand_milli <= item.low_stock_milli %}
+                        <span class="obi-row-detail">{{ ui.status('Out of stock' if item.on_hand_milli == 0 else 'Low stock', 'warning') }}</span>
+                      {% endif %}
+                    </td>
+                    <td class="obi-number">{{ item.low_stock_milli|milli }} {{ item.unit }}</td>
+                    <td class="obi-number">{{ item.selling_price_cents|cents }}</td>
+                    {% if can_write %}<td class="obi-number">{{ '—' if item.purchase_cost_cents is none else item.purchase_cost_cents|cents }}</td>{% endif %}
+                  </tr>
+                {% endfor %}
+              </tbody>
+            {% endcall %}
+          {% else %}
+            {{ ui.empty('No inventory items on this page.') }}
+          {% endif %}
+          {{ ui.pager(path, {'q': query, 'category': category, 'include_archived': include_archived, 'low_stock': low_stock},
+                      before, page.next_before, 'Newest items', 'Older items') }}
+        {% endcall %}
+      {% endif %}
+{% endblock %}

@@ -1,0 +1,61 @@
+{% import '_ui.html' as ui with context %}
+<!doctype html>
+<html lang="{{ lang() }}">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ _('Repair {id} summary', id=view.repair.id) }} · {{ view.shop_name }}</title>
+  <link rel="stylesheet" href="{{ request.url_for('static', path='print.css').path }}">
+</head>
+<body class="print-summary">
+  <p class="print-hint"><a href="{{ request.url_for('repair_detail', repair_id=view.repair.id).path }}">{{ _('Back to repair') }}</a> · {{ _("Use your browser's Print command to print or save as PDF.") }}</p>
+  <header>
+    <p class="print-shop">{{ view.shop_name }}</p>
+    {% if view.shop_address %}<p class="print-contact">{{ view.shop_address }}</p>{% endif %}
+    {% if view.shop_phone %}<p class="print-contact">{{ view.shop_phone }}</p>{% endif %}
+    <h1>{{ _('Repair {id}', id=view.repair.id) }}</h1>
+  </header>
+  <dl>
+    <dt>{{ _('Customer') }}</dt><dd>{{ view.customer_name or _('None') }}{% if view.customer_phone %} · {{ view.customer_phone }}{% endif %}</dd>
+    <dt>{{ _('Device') }}</dt><dd>{{ view.repair.device_type or _('Device') }} {{ view.repair.brand }} {{ view.repair.model }}{% if view.repair.serial %} · {{ _('Serial') }} {{ view.repair.serial }}{% endif %}</dd>
+    <dt>{{ _('Reported issue') }}</dt><dd class="multiline">{{ view.repair.reported_issue }}</dd>
+    <dt>{{ _('Repair status') }}</dt><dd>{{ stage_label(view.repair.stage) }}</dd>
+    <dt>{{ _('Received') }}</dt><dd>{{ ui.local_time(view.repair.created_at) }}</dd>
+    {% if view.repair.picked_up_at %}<dt>{{ _('Picked up') }}</dt><dd>{{ ui.local_time(view.repair.picked_up_at) }}</dd>{% endif %}
+    {% if view.payment_paid is not none %}<dt>{{ _('Payment') }}</dt><dd>{{ _('Paid') if view.payment_paid else _('Not paid') }}</dd>{% endif %}
+  </dl>
+  {% if view.charges['items'] %}
+    <h2>{{ _('Parts and labour') }}</h2>
+    <table>
+      <thead><tr><th scope="col">{{ _('Description') }}</th><th scope="col" class="numeric">{{ _('Quantity') }}</th><th scope="col" class="numeric">{{ _('Unit price') }}</th><th scope="col" class="numeric">{{ _('Total') }}</th></tr></thead>
+      <tbody>
+        {% for item in view.charges['items'] %}<tr><td>{{ item.description }}</td><td class="numeric">{{ item.quantity_milli|milli }} {{ item.unit }}</td><td class="numeric">{{ item.unit_price_cents|cents }}</td><td class="numeric">{{ item.line_total_cents|cents }}</td></tr>{% endfor %}
+      </tbody>
+      <tfoot>
+        <tr><th scope="row" colspan="3">{{ _('Parts') }}</th><td class="numeric">{{ view.charges.parts_subtotal_cents|cents }}</td></tr>
+        <tr><th scope="row" colspan="3">{{ _('Labour') }}</th><td class="numeric">{{ view.charges.labor_subtotal_cents|cents }}</td></tr>
+        {% if view.charges.discount_cents %}<tr><th scope="row" colspan="3">{{ _('Discount') }}</th><td class="numeric">{{ view.charges.discount_cents|cents }}</td></tr>{% endif %}
+        <tr><th scope="row" colspan="3">{{ _('Total (EUR)') }}</th><td class="numeric"><strong>{{ view.charges.total_cents|cents }}</strong></td></tr>
+      </tfoot>
+    </table>
+    <p class="small">{{ _('Totals describe the work; this document is not a receipt or invoice.') }}</p>
+  {% endif %}
+  {% if view.terms %}
+    <section class="print-terms">
+      <h2>{{ _('Terms') }}</h2>
+      <p class="multiline">{{ view.terms }}</p>
+    </section>
+  {% endif %}
+  <section class="print-signature">
+    <p><span class="print-line"></span> {{ _('Customer signature') }}</p>
+    <p><span class="print-line"></span> {{ _('Date') }}</p>
+  </section>
+  {% if view.entries %}
+    <h2>{{ _('Work log') }}</h2>
+    {% if view.entries_truncated %}<p class="small">{{ _('Showing the latest {count} work entries.', count=view.entries|length) }}</p>{% endif %}
+    <ol class="entries">
+      {% for entry in view.entries %}<li><strong>{{ _(entry.kind|title) }}</strong> · {{ entry.author_username }} · {{ ui.local_time(entry.created_at) }}<br><span class="multiline">{{ entry.body }}</span></li>{% endfor %}
+    </ol>
+  {% endif %}
+</body>
+</html>

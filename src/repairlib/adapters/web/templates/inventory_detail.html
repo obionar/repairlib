@@ -1,0 +1,129 @@
+{% extends "base.html" %}
+{% import '_ui.html' as ui with context %}
+{% set title = item.sku %}
+{% set detail = request.url_for('inventory_detail', item_id=item.id).path %}
+{% block content %}
+  {% if error %}<p class="obi-notice" role="alert" id="form-error">{{ _(error) }}</p>{% endif %}
+  {% if stale and not reverse_target %}<p><a href="{{ detail }}">{{ _('Open latest version') }}</a></p>{% endif %}
+  {% if reverse_target %}
+    {% call ui.panel('reverse-review', 'Review stock reversal') %}
+      <div class="obi-panel-body">
+        <p><strong>{{ _('Review reversal of movement #{id}', id=reverse_target.id) }}</strong></p>
+        <dl class="record-details">
+          <dt>{{ _('On hand') }}</dt><dd>{{ item.on_hand_milli|milli }} {{ item.unit }}</dd>
+          <dt>{{ _('Original quantity') }}</dt><dd>{{ '-' if reverse_target.quantity_milli < 0 }}{{ (reverse_target.quantity_milli|abs)|milli }} {{ item.unit }}</dd>
+          {% if reverse_target.reason %}<dt>{{ _('Original reason') }}</dt><dd>{{ reverse_target.reason }}</dd>{% endif %}
+        </dl>
+        {% if reverse_retry %}
+          <form method="post" action="{{ request.url_for('inventory_reverse', item_id=item.id, movement_id=reverse_target.id).path }}" aria-labelledby="reverse-review" aria-describedby="form-error">
+            <input type="hidden" name="csrf" value="{{ csrf }}">
+            <input type="hidden" name="key" value="{{ reverse_key }}">
+            <input type="hidden" name="revision" value="{{ item.revision if stale else stock_values.revision }}">
+            {% if before %}<input type="hidden" name="before" value="{{ before }}">{% endif %}
+            {% if stale %}<input type="hidden" name="reviewed" value="1">{% endif %}
+            <label for="review-reversal-reason">{{ _('Reason') }}</label>
+            <input id="review-reversal-reason" name="reason" value="{{ stock_values.reason }}" maxlength="200" required{% if field_errors.get('reason') %} aria-invalid="true" aria-describedby="review-reversal-error"{% endif %}>
+            {% if field_errors.get('reason') %}<span id="review-reversal-error">{{ _(field_errors.reason) }}</span>{% endif %}
+            {{ ui.button('Review and reverse') }}
+          </form>
+        {% elif stock_values.reason %}
+          <p>{{ _('Draft reason') }}: {{ stock_values.reason }}</p>
+        {% endif %}
+        <p><a href="{{ detail }}{% if before %}?before={{ before }}{% endif %}#stock-movements">{{ _('Back to movements') }}</a></p>
+      </div>
+    {% endcall %}
+  {% endif %}
+  {% if item.archived_at %}<p>{{ _('Archived {when}', when=item.archived_at) }}</p>{% endif %}
+  <p>{{ _('Revision {number}', number=item.revision) }}</p>
+  <dl class="record-details">
+    <dt>{{ _('SKU') }}</dt><dd>{{ item.sku }}</dd>
+    <dt>{{ _('On hand') }}</dt><dd>{{ item.on_hand_milli|milli }} {{ item.unit }}</dd>
+    {% for field, label in [('description', _('Description')), ('category', _('Category')),
+                            ('manufacturer', _('Manufacturer')), ('part_number', _('Part number')),
+                            ('package', _('Package')), ('specifications', _('Specifications')),
+                            ('bin', _('Bin')), ('unit', _('Unit'))] if item[field] %}
+      <dt>{{ label }}</dt><dd class="customer-multiline">{{ item[field] }}</dd>
+    {% endfor %}
+    <dt>{{ _('Low-stock threshold') }}</dt><dd>{{ item.low_stock_milli|milli }} {{ item.unit }}</dd>
+    {% if can_write %}<dt>{{ _('Purchase cost') }}</dt><dd>{{ '—' if item.purchase_cost_cents is none else item.purchase_cost_cents|cents }} EUR</dd>{% endif %}
+    <dt>{{ _('Selling price') }}</dt><dd>{{ item.selling_price_cents|cents }} EUR</dd>
+  </dl>
+  {% set active_stock = can_write and not item.archived_at %}
+  {% if active_stock %}
+    {% for action, heading in [('receive', _('Receive stock')), ('adjust', _('Adjust stock'))] %}
+      {% set values = stock_values if stock_action == action else {} %}
+      <h2 id="{{ action }}-heading">{{ heading }}</h2>
+      <form method="post" action="{{ request.url_for('inventory_' ~ action, item_id=item.id).path }}" aria-labelledby="{{ action }}-heading"{% if error and stock_action == action %} aria-describedby="form-error"{% endif %}>
+        <input type="hidden" name="csrf" value="{{ csrf }}">
+        <input type="hidden" name="key" value="{{ values.get('key') or keys[action] }}">
+        <input type="hidden" name="revision" value="{{ values.get('revision') or item.revision }}">
+        {% if action == 'adjust' %}
+          <label for="adjust-direction">{{ _('Direction') }}</label>
+          <select id="adjust-direction" name="direction">
+            <option value="remove"{% if values.get('direction') != 'add' %} selected{% endif %}>{{ _('Remove from stock') }}</option>
+            <option value="add"{% if values.get('direction') == 'add' %} selected{% endif %}>{{ _('Add to stock') }}</option>
+          </select>
+        {% endif %}
+        {% for field, label in [('quantity', _('Quantity ({unit})', unit=item.unit)),
+                                ('reason', _('Reason') if action == 'adjust' else _('Note (optional)'))] %}
+          {% set invalid = field_errors.get(field) if stock_action == action else none %}
+          <label for="{{ action }}-{{ field }}">{{ label }}</label>
+          <input id="{{ action }}-{{ field }}" name="{{ field }}" value="{{ values.get(field, '') }}"{% if field == 'quantity' %} inputmode="decimal" required{% else %} maxlength="200"{% if action == 'adjust' %} required{% endif %}{% endif %}{% if invalid %} aria-invalid="true" aria-describedby="{{ action }}-{{ field }}-error"{% endif %}>
+          {% if invalid %}<span id="{{ action }}-{{ field }}-error">{{ _(invalid) }}</span>{% endif %}
+        {% endfor %}
+        <button type="submit">{{ heading }}</button>
+      </form>
+    {% endfor %}
+  {% endif %}
+  <h2 id="stock-movements">{{ _('Stock movements') }}</h2>
+  {% if movements.movements %}
+    <div class="table-scroll">
+      <table class="charge-table">
+        <thead><tr><th scope="col">{{ _('When') }}</th><th scope="col">{{ _('Movement') }}</th><th scope="col" class="numeric">{{ _('Quantity') }}</th><th scope="col" class="numeric">{{ _('On hand after') }}</th><th scope="col">{{ _('Reason') }}</th><th scope="col">{{ _('By') }}</th>{% if active_stock %}<th scope="col">{{ _('Reverse') }}</th>{% endif %}</tr></thead>
+        <tbody>
+          {% for movement in movements.movements %}
+            <tr>
+              <td>{{ movement.created_at }}</td>
+              <td>{{ {'receive': _('Receipt'), 'adjust': _('Adjustment'), 'reversal': _('Reversal'), 'consume': _('Repair consumption'), 'return': _('Repair return')}[movement.kind] }}{% if movement.reverses_id %} · #{{ movement.reverses_id }}{% endif %} #{{ movement.id }}</td>
+              <td class="numeric">{{ '-' if movement.quantity_milli < 0 }}{{ (movement.quantity_milli|abs)|milli }}</td>
+              <td class="numeric">{{ movement.on_hand_after_milli|milli }}</td>
+              <td>{{ movement.reason }}</td>
+              <td>{{ movement.actor_username }}</td>
+              {% if active_stock %}<td>
+                {% if movement.reversed_by_id %}{{ _('Reversed by #{number}', number=movement.reversed_by_id) }}
+                {% elif movement.kind in ('receive', 'adjust') and (not reverse_target or movement.id != reverse_target.id) %}
+                  <form method="post" action="{{ request.url_for('inventory_reverse', item_id=item.id, movement_id=movement.id).path }}">
+                    <input type="hidden" name="csrf" value="{{ csrf }}">
+                    <input type="hidden" name="key" value="{{ keys['reverse'] }}-{{ movement.id }}">
+                    <input type="hidden" name="revision" value="{{ item.revision }}">
+                    {% if before %}<input type="hidden" name="before" value="{{ before }}">{% endif %}
+                    <label for="reverse-{{ movement.id }}">{{ _('Reason for reversing #{number}', number=movement.id) }}</label>
+                    <input id="reverse-{{ movement.id }}" name="reason" maxlength="200" required>
+                    <button type="submit">{{ _('Reverse') }}</button>
+                  </form>
+                {% endif %}
+              </td>{% endif %}
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% if movements.next_before %}<p><a href="?before={{ movements.next_before }}#stock-movements">{{ _('Older movements') }}</a></p>{% endif %}
+    {% if before %}<p><a href="{{ detail }}#stock-movements">{{ _('Newest movements') }}</a></p>{% endif %}
+  {% else %}
+    <p>{{ _('No stock movements yet.') }}</p>
+  {% endif %}
+  {% if active_stock %}
+    <p><a href="{{ request.url_for('inventory_edit', item_id=item.id).path }}">{{ _('Edit inventory item') }}</a></p>
+  {% endif %}
+  {% if can_write %}
+    {% set action = 'archive' if active_stock else 'restore' %}
+    <form method="post" action="{{ request.url_for('inventory_' ~ action, item_id=item.id).path }}">
+      <input type="hidden" name="csrf" value="{{ csrf }}">
+      <input type="hidden" name="key" value="{{ keys[action] }}">
+      <input type="hidden" name="revision" value="{{ item.revision }}">
+      <button type="submit">{{ _('Archive inventory item') if active_stock else _('Restore inventory item') }}</button>
+    </form>
+  {% endif %}
+  <p class="account-link"><a href="{{ request.url_for('inventory_list').path }}{% if item.archived_at %}?include_archived=true{% endif %}">{{ _('Back to inventory') }}</a></p>
+{% endblock %}

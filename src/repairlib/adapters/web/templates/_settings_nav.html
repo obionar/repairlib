@@ -1,0 +1,9 @@
+{% import '_ui.html' as ui with context %}
+{% call ui.panel('settings-navigation', 'Administration') %}
+  <nav class="obi-panel-body obi-actions" aria-labelledby="settings-navigation">
+    {% for route, label in [('settings_page', _('Shop settings')), ('user_list', _('Users')), ('printer_page', _('Label printer'))] %}
+      {% set path = request.url_for(route).path %}
+      <a href="{{ path }}"{% if request.url.path == path %} aria-current="page"{% endif %}>{{ label }}</a>
+    {% endfor %}
+  </nav>
+{% endcall %}

@@ -1,0 +1,9 @@
+{% set pickup_label = 'Picked up' if repair.picked_up_at else 'Not picked up' %}
+<div id="pickup"{% if not handover_available %} title="{{ _('Finish the repair before changing pickup status.') }}"{% elif repair.picked_up_at %} title="{{ _('Picked up {when}', when=repair.picked_up_at|localtime) }}"{% endif %}>
+  <label class="rl-sr-only" for="pickup-state">{{ _('Pickup status') }}</label>
+  <select id="pickup-state" name="pickup" form="{{ status_form_id }}"{% if not can_write or not handover_available %} disabled{% endif %}>
+    <option value=""{% if not pickup_draft or not handover_available %} selected disabled hidden{% endif %}>{{ _(pickup_label) }}</option>
+    <option value="0"{% if not repair.picked_up_at %} disabled{% elif handover_available and pickup_draft == '0' %} selected{% endif %}>{{ _('Not picked up') }}</option>
+    <option value="1"{% if repair.picked_up_at %} disabled{% elif handover_available and pickup_draft == '1' %} selected{% endif %}>{{ _('Picked up') }}</option>
+  </select>
+</div>

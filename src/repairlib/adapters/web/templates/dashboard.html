@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% import "_ui.html" as ui with context %}
+{% import "_repair_rows.html" as rows with context %}
+{% set title = _('Dashboard') %}
+
+{% set repairs_path = request.url_for('repair_list').path %}
+{% block content %}
+  {% call ui.panel('open-work', 'Open work', _('{count} open', count=dashboard.open_count),
+                   repairs_path ~ '?queue=open', 'View open repairs') %}
+    {% if dashboard.open_work %}
+      {{ rows.table(dashboard.open_work, 'Open work', 'Created', queue=true) }}
+    {% else %}
+      {{ ui.empty('No open work.') }}
+    {% endif %}
+  {% endcall %}
+
+  {% call ui.panel('awaiting-pickup', 'Awaiting pickup', _('{count} waiting', count=dashboard.pickup_count),
+                   repairs_path ~ '?queue=pickup', 'View repairs awaiting pickup') %}
+    {% if dashboard.awaiting_pickup %}
+      {{ rows.table(dashboard.awaiting_pickup, 'Awaiting pickup', 'Updated', queue=true) }}
+    {% else %}
+      {{ ui.empty('No repairs awaiting pickup.') }}
+    {% endif %}
+  {% endcall %}
+
+  <div class="obi-dashboard-context">
+    {% call ui.panel('low-stock', 'Low stock', _('{count} low-stock items', count=dashboard.low_stock_count),
+                     request.url_for('inventory_list').path ~ '?low_stock=true', 'View low-stock inventory') %}
+      {% if dashboard.low_stock %}
+        {% call ui.table('Low stock') %}
+          <thead><tr><th scope="col">{{ _('SKU') }}</th><th scope="col" class="obi-number">{{ _('On hand') }}</th><th scope="col" class="obi-number">{{ _('Low-stock threshold') }}</th></tr></thead>
+          <tbody>
+            {% for item in dashboard.low_stock %}
+              <tr>
+                <th scope="row">
+                  <a class="obi-id" href="{{ request.url_for('inventory_detail', item_id=item.id).path }}">{{ item.sku }}</a>
+                  <span class="obi-row-detail">{{ item.description }}</span>
+                </th>
+                <td class="obi-number">{{ item.on_hand_milli|milli }} {{ item.unit }}</td>
+                <td class="obi-number">{{ item.low_stock_milli|milli }} {{ item.unit }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        {% endcall %}
+      {% else %}
+        {{ ui.empty('No low-stock items.') }}
+      {% endif %}
+    {% endcall %}
+
+    {% call ui.panel('recent-customers', 'Recent customers', '',
+                     request.url_for('customer_list').path, 'View all customers') %}
+      {% if dashboard.recent_customers %}
+        {% call ui.table('Recent customers') %}
+          <thead><tr><th scope="col">{{ _('Customer') }}</th><th scope="col">{{ _('Phone') }}</th><th scope="col">{{ _('Email') }}</th></tr></thead>
+          <tbody>
+            {% for customer in dashboard.recent_customers %}
+              <tr>
+                <th scope="row"><a href="{{ request.url_for('customer_detail', customer_id=customer.id).path }}">{{ customer.name }}</a></th>
+                <td>{{ customer.phone or '—' }}</td>
+                <td>{{ customer.email or '—' }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        {% endcall %}
+      {% else %}
+        {{ ui.empty('No customers on this page.') }}
+      {% endif %}
+    {% endcall %}
+  </div>
+{% endblock %}

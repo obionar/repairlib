@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% import '_ui.html' as ui with context %}
+{% import '_shell.html' as shell with context %}
+{% set title = _(heading) %}
+{% block content %}
+  {% if message %}<p>{{ _(message) }}</p>{% endif %}
+  {% if error %}{{ ui.error(error, 'form-error') }}{% endif %}
+  {% if account_page %}
+    {% call ui.panel('account-profile', 'Profile') %}
+      <dl class="record-details obi-panel-body">
+        <dt>{{ _('Username') }}</dt><dd>{{ username }}</dd>
+        <dt>{{ _('Role') }}</dt><dd>{{ _(role|title) }}</dd>
+        <dt>{{ _('Shop name') }}</dt><dd>{{ shell_principal.shop_name }}</dd>
+      </dl>
+    {% endcall %}
+    {% call ui.panel('account-language', 'Language') %}
+      <div class="obi-panel-body">{{ shell.language_form() }}</div>
+    {% endcall %}
+    {% call ui.panel('account-api', 'API tokens') %}
+      <p class="obi-panel-content"><a href="{{ request.url_for('api_tokens').path }}">{{ _('Manage API tokens') }}</a></p>
+    {% endcall %}
+    {% if role == 'admin' %}{% include '_settings_nav.html' %}{% endif %}
+  {% elif action %}
+    <form method="post" action="/{{ action }}"{% if error %} aria-describedby="form-error"{% endif %}>
+      <input type="hidden" name="csrf" value="{{ csrf }}">
+      {% if switching %}<p class="obi-panel-content" role="status">{{ _('Signed out. Choose the user for this device.') }}</p>{% endif %}
+      {% if action == "setup" %}
+        <fieldset class="obi-fieldset">
+        <legend>{{ _('Shop profile') }}</legend>
+        <label class="rl-sr-only" for="shop">{{ _('Shop name') }}</label>
+        <input id="shop" name="shop" value="{{ fields.shop }}" placeholder="{{ _('Shop name') }}" autocomplete="organization" maxlength="160" required>
+        <label class="rl-sr-only" for="timezone">{{ _('Timezone') }}</label>
+        <input id="timezone" name="timezone" value="{{ fields.timezone }}" placeholder="{{ _('Timezone') }}" aria-describedby="timezone-help" required>
+        <span id="timezone-help">{{ _('Use an IANA name such as Europe/Nicosia.') }}</span>
+        </fieldset>
+        <fieldset class="obi-fieldset">
+        <legend>{{ _('Administrator') }}</legend>
+      {% endif %}
+      <label class="rl-sr-only" for="username">{{ _('Admin username') if action == "setup" else _('Username') }}</label>
+      <input id="username" name="username" value="{{ fields.username }}" placeholder="{{ _('Admin username') if action == "setup" else _('Username') }}" autocomplete="username" maxlength="80" required>
+      <label class="rl-sr-only" for="password">{{ _('Password') }}</label>
+      <input id="password" name="password" type="password" placeholder="{{ _('Password') }}" maxlength="1024" autocomplete="{{ 'new-password' if action == 'setup' else 'current-password' }}" required{% if action == 'setup' %} aria-describedby="password-help"{% endif %}>
+      {% if action == 'login' %}
+        <label class="checkbox-label" for="session-only"><input id="session-only" name="session_only" type="checkbox" value="1"{% if session_only %} checked{% endif %}> {{ _('Sign in for this browser session only') }}</label>
+      {% endif %}
+      {% if action == 'setup' %}
+        <span id="password-help">{{ _('Enter a password of 1 to 1024 characters.') }}</span>
+        </fieldset>
+        {{ ui.button('Create workspace', 'primary') }}
+      {% else %}
+        {{ ui.button('Sign in', 'primary') }}
+      {% endif %}
+    </form>
+  {% endif %}
+{% endblock %}

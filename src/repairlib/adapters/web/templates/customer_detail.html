@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% import "_ui.html" as ui with context %}
+{% import "_repair_rows.html" as rows with context %}
+{% set title = record.name %}
+{% block content %}
+  <section class="obi-panel" aria-labelledby="customer-record">
+  <header class="obi-panel-bar">
+    <h2 id="customer-record">{{ record.name }}</h2>
+    {% if can_write %}<a href="{{ request.url_for('customer_edit', customer_id=record.id).path }}">{{ _('Edit customer') }}</a>{% endif %}
+  </header>
+  <div class="obi-panel-body">
+  {{ ui.customer_notices(contact_warnings, possible_duplicate_id) }}
+  {% set labels = {'name': _('Name'), 'phone': _('Phone'), 'email': _('Email'), 'address': _('Address')} %}
+  <dl class="rl-ticket-facts rl-inline-facts">
+    {% for field in ('name', 'phone', 'email', 'address') %}
+      <div><dt>{{ labels[field] }}:</dt> <dd class="customer-multiline">{{ record[field] or '—' }}</dd></div>
+    {% endfor %}
+    <div><dt>{{ _('Created') }}:</dt> <dd>{{ ui.local_time(record.created_at) }}</dd></div>
+    <div><dt>{{ _('Archive status') }}:</dt> <dd>{% if record.archived_at %}{{ _('Archived customer') }} · {{ ui.local_time(record.archived_at) }}{% else %}{{ _('Active') }}{% endif %}</dd></div>
+    <div class="rl-customer-notes"><dt>{{ _('Notes') }}:</dt> <dd class="customer-multiline">{{ record.notes or '—' }}</dd></div>
+  </dl>
+  <p class="obi-record-meta"><a href="#customer-repairs">{{ _('Total repairs: {count}', count=linked.total) }}</a></p>
+  {% if can_write %}
+    {% if record.archived_at %}
+    <form method="post" action="{{ request.url_for('customer_archive', customer_id=record.id).path }}">
+      <input type="hidden" name="csrf" value="{{ csrf }}">
+      <input type="hidden" name="key" value="{{ request_key }}">
+      <input type="hidden" name="revision" value="{{ record.revision }}">
+      <input type="hidden" name="enabled" value="0">
+      <button type="submit">{{ _('Restore customer') }}</button>
+    </form>
+    {% endif %}
+  {% endif %}
+  </div>
+  </section>
+  {% set intake = request.url_for('repair_new').path ~ '?customer_id=' ~ record.id if can_write and not record.archived_at else '' %}
+  {% call ui.panel('customer-repairs', 'Repairs', path=intake, link='New repair') %}
+    {% if linked.items %}
+      {{ rows.table(linked.items, 'Repairs', 'Created', show_customer=false) }}
+    {% else %}
+      {{ ui.empty('No repairs on this page.') }}
+    {% endif %}
+    {% if newest_repairs or older_repairs %}
+      <nav class="obi-pager" aria-label="{{ _('Repair pages') }}">
+        {% if newest_repairs %}<a href="{{ newest_repairs }}">{{ _('Newest repairs') }}</a>{% endif %}
+        {% if older_repairs %}<a href="{{ older_repairs }}">{{ _('Older repairs') }}</a>{% endif %}
+      </nav>
+    {% endif %}
+  {% endcall %}
+  {% set operations = {'customer.create': _('Created customer'), 'customer.update': _('Edited customer'),
+                       'customer.archive': _('Archived customer'), 'customer.restore': _('Restored customer')} %}
+  {% call ui.panel('customer-history', 'Customer history', fold=true, expanded=not not newest_history) %}
+    <div class="obi-panel-body">
+    {% if history.items %}
+      <ul class="customer-list">
+        {% for event in history.items %}
+          <li>
+            <strong>{{ operations.get(event.operation, event.operation) }}</strong>
+            <span>{{ event.actor_username }}{% if event.actor_kind == 'agent' %} · {{ _('Agent') }}{% endif %} · {{ ui.local_time(event.occurred_at) }} · {{ _('Web') if event.source == 'web' else _('API') }}{% if event.token_label %} · {{ event.token_label }}{% endif %}</span>
+            {% for field, change in event.changes.items() if change is mapping %}
+              <span class="customer-multiline">{{ labels.get(field, field) }} · {{ _('Before') }}: {{ change.before or '—' }}</span>
+              <span class="customer-multiline">{{ _('After') }}: {{ change.after or '—' }}</span>
+            {% endfor %}
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p>{{ _('No customer changes on this page.') }}</p>
+    {% endif %}
+    {% if newest_history or older_history %}
+      <nav class="obi-pager" aria-label="{{ _('Customer history pages') }}">
+        {% if newest_history %}<a href="{{ newest_history }}">{{ _('Newest changes') }}</a>{% endif %}
+        {% if older_history %}<a href="{{ older_history }}">{{ _('Older changes') }}</a>{% endif %}
+      </nav>
+    {% endif %}
+    </div>
+  {% endcall %}
+  <p class="account-link"><a href="{{ request.url_for('customer_list').path }}{% if record.archived_at %}?include_archived=true{% endif %}">{{ _('Back to customers') }}</a></p>
+{% endblock %}

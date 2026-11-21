@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="{{ lang() }}">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ _('Repair {id} label', id=view.repair.id) }} · {{ view.shop_name }}</title>
+  <link rel="stylesheet" href="{{ request.url_for('static', path='print.css').path }}">
+</head>
+<body class="print-label-page">
+  <p class="print-hint"><a href="{{ request.url_for('repair_detail', repair_id=view.repair.id).path }}">{{ _('Back to repair') }}</a> · {{ _('Print on a 62 × 29 mm label or plain paper.') }}</p>
+  {% if view.label_options and view.label_options.enabled %}
+    {% if view.label_options.available %}
+      <form class="print-hint" method="post" action="{{ request.url_for('repair_label_send', repair_id=view.repair.id).path }}">
+        <input type="hidden" name="csrf" value="{{ print_csrf }}">
+        <input type="hidden" name="key" value="{{ print_key }}">
+        <input type="hidden" name="revision" value="{{ view.label_options.revision }}">
+        <input type="hidden" name="printer_revision" value="{{ view.label_options.printer_revision }}">
+        <button type="submit">{{ _('Send to P15') }}</button>
+      </form>
+    {% else %}
+      <p class="print-hint">{{ _('P15 program unavailable on the server.') }}</p>
+    {% endif %}
+  {% endif %}
+  <section class="print-label" aria-label="{{ _('Repair label') }}">
+    <p class="label-id">#{{ view.repair.id }}</p>
+    <p>{{ view.customer_name or _('No customer') }}</p>
+    <p>{{ view.repair.device_type or _('Device') }} {{ view.repair.brand }} {{ view.repair.model }}</p>
+    {% if view.repair.serial %}<p>{{ view.repair.serial }}</p>{% endif %}
+    <p class="small">{{ view.repair.created_at[:10] }} · {{ view.shop_name }}</p>
+  </section>
+</body>
+</html>

@@ -1,0 +1,68 @@
+{% import "_shell.html" as shell with context %}
+<!doctype html>
+<html lang="{{ lang() }}">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ title }} · RepairLib</title>
+  <link rel="icon" type="image/svg+xml" href="{{ request.url_for('static', path='favicon.svg').path }}">
+  <link rel="stylesheet" href="{{ request.url_for('static', path='app.css').path }}">
+</head>
+<body class="rl-ui{% if shell_principal %} rl-shell{% endif %}">
+  <a href="#main" class="rl-skip">{{ _('Skip to content') }}</a>
+  <header class="rl-masthead">
+    {% if shell_principal %}
+    <button class="rl-menu" type="button" popovertarget="primary-navigation" aria-label="{{ _('Menu') }}">
+      {{ shell.icon('menu') }}<span class="rl-menu-text">{{ _('Menu') }}</span>
+    </button>
+    {% endif %}
+    {{ shell.brand(shell_principal) }}
+  </header>
+  {% if shell_principal %}
+  <nav class="rl-nav" id="primary-navigation" aria-label="{{ _('Main navigation') }}" popover>
+    <div class="rl-nav-inner">
+      <div class="rl-nav-header">
+        {{ shell.brand(true) }}
+        <p class="rl-shop">{{ shell_principal.shop_name }}</p>
+      </div>
+      <div class="rl-nav-links">
+
+        {{ shell.link('repairs', 'repair_list', 'Repairs') }}
+        {{ shell.link('customers', 'customer_list', 'Customers') }}
+        {{ shell.link('inventory', 'inventory_list', 'Inventory') }}
+      </div>
+      <div class="rl-nav-footer">
+        {% if shell_principal.role == 'admin' %}
+        {{ shell.link('system', 'system_page', 'System') }}
+        {{ shell.link('settings', 'settings_page', 'Shop settings') }}
+        {% endif %}
+        <a class="rl-nav-link" href="{{ request.url_for('account').path }}"{% if shell_section == 'account' %} aria-current="page"{% endif %}>
+          {{ shell.icon('account') }}
+          <span>{{ _('Account') }} <span class="rl-account-role">{{ shell_principal.username }} · {{ _(shell_principal.role|title) }}</span></span>
+        </a>
+        <form method="post" action="{{ request.url_for('sign_out').path }}" id="nav-logout">
+          <button type="submit" class="rl-nav-link" name="switch" value="1">{{ shell.icon('account') }} {{ _('Switch user') }}</button>
+          <button type="submit" class="rl-nav-link">{{ shell.icon('logout') }} {{ _('Sign out') }}</button>
+        </form>
+      </div>
+    </div>
+  </nav>
+  {% endif %}
+  <main id="main" tabindex="-1" class="{{ 'rl-workspace' if shell_principal else 'rl-public' }}">
+    <div class="obi-window rl-workspace-inner{% if shell_section == '' %} rl-dashboard{% endif %}{% if ticket_context %} rl-subpage{% endif %}">
+      {% set quiet_page_heading = shell_principal and not show_page_heading and not ticket_context %}
+      <header class="rl-page-header{% if quiet_page_heading %} rl-sr-only{% endif %}">
+        {% if ticket_context %}<a class="rl-context-link" href="{{ request.url_for('repair_detail', repair_id=ticket_context).path }}"><span aria-hidden="true">←</span> {{ _('Repair #{id}', id=ticket_context) }}</a>{% endif %}
+        <h1 class="rl-page-title{% if quiet_page_heading %} rl-sr-only{% endif %}">{{ title }}</h1>
+      </header>
+      <div class="obi-window__body{% if register %} rl-register-body{% endif %}">
+        {% block content %}{% endblock %}
+      </div>
+    </div>
+    {% if not shell_principal %}{{ shell.language_form() }}{% endif %}
+  </main>
+  {% if shell_principal %}
+  <input type="hidden" form="nav-logout" name="csrf" value="{{ shell_sign_out }}">
+  {% endif %}
+</body>
+</html>

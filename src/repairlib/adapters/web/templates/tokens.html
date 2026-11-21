@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+{% import "_ui.html" as ui with context %}
+{% set title = _('API tokens') %}
+{% block content %}
+      {% if error %}<p class="obi-notice" role="alert" id="form-error">{{ _(error) }}</p>{% endif %}
+      {% if secret %}
+        <h2>{{ _('Token created') }}</h2>
+        <p>{{ _('Copy this token to the client that will use it. It is shown only here.') }}</p>
+        <p><code id="token-secret">{{ secret }}</code></p>
+      {% endif %}
+      {% if message %}<p role="status">{{ _(message) }}</p>{% endif %}
+      {% if listing %}
+        <form method="post" action="{{ request.url_for('issue_token').path }}"{% if error %} aria-describedby="form-error"{% endif %}>
+          {% call ui.panel('token-form', 'Create token') %}
+          <div class="obi-panel-body">
+            <div class="obi-intake-grid">
+          <input type="hidden" name="csrf" value="{{ csrf }}">
+          <input type="hidden" name="key" value="{{ fields.key }}">
+          <label class="rl-sr-only" for="name">{{ _('Token name') }}</label>
+          <input id="name" name="name" value="{{ fields.name }}" placeholder="{{ _('Token name') }}" maxlength="80" required>
+          <label class="rl-sr-only" for="scope">{{ _('Scope') }}</label>
+          <select id="scope" name="scope">
+            {% for scope in scopes %}
+              <option value="{{ scope }}"{% if fields.scope == scope %} selected{% endif %}>{{ _('Read only') if scope == 'read' else _('Read and write') }}</option>
+            {% endfor %}
+          </select>
+          <label class="rl-sr-only" for="kind">{{ _('Used by') }}</label>
+          <select id="kind" name="kind">
+            <option value="user"{% if fields.kind != 'agent' %} selected{% endif %}>{{ _('A person or script') }}</option>
+            <option value="agent"{% if fields.kind == 'agent' %} selected{% endif %}>{{ _('An agent') }}</option>
+          </select>
+          <label class="rl-sr-only" for="preset">{{ _('Agent limit') }}</label>
+          <select id="preset" name="preset">
+            <option value=""{% if not fields.preset %} selected{% endif %}>{{ _('No limit') }}</option>
+            <option value="read-only"{% if fields.preset == 'read-only' %} selected{% endif %}>{{ _('Read only') }}</option>
+            <option value="repairs-write"{% if fields.preset == 'repairs-write' %} selected{% endif %}>{{ _('Repairs and customers') }}</option>
+            <option value="inventory-write"{% if fields.preset == 'inventory-write' %} selected{% endif %}>{{ _('Inventory') }}</option>
+          </select>
+          <label class="rl-sr-only" for="password">{{ _('Current password') }}</label>
+          <input id="password" name="password" type="password" placeholder="{{ _('Current password') }}" maxlength="1024" autocomplete="current-password" required>
+            </div>
+          </div>
+          {% endcall %}
+          <div class="obi-actions"><button type="submit">{{ _('Create token') }}</button></div>
+        </form>
+        {% call ui.panel('active-tokens', 'Active tokens') %}
+          {% if items %}
+            {% call ui.table('Active tokens') %}
+              <thead><tr><th scope="col">{{ _('Token name') }}</th><th scope="col">{{ _('Scope') }}</th><th scope="col">{{ _('Used by') }}</th><th scope="col">{{ _('Actions') }}</th></tr></thead>
+              <tbody>
+                {% for token in items %}
+                  <tr>
+                    <th scope="row">{{ token.name }}</th>
+                    <td>{{ _('Read only') if token.scope == 'read' else _('Read and write') }}</td>
+                    <td>{{ _('An agent') if token.kind == 'agent' else _('A person or script') }}</td>
+                    <td><a href="{{ request.url_for('review_revocation', token_id=token.id).path }}" aria-label="{{ _('Revoke {name}', name=token.name) }}">{{ _('Revoke') }}</a></td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            {% endcall %}
+          {% else %}
+            {{ ui.empty('No active tokens on this page.') }}
+          {% endif %}
+          {{ ui.pager(request.url_for('api_tokens').path, {}, before, next_page, 'Newest tokens', 'Older tokens') }}
+        {% endcall %}
+      {% elif revoke_id %}
+        <h2>{{ _('Revoke token') }}{% if token_name %} <span>{{ token_name }}</span>{% endif %}</h2>
+        <p>{{ _('Any client using this token will lose access.') }}</p>
+        <form method="post" action="{{ request.url_for('submit_revocation', token_id=revoke_id).path }}"{% if error %} aria-describedby="form-error"{% endif %}>
+          <input type="hidden" name="csrf" value="{{ csrf }}">
+          <input type="hidden" name="key" value="{{ request_key }}">
+          <input type="hidden" name="revision" value="{{ revision }}">
+          <label for="password">{{ _('Current password') }}</label>
+          <input id="password" name="password" type="password" maxlength="1024" autocomplete="current-password" required>
+          <button type="submit">{{ _('Revoke token') }}</button>
+        </form>
+      {% endif %}
+      <p class="account-link">
+        {% if listing %}
+          <a href="{{ request.url_for('account').path }}">{{ _('Back to account') }}</a>
+        {% else %}
+          <a href="{{ request.url_for('api_tokens').path }}">{{ _('Back to API tokens') }}</a>
+        {% endif %}
+      </p>
+{% endblock %}

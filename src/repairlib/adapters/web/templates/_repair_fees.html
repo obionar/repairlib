@@ -1,0 +1,25 @@
+{% import "_ui.html" as ui with context %}
+{% call ui.panel('payment-total', 'Payment') %}
+  {% if fees_error %}{{ ui.toast(fees_error, 'error', 'fees-error') }}{% elif notice_panel == 'payment-total' %}{{ ui.notice(notice) }}{% endif %}
+  <div class="obi-panel-body">
+    {% if fees_can_write %}
+      <form method="post" id="fees-form" action="{{ request.url_for('repair_fees', repair_id=repair.id).path }}"{% if fees_error %} aria-describedby="fees-error"{% endif %}>
+        <input type="hidden" name="csrf" value="{{ fees_csrf }}">
+        <input type="hidden" name="key" value="{{ fees_key }}">
+        <input type="hidden" name="revision" value="{{ fees.revision }}">
+        <div class="rl-fee-form">
+          <div class="obi-field"><label for="fee-parts">{{ _('Parts EUR') }}</label><input id="fee-parts" value="{{ '%0.2f'|format(fees.parts / 100) }}" readonly tabindex="-1"></div>
+          <div class="obi-field"><label for="fee-labor">{{ _('Labour EUR') }}</label><input id="fee-labor" name="labor" inputmode="decimal" maxlength="16" value="{{ fees_draft.get('labor', '%0.2f'|format(fees.labor_input / 100)) }}" required></div>
+          <div class="obi-field"><label for="fee-discount">{{ _('Discount EUR') }}</label><input id="fee-discount" name="discount" inputmode="decimal" maxlength="16" value="{{ fees_draft.get('discount', '%0.2f'|format(fees.discount_amount / 100)) }}"></div>
+          <div>{{ ui.button('Save amounts') }}</div>
+        </div>
+      </form>
+    {% else %}
+      <dl class="rl-inline-facts">
+        <div><dt>{{ _('Labour EUR') }}:</dt> <dd>{{ fees.labor|cents }}</dd></div>
+        <div><dt>{{ _('Parts EUR') }}:</dt> <dd>{{ fees.parts|cents }}</dd></div>
+      </dl>
+    {% endif %}
+    <p class="rl-fee-total">{% if fees.discount_cents %}{{ _('Discount') }} −{{ fees.discount_cents|cents }} · {% endif %}<strong>{{ _('Total') }}: {{ fees.pending_total_cents|cents }} EUR</strong></p>
+  </div>
+{% endcall %}

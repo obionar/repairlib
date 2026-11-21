@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% import "_ui.html" as ui with context %}
+{% set title = _('Choose a customer') %}
+{% set path = request.url_for('repair_edit', repair_id=repair_id).path if repair_id else request.url_for('repair_new').path %}
+{% block content %}
+  {% if error %}{{ ui.error(error, 'customer-search-error') }}{% endif %}
+  {% call ui.panel('intake-search', 'Search') %}
+  <form class="rl-compact-search" method="get" action="{{ path }}" role="search">
+    <label class="rl-sr-only" for="customer-q">{{ _('Search name, phone or email') }}</label>
+    <input id="customer-q" name="customer_q" type="search" maxlength="100" value="{{ query }}" placeholder="{{ _('Search') }}">
+    <button type="submit" aria-label="{{ _('Search') }}">
+      <svg class="rl-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="10" cy="10" r="6"/><path d="m15 15 5 5"/></svg>
+    </button>
+  </form>
+  {% endcall %}
+  {% if page %}
+    {% call ui.panel('intake-customers', 'Customers') %}
+      {% if page.items %}
+        <ul class="customer-list rl-pick-list">
+          {% for item in page.items %}
+            <li><a href="{{ path }}?customer_id={{ item.id }}">{{ item.name }}</a>
+              {% if item.phone %}<span>{{ item.phone }}</span>{% endif %}
+              {% if item.email %}<span>{{ item.email }}</span>{% endif %}
+            </li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        {{ ui.empty('No customers on this page.') }}
+      {% endif %}
+      {{ ui.pager(path, {'customer_q': query}, before, page.next_before, 'Newest customers', 'Older customers') }}
+    {% endcall %}
+  {% endif %}
+  <p class="obi-actions rl-pick-actions">
+    {% if not repair_id %}{{ ui.action(request.url_for('customer_new').path ~ '?next=new-repair', 'New customer') }}{% endif %}
+    <a href="{{ path }}?customer_id=0">{{ _('Continue without a customer') }}</a>
+    <a href="{{ path if repair_id else request.url_for('repair_list').path }}">{{ _('Cancel') }}</a>
+  </p>
+{% endblock %}

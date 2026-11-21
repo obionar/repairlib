@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% import "_ui.html" as ui with context %}
+{% import "_repair_rows.html" as rows with context %}
+{% set title = _('Repairs') %}
+{% set register = true %}
+
+{% set path = request.url_for('repair_list').path %}
+{% block content %}
+  {% if error %}{{ ui.error(error, 'list-error') }}{% endif %}
+  {% if page %}
+    {% call ui.panel('repair-search-title', 'Search') %}
+    <form class="rl-compact-search" method="get" action="{{ path }}" role="search">
+      <label class="rl-sr-only" for="repair-search">{{ _('Search device, serial, issue or customer') }}</label>
+      <input id="repair-search" type="search" name="q" value="{{ filters.get('q', '') }}" maxlength="100" placeholder="{{ _('Search') }}">
+      {% for name in ('stage', 'queue', 'picked_up', 'archived', 'customer_id') %}
+        {% if filters.get(name) %}<input type="hidden" name="{{ name }}" value="{{ filters[name] }}">{% endif %}
+      {% endfor %}
+      <button type="submit" aria-label="{{ _('Search') }}">
+        <svg class="rl-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="10" cy="10" r="6"/><path d="m15 15 5 5"/></svg>
+      </button>
+    </form>
+    <details class="rl-search-filters"{% if filters.get('stage') or filters.get('queue') or filters.get('picked_up') or filters.get('archived') %} open{% endif %}>
+      <summary>{{ _('Filters') }}</summary>
+      <form method="get" action="{{ path }}">
+      {% if filters.get('q') %}<input type="hidden" name="q" value="{{ filters.q }}">{% endif %}
+      <div class="obi-intake-grid">
+        <div class="obi-field">
+          <label for="repair-stage">{{ _('Repair status') }}</label>
+          <select id="repair-stage" name="stage">
+            <option value="">{{ _('Any status') }}</option>
+            {% for option in stages %}<option value="{{ option }}"{% if option == filters.stage %} selected{% endif %}>{{ stage_label(option) }}</option>{% endfor %}
+          </select>
+        </div>
+        {{ ui.select_filter('queue', 'Queue', filters.get('queue', ''), [
+            ('', 'All repairs'), ('open', 'Open work'), ('pickup', 'Awaiting pickup')]) }}
+        {{ ui.select_filter('picked_up', 'Pickup status', filters.get('picked_up', ''), [
+            ('', 'Any pickup status'), ('false', 'In shop'), ('true', 'Picked up')]) }}
+        {{ ui.select_filter('archived', 'Archive status', filters.get('archived', ''), [
+            ('', 'Any archive status'), ('false', 'Active'), ('true', 'Archived')]) }}
+        {% if filters.customer_id %}
+          <div class="obi-field">
+            <label for="repair-customer">{{ _('Customer ID') }}</label>
+            <input id="repair-customer" name="customer_id" value="{{ filters.customer_id }}" readonly>
+          </div>
+        {% endif %}
+      </div>
+      <div class="obi-actions">
+        {{ ui.button('Apply filters') }}
+        {% if filters %}<a href="{{ path }}">{{ _('Clear filters') }}</a>{% endif %}
+      </div>
+      </form>
+    </details>
+    {% endcall %}
+    {% set q = filters.get('q', '') %}
+    <nav class="rl-chip-strip" aria-label="{{ _('Filter by status') }}">
+      <a class="rl-chip" href="{{ path }}{% if q %}?q={{ q|urlencode }}{% endif %}"{% if not filters.get('stage') %} aria-current="page"{% endif %}>{{ _('All') }}</a>
+      {% for option in stages %}
+        <a class="rl-chip" href="{{ path }}?stage={{ option|urlencode }}{% if q %}&amp;q={{ q|urlencode }}{% endif %}"{% if filters.get('stage') == option %} aria-current="page"{% endif %}>{{ stage_label(option) }}</a>
+      {% endfor %}
+    </nav>
+    {% call ui.panel('repair-results', 'Repairs', '(' ~ page.total ~ ')',
+                     request.url_for('repair_new').path if can_write else '', 'New repair') %}
+      {% if page.items %}
+        {{ rows.table(page.items, 'Repairs', 'Created') }}
+      {% else %}
+        {% if filters %}{{ ui.empty('No repairs match these filters.') }}{% else %}{{ ui.empty('No repairs on this page.') }}{% endif %}
+      {% endif %}
+      {{ ui.pager(path, filters, before, page.next_before, 'Newest repairs', 'Older repairs') }}
+    {% endcall %}
+  {% endif %}
+{% endblock %}

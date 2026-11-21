@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% import "_ui.html" as ui with context %}
+{% set title = _('Work entry history') %}
+{% set ticket_context = repair_id %}
+{% block content %}
+  {% call ui.panel('work-entry-history', 'Revisions', fold=true) %}
+  <ol class="customer-list">
+    {% for version in history %}
+      <li>
+        <strong>{{ _('Revision {number}', number=version.revision) }} · {{ _(version.kind|title) }} · {{ version.editor_username }}</strong>
+        <span>{{ _('Deleted') if version.deleted else _('Visible') }} · {{ version.created_at }}</span>
+        <span class="customer-multiline">{{ version.body }}</span>
+        {% if version.reason %}<span>{{ _('Reason: {reason}', reason=version.reason) }}</span>{% endif %}
+      </li>
+    {% endfor %}
+  </ol>
+  {% endcall %}
+  <p class="account-link"><a href="{{ request.url_for('repair_detail', repair_id=repair_id).path }}#log">{{ _('Back to repair') }}</a></p>
+{% endblock %}

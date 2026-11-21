@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% import '_ui.html' as ui with context %}
+{% set title = _('Shop settings') %}
+{% block content %}
+      {% if error %}{{ ui.error(error, 'form-error') }}{% endif %}
+      {% if current or details %}
+        {% include '_settings_nav.html' %}
+        <form method="post" action="{{ request.url_for('settings_save').path }}"{% if error %} aria-describedby="form-error"{% endif %}>
+          <input type="hidden" name="csrf" value="{{ csrf }}">
+          <input type="hidden" name="key" value="{{ request_key }}">
+          <input type="hidden" name="revision" value="{{ revision }}">
+          {% call ui.panel('shop-profile', 'Shop profile') %}
+          <div class="obi-panel-body">
+            <div class="obi-intake-grid">
+              <label class="rl-sr-only" for="name">{{ _('Shop name') }}</label>
+              <input id="name" name="name" value="{{ details.get('name', '') }}" placeholder="{{ _('Shop name') }}" maxlength="160" autocomplete="organization" required{% if field_errors.get('name') %} aria-invalid="true" aria-describedby="name-error"{% endif %}>
+              {% if field_errors.get('name') %}<span id="name-error">{{ _(field_errors.name) }}</span>{% endif %}
+              <label class="rl-sr-only" for="timezone">{{ _('Timezone') }}</label>
+              <input id="timezone" name="timezone" value="{{ details.get('timezone', '') }}" placeholder="{{ _('Timezone') }}" maxlength="100" required{% if field_errors.get('timezone') %} aria-invalid="true" aria-describedby="timezone-error timezone-help"{% else %} aria-describedby="timezone-help"{% endif %}>
+              <span class="obi-span obi-hint" id="timezone-help">{{ _('Use an IANA name such as Europe/Nicosia.') }}</span>
+              {% if field_errors.get('timezone') %}<span id="timezone-error">{{ _(field_errors.timezone) }}</span>{% endif %}
+              <label class="rl-sr-only" for="language">{{ _('Language') }}</label>
+              <select id="language" name="language"{% if field_errors.get('language') %} aria-invalid="true" aria-describedby="language-error"{% endif %}>
+                {% if not details.get('language') %}<option value="" selected>{{ _('None') }}</option>{% endif %}
+                {% for code, language_name in languages.items() %}
+                <option value="{{ code }}"{% if code == details.get('language') %} selected{% endif %}>{{ language_name }}</option>
+                {% endfor %}
+              </select>
+              {% if field_errors.get('language') %}<span id="language-error">{{ _(field_errors.language) }}</span>{% endif %}
+              <label class="rl-sr-only" for="address">{{ _('Address') }}</label>
+              <input id="address" name="address" value="{{ details.get('address', '') }}" placeholder="{{ _('Address') }}" maxlength="200"{% if field_errors.get('address') %} aria-invalid="true" aria-describedby="address-error"{% endif %}>
+              {% if field_errors.get('address') %}<span id="address-error">{{ _(field_errors.address) }}</span>{% endif %}
+              <label class="rl-sr-only" for="phone">{{ _('Phone') }}</label>
+              <input id="phone" name="phone" value="{{ details.get('phone', '') }}" placeholder="{{ _('Phone') }}" maxlength="40"{% if field_errors.get('phone') %} aria-invalid="true" aria-describedby="phone-error"{% endif %}>
+              {% if field_errors.get('phone') %}<span id="phone-error">{{ _(field_errors.phone) }}</span>{% endif %}
+              <label for="diagnosis_fee">{{ _('Default labour fee (EUR)') }}</label>
+              <input id="diagnosis_fee" name="diagnosis_fee" value="{{ details.get('diagnosis_fee', '') }}" inputmode="decimal" maxlength="16"{% if field_errors.get('diagnosis_fee') %} aria-invalid="true" aria-describedby="diagnosis-fee-error"{% endif %}>
+              {% if field_errors.get('diagnosis_fee') %}<span id="diagnosis-fee-error">{{ _(field_errors.diagnosis_fee) }}</span>{% endif %}
+              <label class="rl-sr-only" for="terms">{{ _('Terms') }}</label>
+              <textarea class="obi-span" id="terms" name="terms" placeholder="{{ _('Terms') }}" maxlength="2000"{% if field_errors.get('terms') %} aria-invalid="true" aria-describedby="terms-error"{% endif %}>{{ details.get('terms', '') }}</textarea>
+              {% if field_errors.get('terms') %}<span id="terms-error">{{ _(field_errors.terms) }}</span>{% endif %}
+            </div>
+          </div>
+          {% endcall %}
+          {% call ui.panel('file-limits', 'File limits') %}
+          <div class="obi-panel-body">
+            <div class="obi-intake-grid">
+              <label class="rl-sr-only" for="max_upload_mib">{{ _('Maximum upload size (MiB, 1–2048)') }}</label>
+              <input id="max_upload_mib" name="max_upload_mib" value="{{ details.get('max_upload_mib', '') }}" placeholder="{{ _('Maximum upload size (MiB, 1–2048)') }}" inputmode="numeric" required{% if field_errors.get('max_upload_mib') %} aria-invalid="true" aria-describedby="max-upload-error"{% endif %}>
+              {% if field_errors.get('max_upload_mib') %}<span id="max-upload-error">{{ _(field_errors.max_upload_mib) }}</span>{% endif %}
+              <label class="rl-sr-only" for="inline_preview_mib">{{ _('Largest inline image preview (MiB, 1–64)') }}</label>
+              <input id="inline_preview_mib" name="inline_preview_mib" value="{{ details.get('inline_preview_mib', '') }}" placeholder="{{ _('Largest inline image preview (MiB, 1–64)') }}" inputmode="numeric" required{% if field_errors.get('inline_preview_mib') %} aria-invalid="true" aria-describedby="inline-preview-error"{% endif %}>
+              {% if field_errors.get('inline_preview_mib') %}<span id="inline-preview-error">{{ _(field_errors.inline_preview_mib) }}</span>{% endif %}
+            </div>
+          </div>
+          {% endcall %}
+          <div class="obi-actions">
+            {{ ui.button('Save settings', 'primary') }}
+            <a href="{{ request.url_for('account').path }}">{{ _('Back to account') }}</a>
+          </div>
+        </form>
+        <p class="account-link">{{ _('The listener and database configuration are owner-managed outside this shop settings surface.') }}</p>
+      {% else %}<p><a href="{{ request.url_for('account').path }}">{{ _('Back to account') }}</a></p>{% endif %}
+{% endblock %}

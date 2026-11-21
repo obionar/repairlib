@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% import '_ui.html' as ui with context %}
+{% set title = _('Choose a catalog part') %}
+{% set ticket_context = repair.id %}
+{% set picker = request.url_for('part_picker', repair_id=repair.id).path %}
+{% set filters = {'q': q} if q else {} %}
+{% set params = dict(filters, before=before) if before else filters %}
+{% set query = '?' ~ params|urlencode if params else '' %}
+{% block content %}
+  <p>{{ _('Repair {id}', id=repair.id) }} · {{ repair.display_device or repair.device_type }}</p>
+  {% if error %}{{ ui.error(error|string, 'form-error') }}{% endif %}
+  {% if item %}
+    {% set review = request.url_for('review_part', repair_id=repair.id, item_id=item.id).path ~ query %}
+    {% if error and error.status == 409 %}
+      <p><a href="{{ review }}">{{ _('Open latest version') }}</a></p>
+    {% endif %}
+    <h2>{{ item.sku }} · {{ item.description }}</h2>
+    <dl class="record-details">
+      <dt>{{ _('On hand') }}</dt><dd>{{ item.on_hand_milli|milli }} {{ item.unit }}</dd>
+    </dl>
+    <form method="post" action="{{ request.url_for('consume_part', repair_id=repair.id, item_id=item.id).path }}{{ query }}"{% if error %} aria-describedby="form-error"{% endif %}>
+      <input type="hidden" name="csrf" value="{{ csrf }}">
+      <input type="hidden" name="key" value="{{ request_key }}">
+      <input type="hidden" name="repair_revision" value="{{ form.get('repair_revision', '') }}">
+      <input type="hidden" name="item_revision" value="{{ form.get('item_revision', '') }}">
+      {% set quantity_error = field_errors.get('consumed_quantity') %}
+      <label for="consumed_quantity">{{ _('Quantity taken from stock') }}</label>
+      <input id="consumed_quantity" name="consumed_quantity" inputmode="decimal" required value="{{ form.get('consumed_quantity', '') }}"{% if quantity_error %} aria-invalid="true" aria-describedby="consumed_quantity-error"{% endif %}>
+      {% if quantity_error %}<span id="consumed_quantity-error">{{ _(quantity_error) }}</span>{% endif %}
+      {% if part_work_log %}
+      <label for="work_note">{{ _('Work note (optional)') }}</label>
+      <textarea id="work_note" name="work_note" maxlength="4000"{% if field_errors.work_note %} aria-invalid="true" aria-describedby="work_note-error"{% endif %}>{{ form.get('work_note', '') }}</textarea>
+      {% if field_errors.work_note %}<span id="work_note-error">{{ _(field_errors.work_note) }}</span>{% endif %}
+      <details class="obi-confirm"{% if field_errors.billed_quantity or field_errors.unit_price %} open{% endif %}>
+        <summary>{{ _('More details') }}</summary>
+      {% endif %}
+      {% for name, label in [('billed_quantity', _('Quantity billed')), ('unit_price', _('Unit price (EUR)'))] %}
+        <label for="{{ name }}">{{ label }}</label>
+        {% set invalid = field_errors.get(name) %}
+        <input id="{{ name }}" name="{{ name }}" inputmode="decimal"{% if not part_work_log %} required{% endif %} value="{{ form.get(name, '') }}"{% if invalid %} aria-invalid="true" aria-describedby="{{ name }}-error"{% endif %}>
+        {% if invalid %}<span id="{{ name }}-error">{{ _(invalid) }}</span>{% endif %}
+      {% endfor %}
+      {% if part_work_log %}</details>{% endif %}
+      {{ ui.button('Use catalog part' if part_work_log else 'Use part and add charge', 'primary') }}
+    </form>
+    <p><a href="{{ picker }}{{ query }}">{{ _('Choose a catalog part') }}</a></p>
+  {% else %}
+    {% call ui.search(picker, q) %}
+      {{ ui.search_input('part-q', 'Search SKU, description, manufacturer or part number', q) }}
+    {% endcall %}
+    {% if page %}
+      {% call ui.panel('catalog-results', 'Catalog parts') %}
+        {% if page.items %}
+          <div class="obi-panel-body">
+            <ul class="customer-list">
+              {% for part in page.items %}
+                <li><a href="{{ request.url_for('review_part', repair_id=repair.id, item_id=part.id).path }}{{ query }}">{{ part.sku }} · {{ part.description }}</a>
+                  <span>{{ _('On hand') }} · {{ part.on_hand_milli|milli }} {{ part.unit }}</span></li>
+              {% endfor %}
+            </ul>
+          </div>
+        {% else %}
+          {{ ui.empty('No inventory items on this page.') }}
+        {% endif %}
+        {{ ui.pager(picker, filters, before, page.next_before, 'Newest items', 'Older items') }}
+      {% endcall %}
+    {% endif %}
+  {% endif %}
+  <p class="account-link"><a href="{{ request.url_for('repair_detail', repair_id=repair.id).path }}#log">{{ _('Back to repair') }}</a></p>
+{% endblock %}

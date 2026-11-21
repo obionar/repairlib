@@ -1,0 +1,146 @@
+{% import "_ui.html" as ui with context %}
+{% import "_repair_rows.html" as rows with context %}
+
+{% call ui.panel('files', 'Files', '(' ~ (files.items|length) ~ ((' ' ~ _('shown')) if files_paged else '') ~ ')', fold=true) %}
+    {% if notice_panel == 'files' %}<div class="obi-panel-body">{{ ui.notice(notice) }}</div>{% endif %}
+    {% if attachment_error %}
+      <div class="obi-panel-body">
+        <div class="obi-notice" id="attachment-error">
+          {% if metadata_draft %}
+            {% for message in (metadata_draft.error.fields or {}).values() %}<p>{{ _(message) }}</p>{% endfor %}
+            {% if metadata_draft.error.status == 409 %}
+              <p><a href="{{ request.url_for('repair_detail', repair_id=repair.id).path }}#files">{{ _('Review current files') }}</a></p>
+            {% endif %}
+          {% endif %}
+        </div>
+      </div>
+    {% endif %}
+    {% if files.items %}
+      <ul class="obi-file-list">
+        {% for file in files.items %}
+          {% set content = request.url_for('attachment_content', repair_id=repair.id, attachment_id=file.id).path %}
+          <li class="obi-file" id="attachment-{{ file.id }}" tabindex="-1">
+            {% if file.previewable %}<img src="{{ content }}?inline=1" alt="{{ _('Preview of {name}', name=file.filename) }}" class="obi-file-preview" loading="lazy">{% endif %}
+            <div class="obi-file-body">
+              <strong><a href="{{ content }}" download>{{ file.filename }}</a></strong>
+              <span class="obi-muted">{% if file.size_bytes < 1024 %}{{ file.size_bytes }} B{% else %}{{ (file.size_bytes / 1024)|round(1) }} KiB{% endif %} · {{ file.uploader_username }} · {{ ui.local_time(file.created_at) }}</span>
+              {{ attached_metadata(file) }}
+              {% if can_edit %}
+                {% set file_draft = metadata_draft if metadata_draft and metadata_draft.attachment_id == file.id else none %}
+                <details class="obi-inline-details">
+                  <summary>{{ _('Manage') }}</summary>
+                  {% set draft = file_draft if file_draft and file_draft.action == 'caption' else none %}
+                  <form method="post" action="{{ request.url_for('attachment_caption', repair_id=repair.id, attachment_id=file.id).path }}">
+                    {{ attachment_fields(caption_csrf, attachment_key ~ '-c' ~ file.id, file.revision, draft) }}
+                    <label for="caption-{{ file.id }}">{{ _('Caption') }}</label>
+                    <input id="caption-{{ file.id }}" name="caption" value="{{ draft.caption if draft else file.caption }}">
+                    {{ ui.button('Save caption') }}
+                  </form>
+                  {% set draft = file_draft if file_draft and file_draft.action == 'link' else none %}
+                  {% set link_draft = draft if draft and draft.linked == '1' else none %}
+                  {% set unlink_draft = draft if draft and draft.linked == '0' else none %}
+                  {% set link_url = request.url_for('attachment_links', repair_id=repair.id, attachment_id=file.id).path %}
+                  <form method="post" action="{{ link_url }}">
+                    {{ attachment_fields(link_csrf, attachment_key ~ '-l' ~ file.id, file.revision, link_draft) }}
+                    <input type="hidden" name="linked" value="1">
+                    <label for="link-entry-{{ file.id }}">{{ _('Link to work entry') }}</label>
+                    <select id="link-entry-{{ file.id }}" name="entry_id" required>
+                      <option value="">{{ _('Choose an entry') }}</option>
+                      {% for entry in entries.items if not entry.deleted %}
+                        <option value="{{ entry.id }}"{% if link_draft and link_draft.entry_id == entry.id|string %} selected{% endif %}>{{ _(entry.kind|title) }} {{ entry.id }}: {{ entry.body[:60] }}</option>
+                      {% endfor %}
+                    </select>
+                    {{ ui.button('Link work entry') }}
+                  </form>
+                  {% if file.entry_ids or unlink_draft %}
+                    <form method="post" action="{{ link_url }}">
+                      {{ attachment_fields(link_csrf, attachment_key ~ '-u' ~ file.id, file.revision, unlink_draft) }}
+                      <input type="hidden" name="linked" value="0">
+                      <label for="unlink-entry-{{ file.id }}">{{ _('Work entry to unlink') }}</label>
+                      <select id="unlink-entry-{{ file.id }}" name="entry_id" required>
+                        {% if unlink_draft and unlink_draft.entry_id|int not in file.entry_ids %}
+                          <option value="{{ unlink_draft.entry_id }}">{{ _('Entry {id}', id=unlink_draft.entry_id) }}</option>
+                        {% endif %}
+                        {% for entry_id in file.entry_ids %}
+                          <option value="{{ entry_id }}"{% if unlink_draft and unlink_draft.entry_id == entry_id|string %} selected{% endif %}>{{ _('Entry {id}', id=entry_id) }}</option>
+                        {% endfor %}
+                      </select>
+                      {{ ui.button('Unlink work entry') }}
+                    </form>
+                  {% endif %}
+                  <form method="post" action="{{ request.url_for('attachment_detach', repair_id=repair.id, attachment_id=file.id).path }}">
+                    {{ attachment_fields(detach_csrf, attachment_key ~ '-' ~ file.id, file.revision, none) }}
+                    <input type="hidden" name="detached" value="1">
+                    {{ ui.button('Detach file', 'danger') }}
+                  </form>
+                </details>
+              {% endif %}
+            </div>
+          </li>
+        {% endfor %}
+      </ul>
+      {% if files_older or files_before %}
+        <nav class="obi-pager" aria-label="{{ _('File pages') }}">
+          {% if files_before %}<a href="{{ files_newest }}">{{ _('Newest files') }}</a>{% endif %}
+          {% if files_older %}<a href="{{ files_older }}">{{ _('Older files') }}</a>{% endif %}
+        </nav>
+      {% endif %}
+    {% else %}
+      {{ ui.empty('No attached files.') }}
+    {% endif %}
+    {% if detached_files.items or detached_before %}
+      <details class="obi-panel-body">
+        <summary>{{ _('Detached files ({count})', count=(detached_files.items|length|string) ~ ((' ' ~ _('shown')) if detached_paged else '')) }}</summary>
+        <ul class="obi-link-list">
+          {% for file in detached_files.items %}
+            <li>
+              <strong>{% if file.purged %}{{ file.filename }}{% else %}<a href="{{ request.url_for('attachment_content', repair_id=repair.id, attachment_id=file.id).path }}" download>{{ file.filename }}</a>{% endif %}</strong>
+              {% if file.purged %}
+                <span class="obi-muted">{{ _('Purged {when} by {name} · record and SHA-256 kept', when=file.purged_at|localtime, name=file.purged_by_username) }}</span>
+              {% else %}
+                <span class="obi-muted">{{ _('Detached {when} · original bytes kept', when=file.detached_at|localtime) }}</span>
+              {% endif %}
+              {{ attached_metadata(file) }}
+              {% if is_admin and not file.purged and file.detached_at and file.detached_at <= purge_cutoff %}
+                <form method="post" action="{{ request.url_for('attachment_purge', repair_id=repair.id, attachment_id=file.id).path }}">
+                  {{ attachment_fields(purge_csrf, attachment_key ~ '-p' ~ file.id, file.revision, none, 'detached') }}
+                  {{ ui.button('Purge bytes permanently', 'danger') }}
+                </form>
+              {% endif %}
+              {% if can_edit and not file.purged %}
+                <form method="post" action="{{ request.url_for('attachment_detach', repair_id=repair.id, attachment_id=file.id).path }}">
+                  {{ attachment_fields(detach_csrf, attachment_key ~ '-' ~ file.id, file.revision, none, 'detached') }}
+                  <input type="hidden" name="detached" value="0">
+                  {{ ui.button('Restore') }}
+                </form>
+              {% endif %}
+            </li>
+          {% endfor %}
+        </ul>
+        {% if detached_older or detached_before %}
+          <nav class="obi-pager" aria-label="{{ _('Detached file pages') }}">
+            {% if detached_before %}<a href="{{ detached_newest }}">{{ _('Newest detached files') }}</a>{% endif %}
+            {% if detached_older %}<a href="{{ detached_older }}">{{ _('Older detached files') }}</a>{% endif %}
+          </nav>
+        {% endif %}
+      </details>
+    {% endif %}
+    {% if can_edit %}
+      <details class="obi-panel-body obi-panel-section">
+        <summary class="obi-subheading">{{ _('Attach a file') }}</summary>
+        <form method="post" enctype="multipart/form-data" action="{{ request.url_for('attachment_upload', repair_id=repair.id).path }}">
+          <input type="hidden" name="csrf" value="{{ attachment_csrf }}">
+          <input type="hidden" name="key" value="{{ attachment_key }}">
+          {% if files_before %}<input type="hidden" name="files_before" value="{{ files_before }}">{% endif %}
+          <label for="attachment-entry">{{ _('Link to work entry (optional)') }}</label>
+          <select id="attachment-entry" name="entry_id">
+            <option value="">{{ _('No entry') }}</option>
+            {% for entry in entries.items if not entry.deleted %}<option value="{{ entry.id }}">{{ _(entry.kind|title) }} {{ entry.id }}: {{ entry.body[:60] }}</option>{% endfor %}
+          </select>
+          <label for="attachment-file">{{ _('File (up to {size} MiB; original bytes are kept)', size=max_upload_mib) }}</label>
+          <input id="attachment-file" name="file" type="file" required>
+          {{ ui.button('Attach file') }}
+        </form>
+      </details>
+    {% endif %}
+  {% endcall %}

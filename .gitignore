@@ -1,0 +1,19 @@
+# Local agent instructions and persistent internal memory.
+/AGENTS.md
+/.notes/
+/.writer.lock
+
+# Python artifacts: keep the source tree free of generated files.
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+/.pytest_cache/
+/build/
+/dist/
+
+# Local configuration and databases.
+/data/
+/data-backups/
+.env
+*.sqlite3*

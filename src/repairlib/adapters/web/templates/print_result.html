@@ -1,0 +1,6 @@
+{% extends "base.html" %}
+{% set title = _('Label print result') %}
+{% block content %}
+  <p class="obi-notice" role="{{ 'status' if receipt and receipt.outcome == 'acknowledged' else 'alert' }}">{{ _(message) }}</p>
+  <p><a href="{{ back }}">{{ _('Back') }}</a></p>
+{% endblock %}

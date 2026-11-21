@@ -1,0 +1,219 @@
+$ customers create --key k --name Golden Customer  -> exit 0
+Created customer 1.
+
+$ inventory create --key k --sku GOLD-1 --description Golden part --purchase-cost 1.00 --selling-price 2.50 --low-stock 1  -> exit 0
+Created inventory item 1.
+
+$ inventory receive 1 --quantity 10 --reason stock --revision 1 --key k  -> exit 0
+Recorded stock movement 1; on hand 10 at revision 2.
+
+$ repairs create --key k --customer 1 --device-type Laptop --brand Acme --model X1 --serial SN-GOLD --reported-issue No power  -> exit 0
+Repair 1, revision 1, stage new.
+
+$ repairs create --key k --device-type Phone --reported-issue Cracked screen --json  -> exit 0
+{"customer_id": null, "technician_id": null, "device_type": "Phone", "brand": "", "model": "", "serial": "", "display_device": "", "reported_issue": "Cracked screen", "notes": "", "warranty_until": null, "warranty_repair_id": null, "id": 2, "stage": "new", "revision": 1, "created_at": "<ts>", "picked_up_at": null, "archived_at": null, "payment_paid": null}
+
+$ repairs show 1  -> exit 0
+Repair	1
+Revision	1
+Device	Laptop Acme X1
+Customer	Golden Customer
+Technician	Unassigned
+Reported issue	No power
+Stage	new
+Pickup	In shop
+Archive	Active
+Parts	0.00 EUR
+Labor	0.00 EUR
+Discount	0.00 EUR
+Total	0.00 EUR (not a payment)
+
+$ repairs show 1 --json  -> exit 0
+{"customer_id": 1, "technician_id": null, "device_type": "Laptop", "brand": "Acme", "model": "X1", "serial": "SN-GOLD", "display_device": "", "reported_issue": "No power", "notes": "", "warranty_until": null, "warranty_repair_id": null, "id": 1, "stage": "new", "revision": 1, "created_at": "<ts>", "picked_up_at": null, "archived_at": null, "payment_paid": null}
+
+$ repairs list  -> exit 0
+2	Phone		new
+1	Laptop	X1	new
+
+$ repairs list --queue open --json  -> exit 0
+{"items": [{"customer_id": null, "technician_id": null, "device_type": "Phone", "brand": "", "model": "", "serial": "", "display_device": "", "reported_issue": "Cracked screen", "notes": "", "warranty_until": null, "warranty_repair_id": null, "id": 2, "stage": "new", "revision": 1, "created_at": "<ts>", "picked_up_at": null, "archived_at": null, "payment_paid": null, "customer_name": null, "technician_username": null}, {"customer_id": 1, "technician_id": null, "device_type": "Laptop", "brand": "Acme", "model": "X1", "serial": "SN-GOLD", "display_device": "", "reported_issue": "No power", "notes": "", "warranty_until": null, "warranty_repair_id": null, "id": 1, "stage": "new", "revision": 1, "created_at": "<ts>", "picked_up_at": null, "archived_at": null, "payment_paid": null, "customer_name": "Golden Customer", "technician_username": null}], "next_before": null, "total": 2}
+
+$ repairs device-history --serial SN-GOLD  -> exit 0
+1	<ts>	new	No power
+
+$ repairs edit 1 --revision 1 --model X2 --key k  -> exit 0
+Repair 1, revision 2, stage new.
+
+$ repairs stage 1 --revision 2 --stage in_progress --key k  -> exit 0
+Repair 1, revision 3, stage in_progress.
+
+$ repairs add-entry 1 --kind work --body Opened the case --key k  -> exit 0
+Added work entry 1 by cli.
+
+$ repairs entries 1  -> exit 0
+1	work	cli	Opened the case
+
+$ repairs entries 1 --json  -> exit 0
+{"items": [{"kind": "work", "body": "Opened the case", "id": 1, "repair_id": 1, "author_id": 2, "author_username": "cli", "created_at": "<ts>", "revision": 1, "deleted": false}], "next_before": null}
+
+$ repairs edit-entry 1 1 --revision 1 --kind note --body Opened case --reason typo --key k  -> exit 0
+Work entry 1, revision 2, deleted=False.
+
+$ repairs delete-entry 1 1 --revision 2 --reason mistake --key k  -> exit 0
+Work entry 1, revision 3, deleted=True.
+
+$ repairs entries 1  -> exit 0
+1	note	cli	Opened case (deleted)
+
+$ repairs restore-entry 1 1 --revision 3 --reason back --key k  -> exit 0
+Work entry 1, revision 4, deleted=False.
+
+$ repairs entry-history 1 1  -> exit 0
+Revision 4	note	cli	visible	back
+Revision 3	note	cli	deleted	mistake
+Revision 2	note	cli	visible	typo
+Revision 1	work	cli	visible
+
+$ repairs activity 1  -> exit 0
+<ts>	work_entry.restore	cli	cli	work_entry 1
+<ts>	work_entry.delete	cli	cli	work_entry 1
+<ts>	work_entry.correct	cli	cli	work_entry 1
+<ts>	work_entry.create	cli	cli	work_entry 1
+<ts>	repair.stage	cli	cli	repair 1
+<ts>	repair.update	cli	cli	repair 1
+<ts>	repair.create	cli	cli	repair 1
+
+$ repairs activity 1 --limit 2 --json  -> exit 0
+{"items": [{"id": 13, "operation": "work_entry.restore", "occurred_at": "<ts>", "actor_username": "cli", "source": "cli", "entity_type": "work_entry", "entity_id": 1, "actor_kind": "user"}, {"id": 12, "operation": "work_entry.delete", "occurred_at": "<ts>", "actor_username": "cli", "source": "cli", "entity_type": "work_entry", "entity_id": 1, "actor_kind": "user"}], "next_before": 12}
+
+$ repairs add-charge 1 --kind part --description Fan --quantity 1 --unit-price 12.50 --unit-cost 5 --key k  -> exit 0
+Charge 1, revision 1, line total 12.50 EUR, removed=False.
+
+$ repairs add-charge 1 --kind labor --description Work --quantity 0.5 --unit h --unit-price 40 --key k --json  -> exit 0
+{"kind": "labor", "description": "Work", "quantity_milli": 500, "unit_price_cents": 4000, "unit": "h", "unit_cost_cents": null, "notes": "", "id": 2, "repair_id": 1, "line_total_cents": 2000, "revision": 1, "deleted": false, "created_by": 2, "created_by_username": "cli", "created_at": "<ts>"}
+
+$ repairs charges 1  -> exit 0
+1	part	Fan	1 pcs	12.50	12.50
+2	labor	Work	0.5 h	40.00	20.00
+Parts 12.50, labor 20.00, discount 0.00, total 32.50 EUR (discount revision 0).
+
+$ repairs charges 1 --json  -> exit 0
+{"parts_subtotal_cents": 1250, "labor_subtotal_cents": 2000, "subtotal_cents": 3250, "discount_kind": "none", "discount_value": 0, "discount_cents": 0, "total_cents": 3250, "discount_revision": 0, "currency": "EUR", "items": [{"kind": "part", "description": "Fan", "quantity_milli": 1000, "unit_price_cents": 1250, "unit": "pcs", "unit_cost_cents": 500, "notes": "", "id": 1, "repair_id": 1, "line_total_cents": 1250, "revision": 1, "deleted": false, "created_by": 2, "created_by_username": "cli", "created_at": "<ts>"}, {"kind": "labor", "description": "Work", "quantity_milli": 500, "unit_price_cents": 4000, "unit": "h", "unit_cost_cents": null, "notes": "", "id": 2, "repair_id": 1, "line_total_cents": 2000, "revision": 1, "deleted": false, "created_by": 2, "created_by_username": "cli", "created_at": "<ts>"}]}
+
+$ repairs edit-charge 1 1 --revision 1 --unit-price 13 --reason price --key k  -> exit 0
+Charge 1, revision 2, line total 13.00 EUR, removed=False.
+
+$ repairs delete-charge 1 2 --revision 1 --reason remove --key k  -> exit 0
+Charge 2, revision 2, line total 20.00 EUR, removed=True.
+
+$ repairs restore-charge 1 2 --revision 2 --reason keep --key k  -> exit 0
+Charge 2, revision 3, line total 20.00 EUR, removed=False.
+
+$ repairs discount 1 --revision 0 --kind percent --value 10 --key k  -> exit 0
+1	part	Fan	1 pcs	13.00	13.00
+2	labor	Work	0.5 h	40.00	20.00
+Parts 13.00, labor 20.00, discount 3.30, total 29.70 EUR (discount revision 1).
+
+$ repairs discount 1 --revision 1 --kind none --key k --json  -> exit 0
+{"parts_subtotal_cents": 1300, "labor_subtotal_cents": 2000, "subtotal_cents": 3300, "discount_kind": "none", "discount_value": 0, "discount_cents": 0, "total_cents": 3300, "discount_revision": 2, "currency": "EUR", "items": [{"kind": "part", "description": "Fan", "quantity_milli": 1000, "unit_price_cents": 1300, "unit": "pcs", "unit_cost_cents": 500, "notes": "", "id": 1, "repair_id": 1, "line_total_cents": 1300, "revision": 2, "deleted": false, "created_by": 2, "created_by_username": "cli", "created_at": "<ts>"}, {"kind": "labor", "description": "Work", "quantity_milli": 500, "unit_price_cents": 4000, "unit": "h", "unit_cost_cents": null, "notes": "", "id": 2, "repair_id": 1, "line_total_cents": 2000, "revision": 3, "deleted": false, "created_by": 2, "created_by_username": "cli", "created_at": "<ts>"}]}
+
+$ repairs consume-part 1 1 --repair-revision 3 --item-revision 2 --consumed-quantity 2 --billed-quantity 2 --key k  -> exit 0
+Charge 3, movement 2, consumed 2 pcs, billed 2 pcs, line total 5.00 EUR.
+
+$ repairs charges 1 --include-consumption  -> exit 0
+1	part	Fan	1 pcs	13.00	13.00
+2	labor	Work	0.5 h	40.00	20.00
+3	part	Golden part	2 pcs	2.50	5.00	consumed 2 pcs
+Parts 18.00, labor 20.00, discount 0.00, total 38.00 EUR (discount revision 2).
+
+$ repairs part-return-status 1 3  -> exit 0
+Golden part	consumption movement 2
+Remaining to return: 2 pcs
+Repair revision 3, item revision 3, charge revision 1.
+
+$ repairs return-part 1 3 --repair-revision 3 --item-revision 3 --quantity 0.5 --reason unused --key k  -> exit 0
+Return movement 3, returned 0.5 pcs, on hand 8.5, repair total 38.00 EUR.
+
+$ repairs consume-part 1 1 --repair-revision 3 --item-revision 4 --consumed-quantity 1 --billed-quantity 1 --key k --json  -> exit 0
+{"kind": "part", "description": "Golden part", "quantity_milli": 1000, "unit_price_cents": 250, "unit": "pcs", "unit_cost_cents": 100, "notes": "", "id": 4, "repair_id": 1, "line_total_cents": 250, "revision": 1, "deleted": false, "created_by": 2, "created_by_username": "cli", "created_at": "<ts>", "inventory_item_id": 1, "movement_id": 4, "consumed_quantity_milli": 1000}
+
+$ repairs intake-mistake 1 4 --repair-revision 3 --item-revision 5 --charge-revision 1 --reason wrong --key k  -> exit 0
+Return movement 5, returned 1 pcs, on hand 8.5, repair total 38.00 EUR.
+
+$ repairs consume-part 1 1 --repair-revision 3 --item-revision 999 --consumed-quantity 1000 --billed-quantity 1 --key k  -> exit 7
+[stderr] repairs: The record changed after you reviewed it. Read it again and retry with the new revision.
+
+$ repairs add-charge 1 --kind part --description Bad --quantity x --unit-price 1 --key k  -> exit 8
+[stderr] repairs: Enter a plain non-negative number with at most 3 decimal places.
+
+$ repairs attach 1 --entry 1 --key k  -> exit 0
+Attachment 1, revision 1, attached, sha256 bda33724986175450e049a44be4351a0932bc63b6aa3eb793468f56a24aa48ad.
+
+$ repairs attachments 1  -> exit 0
+1	photo.bin	21	attached	bda33724986175450e049a44be4351a0932bc63b6aa3eb793468f56a24aa48ad
+
+$ repairs attachments 1 --json  -> exit 0
+{"items": [{"id": 1, "repair_id": 1, "entry_id": 1, "filename": "photo.bin", "media_type": "application/octet-stream", "size_bytes": 21, "sha256": "bda33724986175450e049a44be4351a0932bc63b6aa3eb793468f56a24aa48ad", "uploader_id": 2, "uploader_username": "cli", "created_at": "<ts>", "revision": 1, "detached": false, "previewable": false, "detached_at": null, "purged": false, "purged_at": null, "purged_by_username": null, "caption": "", "entry_ids": [1]}], "next_before": null}
+
+$ repairs edit-attachment 1 1 --revision 1 --caption Board --key k  -> exit 0
+Attachment 1, revision 2, attached, sha256 bda33724986175450e049a44be4351a0932bc63b6aa3eb793468f56a24aa48ad.
+
+$ repairs unlink-attachment 1 1 1 --revision 2 --key k  -> exit 0
+Attachment 1, revision 3, attached, sha256 bda33724986175450e049a44be4351a0932bc63b6aa3eb793468f56a24aa48ad.
+
+$ repairs link-attachment 1 1 1 --revision 3 --key k  -> exit 0
+Attachment 1, revision 4, attached, sha256 bda33724986175450e049a44be4351a0932bc63b6aa3eb793468f56a24aa48ad.
+
+$ repairs download 1 1 --output  -> exit 0
+Attachment 1, revision 4, attached, sha256 bda33724986175450e049a44be4351a0932bc63b6aa3eb793468f56a24aa48ad. Saved to <tmp>/copy.bin.
+
+$ repairs download 1 1 --output  -> exit 7
+[stderr] repairs: <tmp>/copy.bin already exists; choose a new output path.
+
+$ repairs detach 1 1 --revision 4 --key k  -> exit 0
+Attachment 1, revision 5, detached, sha256 bda33724986175450e049a44be4351a0932bc63b6aa3eb793468f56a24aa48ad.
+
+$ repairs purge-attachment 1 1 --revision 5 --key k  -> exit 7
+[stderr] repairs: Only attachments detached for at least 30 days can be purged.
+
+$ repairs detach 1 1 --revision 5 --undo --key k  -> exit 0
+Attachment 1, revision 6, attached, sha256 bda33724986175450e049a44be4351a0932bc63b6aa3eb793468f56a24aa48ad.
+
+$ repairs stage 1 --revision 3 --stage repaired --key k  -> exit 0
+Repair 1, revision 4, stage repaired.
+
+$ repairs stage 1 --revision 4 --stage in_progress --key k  -> exit 8
+[stderr] repairs: Reopening requires an explicit reason. reason: Explain why the completed repair is being reopened.
+
+$ repairs stage 1 --revision 4 --stage repaired --key k  -> exit 7
+[stderr] repairs: The repair is already in this stage.
+
+$ repairs pickup 1 --revision 4 --key k  -> exit 0
+Repair 1, revision 5, stage repaired.
+
+$ repairs pickup 1 --revision 5 --undo --key k  -> exit 0
+Repair 1, revision 6, stage repaired.
+
+$ repairs archive 1 --revision 6 --key k  -> exit 0
+Repair 1, revision 7, stage repaired.
+
+$ repairs archive 1 --revision 7 --undo --key k  -> exit 0
+Repair 1, revision 8, stage repaired.
+
+$ repairs label-options 1  -> exit 0
+Repair revision	8
+Printer revision	1
+Enabled	False
+P15 program available	True
+
+$ repairs label-options 1 --json  -> exit 0
+{"revision": 8, "printer_revision": 1, "enabled": false, "available": true}
+
+$ repairs print-label 1 --revision 8 --printer-revision 1 --key k  -> exit 7
+[stderr] repairs: Direct label printing is disabled for this shop.
+
+$ repairs show 99  -> exit 6
+[stderr] repairs: Repair not found.
+
+$ repairs edit 1 --revision 1 --model stale --key k  -> exit 7
+[stderr] repairs: The record changed after you reviewed it. Read it again and retry with the new revision.

@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% import "_ui.html" as ui with context %}
+{% set device = (repair.display_device or repair.device_type or _('Device')) %}
+{% set title = device ~ ' · #' ~ repair.id %}
+{% macro attached_metadata(file) %}
+  {% if file.caption %}<span class="obi-muted">{{ file.caption }}</span>{% endif %}
+  {% if file.entry_ids %}
+    <span class="obi-muted">{{ _('Linked work entries') }} · {% for entry_id in file.entry_ids %}{{ _('Entry {id}', id=entry_id) }}{% if not loop.last %}, {% endif %}{% endfor %}</span>
+  {% endif %}
+{% endmacro %}
+{% macro cursors() %}
+  {% if log_before %}<input type="hidden" name="log_before" value="{{ log_before }}">{% endif %}
+  {% if files_before %}<input type="hidden" name="files_before" value="{{ files_before }}">{% endif %}
+  {% if detached_before %}<input type="hidden" name="detached_before" value="{{ detached_before }}">{% endif %}
+{% endmacro %}
+{% macro attachment_fields(csrf, key, revision, draft, cursor='files') %}
+  <input type="hidden" name="csrf" value="{{ csrf }}">
+  <input type="hidden" name="key" value="{{ draft.key if draft else key }}">
+  <input type="hidden" name="revision" value="{{ draft.revision if draft else revision }}">
+  {% if cursor == 'detached' %}{% if detached_before %}<input type="hidden" name="detached_before" value="{{ detached_before }}">{% endif %}
+  {% else %}{% if files_before %}<input type="hidden" name="files_before" value="{{ files_before }}">{% endif %}{% endif %}
+{% endmacro %}
+
+{% block content %}
+  {% if error_summary %}
+    <div class="obi-notice" data-tone="error" role="alert" id="error-summary" tabindex="-1" autofocus>
+      <p>{{ _('Check the form and correct the marked fields.') }}</p>
+      {% for error in error_summary %}
+        <p><a href="{{ error.href }}">{{ _(error.message) }}</a></p>
+        {% if error.fields %}
+          <ul class="obi-link-list">
+            {% for field, message in error.fields.items() %}<li><a href="#{{ field }}">{{ _(message) }}</a></li>{% endfor %}
+          </ul>
+        {% endif %}
+      {% endfor %}
+    </div>
+  {% endif %}
+  {# status #}
+  {% include "_repair_status.html" %}
+
+  <div class="rl-repair-work-grid">
+    {% include "_repair_stock.html" %}
+    {% include "_repair_log.html" %}
+  </div>
+
+  {% include "_repair_fees.html" %}
+  {% include "_repair_files.html" %}
+  {% call ui.panel('activity-heading', 'Activity', fold=true, expanded=activity_open) %}
+    {% include '_repair_activity.html' %}
+  {% endcall %}
+  {% if can_write %}<script src="{{ request.url_for('static', path='ticket-scroll.js').path }}" integrity="sha256-EM7IoPIPIgodmhS3lEZD5aqjcnRHqniP31lIlZlJ118="></script>{% endif %}
+{% endblock %}

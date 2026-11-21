@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% import "_ui.html" as ui with context %}
+{% set title = _('Edit user') if user_id else _('New user') if form else _('Users') %}
+{% set register = page is defined or form is defined %}
+
+{% block content %}
+      {% if error %}{{ ui.error(error, 'form-error') }}{% endif %}
+      {% if page %}{% include '_settings_nav.html' %}{% endif %}
+      {% if form %}
+        {% set action = request.url_for('user_save', user_id=user_id) if user_id else request.url_for('user_create') %}
+        {% if stale %}<p><a href="{{ request.url_for('user_edit', user_id=user_id).path }}">{{ _('Open latest version') }}</a></p>{% endif %}
+        <form method="post" action="{{ action.path }}"{% if error %} aria-describedby="form-error"{% endif %}>
+          <input type="hidden" name="csrf" value="{{ csrf }}">
+          <input type="hidden" name="key" value="{{ request_key }}">
+          {% if user_id %}<input type="hidden" name="revision" value="{{ revision }}">{% endif %}
+          {% call ui.panel('user-form-details', 'User') %}
+          <div class="obi-panel-body">
+            <div class="obi-intake-grid">
+              <label class="rl-sr-only" for="username">{{ _('Username') }}</label>
+              <input id="username" name="username" value="{{ details.get('username', '') }}" placeholder="{{ _('Username') }}" maxlength="80" autocomplete="off" required{% if field_errors.get('username') %} aria-invalid="true" aria-describedby="username-error"{% endif %}>
+              {% if field_errors.get('username') %}<span id="username-error">{{ _(field_errors.username) }}</span>{% endif %}
+              <label class="rl-sr-only" for="role">{{ _('Role') }}</label>
+              <select id="role" name="role"{% if field_errors.get('role') %} aria-invalid="true" aria-describedby="role-error"{% endif %}>
+                {% for role in roles %}<option value="{{ role }}"{% if details.get('role') == role %} selected{% endif %}>{{ _(role|title) }}</option>{% endfor %}
+              </select>
+              {% if field_errors.get('role') %}<span id="role-error">{{ _(field_errors.role) }}</span>{% endif %}
+              <label class="rl-sr-only" for="password">{{ _('New password (leave blank to keep current)') if user_id else _('Password') }}</label>
+              <input id="password" name="password" type="password" placeholder="{{ _('New password (leave blank to keep current)') if user_id else _('Password') }}" maxlength="1024" autocomplete="new-password"{% if not user_id %} required{% endif %}{% if field_errors.get('password') %} aria-invalid="true" aria-describedby="password-error"{% endif %}>
+              {% if field_errors.get('password') %}<span id="password-error">{{ _(field_errors.password) }}</span>{% endif %}
+              {% if user_id %}
+                <label class="obi-check" for="active"><input id="active" name="active" type="checkbox" value="1"{% if details.get('active') %} checked{% endif %}> {{ _('Active account') }}</label>
+              {% endif %}
+            </div>
+          </div>
+          {% endcall %}
+          <div class="obi-actions">
+            <button type="submit">{{ _('Save user') if user_id else _('Create user') }}</button>
+            <a href="{{ request.url_for('user_list').path }}">{{ _('Back to users') }}</a>
+          </div>
+        </form>
+      {% elif page %}
+        {% call ui.panel('user-results', 'Users', path=request.url_for('user_new').path, link='New user') %}
+          {% if page.items %}
+            {% call ui.table('Users') %}
+              <thead><tr><th scope="col">{{ _('Username') }}</th><th scope="col">{{ _('Role') }}</th><th scope="col">{{ _('Status') }}</th><th scope="col">{{ _('Actions') }}</th></tr></thead>
+              <tbody>
+                {% for user in page.items %}
+                  <tr>
+                    <th scope="row">{{ user.username }}</th>
+                    <td>{{ _(user.role|title) }}</td>
+                    <td>{{ ui.status('Active' if user.active else 'Disabled') }}</td>
+                    <td><a href="{{ request.url_for('user_edit', user_id=user.id).path }}" aria-label="{{ _('Edit {name}', name=user.username) }}">{{ _('Edit') }}</a></td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            {% endcall %}
+          {% else %}
+            {{ ui.empty('No users on this page.') }}
+          {% endif %}
+          {{ ui.pager(request.url_for('user_list').path, {}, before, page.next_before, 'Newest users', 'Older users') }}
+        {% endcall %}
+        <p class="account-link"><a href="{{ request.url_for('account').path }}">{{ _('Back to account') }}</a></p>
+      {% endif %}
+{% endblock %}

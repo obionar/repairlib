@@ -1,0 +1,40 @@
+{% set labels = {
+  'repair.create': _('Created repair'), 'repair.update': _('Edited repair'),
+  'repair.stage': _('Changed repair status'), 'repair.pickup': _('Updated pickup status'),
+  'repair.payment': _('Updated payment status'),
+  'repair.archive': _('Updated archive status'), 'repair.discount': _('Updated discount'),
+  'work_entry.create': _('Added work entry'), 'work_entry.correct': _('Corrected work entry'),
+  'work_entry.delete': _('Deleted work entry'), 'work_entry.restore': _('Restored work entry'),
+  'charge.create': _('Added charge'), 'charge.correct': _('Corrected charge'),
+  'charge.delete': _('Removed charge'), 'charge.restore': _('Restored charge'),
+  'inventory.consume': _('Used stock part'), 'inventory.return': _('Returned stock part'),
+  'inventory.intake_mistake': _('Reversed part consumption'),
+  'attachment.create': _('Added file'), 'attachment.caption': _('Edited file caption'),
+  'attachment.link': _('Linked file'), 'attachment.unlink': _('Unlinked file'),
+  'attachment.detach': _('Detached file'), 'attachment.restore': _('Restored file'),
+  'attachment.purge': _('Purged file'), 'printer.label.requested': _('Requested label print')
+} %}
+<div id="activity" class="obi-panel-body">
+  {% if activity.items %}
+    <ol class="obi-entry-list">
+      {% for event in activity.items %}
+        <li class="obi-entry">
+          <p class="obi-entry-head">
+            <strong>{{ labels.get(event.operation) or _('Recorded change') }}{% if event.entity_type not in ('repair', 'repair_discount') %} <span class="obi-id">#{{ event.entity_id }}</span>{% endif %}</strong>
+            <span>{{ event.actor_username or _('Unknown actor') }}{% if event.actor_kind == 'agent' %} · {{ _('Agent') }}{% endif %}</span>
+            {{ ui.local_time(event.occurred_at) }}
+            {% if event.source in ('web', 'api') %}<span>{{ _('Web') if event.source == 'web' else _('API') }}</span>{% endif %}
+          </p>
+        </li>
+      {% endfor %}
+    </ol>
+  {% else %}
+    <p>{{ _('No activity on this page.') }}</p>
+  {% endif %}
+  {% if activity_newest or activity_older %}
+    <nav class="obi-pager" aria-label="{{ _('Activity pages') }}">
+      {% if activity_newest %}<a href="{{ activity_newest }}#activity">{{ _('Newest activity') }}</a>{% endif %}
+      {% if activity_older %}<a href="{{ activity_older }}#activity">{{ _('Older activity') }}</a>{% endif %}
+    </nav>
+  {% endif %}
+</div>

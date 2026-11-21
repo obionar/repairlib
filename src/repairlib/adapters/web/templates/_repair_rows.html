@@ -1,0 +1,37 @@
+{% import "_ui.html" as ui with context %}
+
+{% macro table(rows, label, date_label, queue=false, show_customer=true) %}
+  {% call ui.table(label, wide=true, css='rl-register') %}
+    <thead><tr>
+      <th scope="col">{{ _('Repair') }}</th>
+      {% if show_customer %}<th scope="col">{{ _('Customer') }}</th>{% endif %}
+      <th scope="col">{{ _('Status') }}</th>
+      <th scope="col">{{ _(date_label) }}</th>
+    </tr></thead>
+    <tbody>
+      {% for repair in rows %}
+        <tr>
+          <th scope="row">
+            <a href="{{ request.url_for('repair_detail', repair_id=repair.id).path }}">#{{ repair.id }}: {{ repair.display_device or ([repair.device_type, repair.brand, repair.model]|reject('equalto', '')|join(' ')) or _('Device') }}</a>
+            <span class="obi-row-detail">{{ repair.reported_issue|truncate(120, false, '…') }}</span>
+          </th>
+          {% if show_customer %}<td>
+            {% if repair.customer_name %}
+              <a href="{{ request.url_for('customer_detail', customer_id=repair.customer_id).path }}">{{ repair.customer_name }}</a>
+            {% else %}
+              <span class="obi-muted">{{ _('No linked customer') }}</span>
+            {% endif %}
+          </td>{% endif %}
+          <td>
+            <div class="obi-row-flags">
+              {{ ui.status(stage_label(repair.stage), {'new': 'new', 'waiting_parts': 'warning', 'lab_test': 'test', 'customer_test': 'test', 'repaired': 'success', 'no_repair': 'stop'}.get(repair.stage, 'work')) }}
+              {% if repair.picked_up_at %}{{ ui.status('Picked up', 'success') }}{% endif %}
+              {% if not queue and repair.archived_at %}{{ ui.status('Archived') }}{% endif %}
+            </div>
+          </td>
+          <td>{{ ui.local_time(repair.timestamp if queue else repair.created_at, date_only=true) }}</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  {% endcall %}
+{% endmacro %}

@@ -1,0 +1,47 @@
+/* Print views: plain document flow, black on white, no decoration. */
+body {
+  margin: 16px;
+  color: #000;
+  background: #fff;
+  font: 11pt/1.4 system-ui, sans-serif;
+}
+
+h1 { font-size: 16pt; margin: 0 0 8px; }
+h2 { font-size: 12pt; margin: 16px 0 4px; border-bottom: 1px solid #000; }
+dl { display: grid; grid-template-columns: max-content 1fr; gap: 2px 12px; margin: 0; }
+dt { font-weight: 600; }
+dd { margin: 0; }
+table { width: 100%; border-collapse: collapse; }
+th, td { padding: 2px 4px; border-bottom: 1px solid #999; text-align: left; vertical-align: top; }
+.numeric { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.multiline { white-space: pre-wrap; overflow-wrap: anywhere; }
+.small { font-size: 9pt; }
+.print-shop { margin: 0; font-weight: 600; }
+.entries { padding-left: 20px; }
+.print-hint { padding: 8px; border: 1px solid #000; }
+
+.print-label {
+  width: 62mm;
+  min-height: 29mm;
+  box-sizing: border-box;
+  padding: 2mm 3mm;
+  border: 1px dashed #000;
+  overflow: hidden;
+}
+.print-label p { margin: 0; overflow-wrap: anywhere; font-size: 9pt; line-height: 1.2; }
+.print-label .label-id { font-size: 18pt; font-weight: 700; }
+
+@page { margin: 12mm; }
+
+@media print {
+  .print-hint { display: none; }
+  body { margin: 0; }
+  .print-label { border: 0; }
+  tr, li { break-inside: avoid; }
+}
+
+/* Named page: label views print at label size where the browser supports it. */
+@page label { size: 62mm 29mm; margin: 0; }
+@media print { .print-label-page { page: label; } }
+
+.print-hint :focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }

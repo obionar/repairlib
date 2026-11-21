@@ -1,0 +1,82 @@
+{% import "_ui.html" as ui with context %}
+
+{% call ui.panel('stock-usage', 'Parts used') %}
+  {% if manual_error %}{{ ui.toast(manual_error, 'error', 'manual-part-error') }}{% elif notice_panel == 'stock-usage' %}{{ ui.notice(notice) }}{% endif %}
+  {% if can_edit %}
+    {% set picker = request.url_for('part_picker', repair_id=repair.id).path %}
+    <div class="obi-panel-body">
+      <form method="get" action="{{ request.url_for('repair_detail', repair_id=repair.id).path }}#stock-usage" class="rl-part-search" role="search">
+        <label for="part-q">{{ _('Find a catalog part') }}</label>
+        <div class="rl-part-search-row">
+          <input id="part-q" type="search" name="part_q" value="{{ part_q }}" maxlength="100" placeholder="{{ _('SKU, description or part number') }}">
+          {{ ui.button('Search') }}
+        </div>
+      </form>
+      {% if part_error %}{{ ui.error(part_error, 'part-search-error') }}{% endif %}
+      {% if part_results %}
+        {% if part_results.items %}
+          <ul class="rl-part-results">
+            {% for item in part_results.items %}
+              <li>
+                <div class="rl-part-name"><strong>{{ item.description }}</strong>
+                  <span class="obi-muted">{{ item.sku }} · {{ _('On hand') }} {{ item.on_hand_milli|milli }} {{ item.unit }} · {{ item.selling_price_cents|cents }} EUR</span></div>
+                {% if item.on_hand_milli > 0 %}
+                  <form method="post" action="{{ request.url_for('consume_part', repair_id=repair.id, item_id=item.id).path }}" class="rl-part-use">
+                    <input type="hidden" name="csrf" value="{{ part_csrf[item.id] }}">
+                    <input type="hidden" name="key" value="{{ part_keys[item.id] }}">
+                    <input type="hidden" name="repair_revision" value="{{ repair.revision }}">
+                    <input type="hidden" name="item_revision" value="{{ item.revision }}">
+                    <label class="rl-sr-only" for="part-quantity-{{ item.id }}">{{ _('Quantity taken from stock') }}</label>
+                    <input id="part-quantity-{{ item.id }}" name="consumed_quantity" inputmode="decimal" value="1" required>
+                    {{ ui.button('Use') }}
+                  </form>
+                {% else %}
+                  {{ ui.status('Out of stock', 'warning') }}
+                {% endif %}
+              </li>
+            {% endfor %}
+          </ul>
+          {% if part_results.next_before %}<p><a href="{{ picker }}?{{ {'q': part_q}|urlencode }}">{{ _('More catalog results') }}</a></p>{% endif %}
+        {% else %}
+          <p class="obi-muted">{{ _('No catalog part matches.') }}</p>
+        {% endif %}
+      {% endif %}
+      <p class="rl-part-browse"><a href="{{ picker }}">{{ _('Browse catalog') }}</a></p>
+    </div>
+    <details class="obi-panel-body obi-panel-section rl-manual-part"{% if manual_error or (part_results and not part_results.items) %} open{% endif %}>
+      <summary class="obi-subheading">{{ _('Part not in the catalog') }}</summary>
+      <form method="post" id="manual-part-form" action="{{ request.url_for('use_manual_part', repair_id=repair.id).path }}"{% if manual_error %} aria-describedby="manual-part-error"{% endif %}>
+        <input type="hidden" name="csrf" value="{{ manual_csrf }}">
+        <input type="hidden" name="key" value="{{ manual_key }}">
+        <input type="hidden" name="revision" value="{{ manual_revision }}">
+        <div class="rl-manual-part-grid">
+          <div class="obi-field"><label for="manual-description">{{ _('Name') }}</label><input id="manual-description" name="description" maxlength="200" value="{{ manual.get('description', '') }}" required></div>
+          <div class="obi-field"><label for="manual-quantity">{{ _('Quantity') }}</label><input id="manual-quantity" name="quantity" inputmode="decimal" value="{{ manual.get('quantity', '') }}" required></div>
+          <div class="obi-field"><label for="manual-unit-price">{{ _('Unit price (EUR)') }}</label><input id="manual-unit-price" name="unit_price" inputmode="decimal" value="{{ manual.get('unit_price', '') }}" required></div>
+        </div>
+        {{ ui.button('Use part') }}
+      </form>
+    </details>
+  {% endif %}
+  {% if not used_parts and can_edit %}<p class="obi-panel-content obi-muted">{{ _('No parts used yet.') }}</p>{% endif %}
+  {% if used_parts %}
+    <div class="obi-panel-body rl-used-parts">
+      <ul class="customer-list">
+        {% for item in used_parts %}
+          <li>{{ item.description }} · ×{{ (item.consumed_quantity_milli or item.quantity_milli)|milli }} {{ item.unit }} · {{ item.unit_price_cents|cents }} EUR</li>
+        {% endfor %}
+      </ul>
+      {% set stocked = used_parts|selectattr('movement_id')|list %}
+      {% if can_edit and stocked %}
+        <details class="obi-inline-details">
+          <summary>{{ _('Return to stock') }}</summary>
+          <ul class="obi-link-list">
+            {% for item in stocked %}
+              <li><a href="{{ request.url_for('return_part_review', repair_id=repair.id, charge_id=item.id).path }}">{{ item.description }} · {{ item.consumed_quantity_milli|milli }} {{ item.unit }} · #{{ item.id }}</a></li>
+            {% endfor %}
+          </ul>
+        </details>
+      {% endif %}
+    </div>
+  {% endif %}
+{% endcall %}
