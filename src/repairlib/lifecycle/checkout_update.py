@@ -36,7 +36,7 @@ def check_candidate(workspace: str, backup: str, fd: str = "") -> None:
     lock_fd = int(fd) if fd else None
     path = Path(workspace)
     try:
-        migrate_workspace(path, check_backup=lambda schema: verify_restore_point(Path(backup), schema),
+        migrate_workspace(path, check_backup=lambda schema: verify_restore_point(Path(backup), schema, workspace=path),
                           lock_fd=lock_fd)
         checked_doctor(path, lock_fd)
     except (CheckoutError, WorkspaceError, OSError) as error:

@@ -97,6 +97,56 @@ class MigrateBackupGuardTests(unittest.TestCase):
         self.assert_refused(result, f"schema {SCHEMA_VERSION} does not match")
         self.assertEqual(wrong.read_bytes(), archived)
 
+    def test_archive_from_another_workspace_at_same_schema_is_refused(self):
+        other = self.prior_workspace("other", SCHEMA_VERSION - 1)
+        with closing(sqlite3.connect(database_path(other))) as db, db:
+            db.execute("INSERT INTO customers(shop_id, name) VALUES (1, 'Different workshop record')")
+        wrong = self.root / "other.zip"
+        self.run_cli("backup", "create", "--workspace", str(other), "--output", str(wrong), check=True)
+        self.before = self.database.read_bytes()
+        self.assert_refused(self.migrate("--backup", str(wrong)), "contents do not match")
+
+    def test_newly_committed_wal_data_makes_same_workspace_backup_stale(self):
+        with closing(sqlite3.connect(self.database)) as db:
+            db.execute("PRAGMA journal_mode = WAL")
+            with db:
+                db.execute("INSERT INTO customers (shop_id, name, notes) VALUES (1, ?, ?)",
+                           ("New workshop record", "not visible in the backup\0suffix"))
+            self.before = self.database.read_bytes()
+            wal = self.database.with_name(self.database.name + "-wal")
+            before_wal = wal.read_bytes()
+            self.assert_refused(self.migrate("--backup", str(self.archive)), "contents do not match")
+            self.assertEqual(wal.read_bytes(), before_wal)
+
+    def test_matching_database_snapshot_can_guard_a_workspace_without_attachments(self):
+        snapshot = self.root / "before.sqlite3"
+        self.run_cli("backup", "snapshot", "--workspace", str(self.workspace),
+                     "--output", str(snapshot), check=True)
+        result = self.migrate("--backup", str(snapshot))
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(self.version(), SCHEMA_VERSION)
+
+    def test_database_only_snapshot_cannot_guard_retained_attachments(self):
+        with closing(sqlite3.connect(self.database)) as db, db:
+            db.execute("INSERT INTO repairs(shop_id, reported_issue) VALUES (1, 'Synthetic issue')")
+            db.execute(
+                "INSERT INTO attachments(shop_id, repair_id, uploader_id, uploader_username, filename, "
+                "media_type, size_bytes, sha256, storage_name) "
+                "VALUES (1, 1, 1, 'owner', 'lab.bin', 'application/octet-stream', 1, ?, ?)",
+                ("a" * 64, "b" * 32),
+            )
+        snapshot = self.root / "before.sqlite3"
+        self.run_cli("backup", "snapshot", "--workspace", str(self.workspace),
+                     "--output", str(snapshot), check=True)
+        self.before = self.database.read_bytes()
+        self.assert_refused(self.migrate("--backup", str(snapshot)), "Use a full backup archive")
+
+    def test_backup_inside_workspace_is_refused_without_writes(self):
+        inside = self.workspace / self.archive.name
+        self.archive.rename(inside)
+        self.before = self.database.read_bytes()
+        self.assert_refused(self.migrate("--backup", str(inside)), "must be outside")
+
 
 if __name__ == "__main__":
     unittest.main()

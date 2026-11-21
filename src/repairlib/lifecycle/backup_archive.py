@@ -15,14 +15,16 @@ from typing import BinaryIO, TypedDict
 from zipfile import BadZipFile, ZIP_STORED, ZipFile, ZipInfo
 
 from repairlib.domain.attachments import MAX_UPLOAD_BYTES
-from repairlib.lifecycle.operations import private_subdirectory
+from repairlib.lifecycle.operations import check_database_files, private_subdirectory
 from repairlib.lifecycle.recovery import (
     publish_backup, require_private, staged_workspace_snapshot, verify_snapshot,
 )
 from repairlib.lifecycle.workspace import ACTIVE, DATABASE, LOCK, WorkspaceError, database_path
 from repairlib.storage.blobs import FILES, STORAGE_NAME_LENGTH, blob_path
 from repairlib.storage.initialization import SCHEMA_VERSION
-from repairlib.storage.recovery import SnapshotError, prepare_restored_database, snapshot_attachments
+from repairlib.storage.recovery import (
+    SnapshotError, database_contents_digest, prepare_restored_database, snapshot_attachments,
+)
 
 FORMAT = "repairlib-backup-1"
 RESTORE_STAGE_PREFIX = ".restore-"
@@ -326,26 +328,45 @@ def create_archive(workspace: Path, output: Path) -> int:
         return version
 
 
-def verify_backup(path: Path) -> tuple[str, int]:
+@contextmanager
+def verified_backup_database(path: Path):
     require_private(path.parent.lstat(), stat.S_ISDIR)
     with private_file(path) as handle:
         if handle.read(len(ZIP_HEADER)) == ZIP_HEADER:
             handle.seek(0)
             with TemporaryDirectory(prefix=".verify-", dir=path.parent) as temporary:
-                return "Backup archive", verify_archive(handle, Path(temporary))
-    return "SQLite snapshot", verify_snapshot(path)
+                directory = Path(temporary)
+                yield "Backup archive", verify_archive(handle, directory), directory / DATABASE
+            return
+    yield "SQLite snapshot", verify_snapshot(path), path
 
 
-def verify_restore_point(path: Path, schema: int) -> str:
-    """Refuse unless `path` verifies and holds the given pre-upgrade schema."""
+def verify_backup(path: Path) -> tuple[str, int]:
+    with verified_backup_database(path) as (kind, version, _):
+        return kind, version
+
+
+def verify_restore_point(path: Path, schema: int, *, workspace: Path) -> str:
+    """Verify a restore point for the locked workspace before allowing migration."""
     try:
-        kind, version = verify_backup(path)
+        if path.resolve().is_relative_to(workspace.resolve()):
+            raise WorkspaceError("The pre-migration backup must be outside the workspace.")
+        with verified_backup_database(path) as (kind, version, database):
+            if version != schema:
+                raise WorkspaceError(f"Backup schema {version} does not match workspace schema {schema}.")
+            if kind == "SQLite snapshot" and snapshot_attachments(database, version, 1):
+                raise WorkspaceError("This workspace has retained attachments. Use a full backup archive.")
+            live = database_path(workspace)
+            check_database_files(live)
+            if database_contents_digest(database, path.parent) != database_contents_digest(live, path.parent):
+                raise WorkspaceError("Backup contents do not match the stopped workspace. "
+                                     "Create and verify a fresh backup before migrating.")
     except FileNotFoundError as error:
         raise WorkspaceError("Backup archive not found.") from error
     except OSError as error:
         raise WorkspaceError("Backup archive could not be read safely.") from error
-    if version != schema:
-        raise WorkspaceError(f"Backup schema {version} does not match workspace schema {schema}.")
+    except SnapshotError as error:
+        raise WorkspaceError(str(error)) from error
     return f"{kind} verified (schema {version}): {path}"
 
 

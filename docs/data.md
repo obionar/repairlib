@@ -176,13 +176,13 @@ The restored database keeps its archived schema, records, settings, password has
 
 ## Upgrade a development workspace
 
-Stop every app process for the disposable workspace. Create and verify a full backup and rehearse restoring it into a new disposable destination with the commands above. Then upgrade the existing workspace, optionally requiring a verified backup of the current schema:
+Stop every app process for the disposable workspace. Create and verify a full backup and rehearse restoring it into a new disposable destination with the commands above. Then upgrade the existing workspace, optionally requiring a verified backup that matches its contents:
 
 ```sh
 repairlib migrate --workspace "$repairlib_workspace"
 repairlib migrate --workspace "$repairlib_workspace" --backup "$repairlib_recovery/repairlib.zip"
 ```
 
-`migrate` explicitly upgrades any supported older schema to the current one (`status` shows both) and enables SQLite WAL; fresh setup creates the current schema and startup never migrates. With `--backup`, the archive is verified under the maintenance lock before any write, its schema must equal the workspace's, and a missing, corrupt or mismatched archive is refused with the database unchanged.
+`migrate` explicitly upgrades any supported older schema to the current one (`status` shows both) and enables SQLite WAL; fresh setup creates the current schema and startup never migrates. With `--backup`, RepairLib verifies the backup under the maintenance lock before any write and checks that its schema and committed database contents match the stopped workspace, including changes still in the WAL. A missing, corrupt, stale or unrelated backup is refused with the database unchanged. Take a fresh backup if anything was written after the last one. Keep it outside the workspace and use a full archive if the workspace has retained attachments.
 
 For a recovery rehearsal, run `migrate` against `"$repairlib_restored"` and rerun `status` and `doctor` there. Check representative records and download retained originals before using the restored workspace. If migration is interrupted, keep the verified backup, stop workspace processes and rerun `migrate` so SQLite can resolve any rollback journal. The rehearsal covers process interruption on Linux; power-loss recovery has not been verified.
