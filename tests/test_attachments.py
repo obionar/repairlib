@@ -12,6 +12,7 @@ from uuid import uuid4
 
 from argon2 import PasswordHasher
 
+from repairlib.adapters.api import attachments as attachment_api
 from repairlib.domain import attachments as attachment_domain
 from repairlib.lifecycle.workspace import maintenance_lock
 from repairlib.storage import attachments as attachment_storage, initialization
@@ -125,6 +126,37 @@ class AttachmentTests(TokenFixture, unittest.TestCase):
         self.assertEqual(self.snapshot("SELECT COUNT(*) FROM audit_events WHERE operation='attachment.create'"),
                          [(3,)])
         self.assertNotIn(PASSWORD, json.dumps(self.snapshot("SELECT changes FROM audit_events")))
+
+    def test_download_keeps_the_open_original_and_refuses_linked_storage(self):
+        with self.client() as client:
+            _, auth = self.admin_auth(client)
+            repair_id = self.repair(client, auth)["id"]
+            result = self.upload(client, auth, repair_id, ORIGINAL)
+            self.assertEqual(result.status_code, 201, result.text)
+            url = f"{API}/{repair_id}/attachments/{result.json()['id']}/content"
+            path, = self.stored_files()
+            replacement = b"x" * len(ORIGINAL)
+            response = attachment_api.file_response
+
+            def replace_path_after_open(found, source, **options):
+                path.rename(path.with_suffix(".saved"))
+                path.write_bytes(replacement)
+                return response(found, source, **options)
+
+            with patch.object(attachment_api, "file_response", side_effect=replace_path_after_open):
+                download = client.get(url, headers=auth)
+            self.assertEqual((download.status_code, download.content), (200, ORIGINAL))
+
+            # A private external directory could also contain an unrelated file
+            # with the right name and byte length. Never follow the directory.
+            shop = path.parent
+            outside = self.workspace.parent / "other-files"
+            shop.rename(outside)
+            shop.symlink_to(outside, target_is_directory=True)
+            refused = client.get(url, headers=auth)
+            self.assertEqual(refused.status_code, 503, refused.text)
+            self.assertEqual(refused.json()["error"]["code"], "file_unavailable")
+            self.assertEqual((outside / path.name).read_bytes(), replacement)
 
     def test_low_disk_refuses_declared_uploads_before_staging_and_cleans_streams(self):
         from types import SimpleNamespace

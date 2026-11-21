@@ -7,6 +7,7 @@ import os
 from pathlib import Path
 import re
 import shutil
+from typing import BinaryIO
 import unicodedata
 
 from repairlib.config import DISK_RESERVE_BYTES
@@ -204,7 +205,8 @@ def read_attachment(workspace: Path, access: RepairAccess, repair_id: int, attac
 
 
 def attachment_content(workspace: Path, access: RepairAccess, repair_id: int, attachment_id: int,
-                       *, inline: bool) -> tuple[Attachment, Path]:
+                       *, inline: bool) -> tuple[Attachment, BinaryIO]:
+    """Open the verified original, without reopening its path after authorization."""
     with authorized(workspace, access) as (db, principal, _, _):
         found, storage_name = find_attachment(db, principal.shop_id, repair_id, attachment_id)
         shop_id = principal.shop_id
@@ -212,11 +214,24 @@ def attachment_content(workspace: Path, access: RepairAccess, repair_id: int, at
         raise RepairError(410, "purged", "The attachment bytes were purged; its record and history remain.")
     if inline and not found.previewable:
         raise RepairError(415, "not_previewable", "Only small PNG, JPEG, GIF or WebP images preview inline.")
-    path = blobs.blob_path(workspace, shop_id, storage_name)
-    if not path.is_file() or path.is_symlink():
+    path = blobs.blob_path(Path(), shop_id, storage_name)
+    try:
+        with private_subdirectory(workspace, *path.parts[:-1]) as directory:
+            if directory is None:
+                raise FileNotFoundError
+            fd = os.open(path.name, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK | os.O_CLOEXEC,
+                         dir_fd=directory)
+            try:
+                info = os.fstat(fd)
+                if not blobs.managed_file(info) or info.st_mode & 0o077 or info.st_size != found.size_bytes:
+                    raise OSError("Attachment storage does not match metadata.")
+                return found, os.fdopen(fd, "rb")
+            except BaseException:
+                os.close(fd)
+                raise
+    except OSError:
         raise RepairError(503, "file_unavailable",
-                          "The attachment file is unavailable. Ask the owner to run file reconciliation.")
-    return found, path
+                          "The attachment file is unavailable. Ask the owner to run file reconciliation.") from None
 
 
 def review_metadata(db, principal, repair_id: int, attachment_id: int, operation: str, key: str,

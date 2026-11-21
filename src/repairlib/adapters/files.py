@@ -1,9 +1,10 @@
 """Shared streaming upload and safe download helpers for HTTP adapters."""
 
+from typing import BinaryIO
 from urllib.parse import quote
 
 from starlette.concurrency import run_in_threadpool
-from starlette.responses import FileResponse, Response
+from starlette.responses import Response, StreamingResponse
 
 from repairlib.contracts import Attachment
 from repairlib.domain import attachments
@@ -30,12 +31,37 @@ def matches_etag(header: str | None, etag: str) -> bool:
     return etag in candidates or "*" in candidates
 
 
-def file_response(attachment: Attachment, path, *, inline: bool, if_none_match: str | None = None):
+class AttachmentResponse(StreamingResponse):
+    def __init__(self, source: BinaryIO, size: int, **kwargs):
+        self.source = source
+        self.size = size
+        super().__init__(self.chunks(), **kwargs)
+
+    def chunks(self):
+        remaining = self.size
+        while remaining > 0 and (chunk := self.source.read(min(1 << 20, remaining))):
+            remaining -= len(chunk)
+            yield chunk
+
+    async def __call__(self, scope, receive, send):
+        try:
+            await super().__call__(scope, receive, send)
+        finally:
+            self.source.close()
+
+
+def file_response(attachment: Attachment, source: BinaryIO, *, inline: bool, if_none_match: str | None = None):
     headers = {"Cross-Origin-Resource-Policy": "same-origin"}
-    if inline:
-        headers.update(ETag=f'"{attachment.sha256}"', **{"Cache-Control": PREVIEW_CACHE})
-        if matches_etag(if_none_match, headers["ETag"]):
-            return Response(status_code=304, headers=headers)
-    media_type = attachment.media_type if inline else "application/octet-stream"
-    headers["Content-Disposition"] = disposition("inline" if inline else "attachment", attachment.filename)
-    return FileResponse(path, media_type=media_type, headers=headers)
+    try:
+        if inline:
+            headers.update(ETag=f'"{attachment.sha256}"', **{"Cache-Control": PREVIEW_CACHE})
+            if matches_etag(if_none_match, headers["ETag"]):
+                source.close()
+                return Response(status_code=304, headers=headers)
+        media_type = attachment.media_type if inline else "application/octet-stream"
+        headers["Content-Disposition"] = disposition("inline" if inline else "attachment", attachment.filename)
+        headers["Content-Length"] = str(attachment.size_bytes)
+        return AttachmentResponse(source, attachment.size_bytes, media_type=media_type, headers=headers)
+    except BaseException:
+        source.close()
+        raise

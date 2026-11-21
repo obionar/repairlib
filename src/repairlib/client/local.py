@@ -348,15 +348,17 @@ def show_attachment(ctx, repair_id, attachment_id) -> Attachment:
 
 def download_attachment(ctx, repair_id, attachment, destination, *, max_bytes=None) -> None:
     """Copy original bytes to a binary writer, refusing size or SHA-256 drift."""
-    found, path = run(ctx, attachments.attachment_content, repair_id, attachment.id, inline=False)
-    if max_bytes is not None and found.size_bytes > max_bytes:
-        raise ClientError("The attachment exceeds the content size limit.", code="attachment_too_large")
+    found, source = run(ctx, attachments.attachment_content, repair_id, attachment.id, inline=False)
     digest, size = sha256(), 0
-    with path.open("rb") as source:
-        while chunk := source.read(1 << 20):
+    with source:
+        if max_bytes is not None and found.size_bytes > max_bytes:
+            raise ClientError("The attachment exceeds the content size limit.", code="attachment_too_large")
+        while size < found.size_bytes and (chunk := source.read(min(1 << 20, found.size_bytes - size))):
             size += len(chunk)
             digest.update(chunk)
             destination.write(chunk)
+        if source.read(1):
+            size += 1
     if size != found.size_bytes or digest.hexdigest() != found.sha256:
         raise ClientError("The stored bytes do not match the recorded SHA-256.", 3, code="invalid_response")
 
