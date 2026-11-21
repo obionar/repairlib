@@ -13,7 +13,7 @@ from repairlib.config import DISK_RESERVE_BYTES
 from repairlib.lifecycle.workspace import (
     ACTIVE, WorkspaceError, database_path, maintenance_lock, workspace_schema, workspace_status,
 )
-from repairlib.storage.blobs import FILES, STAGING, STORAGE_NAME_LENGTH
+from repairlib.storage.blobs import FILES, STAGING, UPLOAD_PART
 from repairlib.storage.initialization import SCHEMA_VERSION
 from repairlib.storage.sessions import connect
 from repairlib.storage.workspace_records import WorkspaceDataError, reset_demo_records, workspace_counts
@@ -25,7 +25,6 @@ RECEIPT_TABLES = (
     "inventory_requests", "portable_imports", "printer_requests", "repair_requests", "settings_requests",
     "stock_requests", "user_requests",
 )
-UPLOAD_PART = re.compile(rf"[0-9a-f]{{{STORAGE_NAME_LENGTH}}}\.part")
 
 
 def check_database_files(path: Path) -> None:

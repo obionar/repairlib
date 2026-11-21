@@ -1,15 +1,20 @@
 """Original attachment bytes: staged streaming writes, opaque names and reconciliation."""
 
+from collections.abc import Collection
 from hashlib import sha256
 import os
 from pathlib import Path
+import re
 import secrets
+import stat
 
 from repairlib.paths import ACTIVE
 
 FILES = "files"
 STAGING = ".staging"
 STORAGE_NAME_LENGTH = 32
+STORAGE_NAME = re.compile(rf"[0-9a-f]{{{STORAGE_NAME_LENGTH}}}")
+UPLOAD_PART = re.compile(rf"{STORAGE_NAME.pattern}\.part")
 
 
 class BlobTooLarge(Exception):
@@ -25,7 +30,7 @@ def shop_directory(workspace: Path, shop_id: int) -> Path:
 
 
 def blob_path(workspace: Path, shop_id: int, storage_name: str) -> Path:
-    if len(storage_name) != STORAGE_NAME_LENGTH or not all(c in "0123456789abcdef" for c in storage_name):
+    if not STORAGE_NAME.fullmatch(storage_name):
         raise ValueError("Invalid storage name")
     return shop_directory(workspace, shop_id) / storage_name
 
@@ -116,30 +121,33 @@ def remove_blob(workspace: Path, shop_id: int, storage_name: str) -> None:
         pass
 
 
-def stored_names(workspace: Path) -> dict[int, set[str]]:
-    names = {}
-    root = files_root(workspace)
-    if not root.is_dir():
-        return names
-    for directory in root.iterdir():
-        if directory.name.startswith("shop-") and directory.is_dir() and not directory.is_symlink():
-            suffix = directory.name.removeprefix("shop-")
-            if suffix.isdecimal():
-                names[int(suffix)] = {path.name for path in directory.iterdir()}
-    return names
+def managed_file(info: os.stat_result) -> bool:
+    return stat.S_ISREG(info.st_mode) and info.st_nlink == 1 and info.st_uid == os.geteuid()
 
 
-def staging_files(workspace: Path) -> list[Path]:
-    staging = files_root(workspace) / STAGING
-    return sorted(staging.iterdir()) if staging.is_dir() else []
+def remove_unreferenced(directory: int, pattern: re.Pattern, known: Collection[str] = ()) -> int:
+    removed = 0
+    for name in os.listdir(directory):
+        if not pattern.fullmatch(name) or name in known:
+            continue
+        if managed_file(os.stat(name, dir_fd=directory, follow_symlinks=False)):
+            os.unlink(name, dir_fd=directory)
+            removed += 1
+    return removed
 
 
-def file_digest(path: Path) -> str | None:
-    digest = sha256()
+def file_digest(directory: int, name: str) -> str | None:
     try:
-        with path.open("rb") as handle:
-            while chunk := handle.read(1 << 20):
-                digest.update(chunk)
+        fd = os.open(name, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK | os.O_CLOEXEC, dir_fd=directory)
     except FileNotFoundError:
         return None
-    return digest.hexdigest()
+    try:
+        if not managed_file(os.fstat(fd)):
+            raise OSError("Recorded attachment is not a regular, unlinked file owned by the workspace user.")
+        digest = sha256()
+        with os.fdopen(fd, "rb", closefd=False) as handle:
+            while chunk := handle.read(1 << 20):
+                digest.update(chunk)
+        return digest.hexdigest()
+    finally:
+        os.close(fd)

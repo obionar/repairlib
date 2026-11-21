@@ -691,7 +691,7 @@ class AttachmentTests(TokenFixture, unittest.TestCase):
                 self.assertEqual(failed.json()["error"]["code"], "server_error")
         self.assertEqual(len(self.stored_files()), 2)
         files = self.workspace / "state" / "files"
-        staging = files / ".staging" / "interrupted.part"
+        staging = files / ".staging" / ("b" * 32 + ".part")
         staging.write_bytes(b"partial upload")
         orphan = files / "shop-1" / ("a" * 32)
         orphan.write_bytes(b"published but never committed")
@@ -746,6 +746,41 @@ class AttachmentTests(TokenFixture, unittest.TestCase):
             content = client.get(f"{API}/{repair_id}/attachments/{attachment_id}/content", headers=auth)
             self.assertEqual((content.status_code, content.content), (200, ORIGINAL))
             self.assertEqual(self.snapshot("SELECT COUNT(*) FROM attachments"), [(1,)])
+
+    def test_reconciliation_refuses_linked_storage_and_preserves_unmanaged_files(self):
+        files = self.db.parent / "files"
+        files.mkdir()
+        stages = files / ".staging"
+        outside = self.workspace.parent / "outside"
+        outside.mkdir()
+        original = outside / ("a" * 32 + ".part")
+        original.write_bytes(b"must stay")
+        stages.symlink_to(outside, target_is_directory=True)
+        with self.assertRaises(OSError):
+            attachment_domain.reconcile_files(self.workspace)
+        self.assertEqual(original.read_bytes(), b"must stay")
+
+        stages.unlink()
+        stages.mkdir()
+        unrelated = stages / "notes.txt"
+        unrelated.write_bytes(b"keep staging notes")
+        abandoned = stages / ("b" * 32 + ".part")
+        abandoned.write_bytes(b"uncommitted upload")
+        shop = files / "shop-1"
+        shop.mkdir()
+        also_unrelated = shop / "notes.txt"
+        also_unrelated.write_bytes(b"keep shop notes")
+        linked = shop / ("c" * 32)
+        linked.symlink_to(original)
+        orphan = shop / ("d" * 32)
+        orphan.write_bytes(b"unreferenced original")
+        report = attachment_domain.reconcile_files(self.workspace)
+        self.assertEqual((report["removed_staging"], report["removed_orphans"]), (1, 1))
+        self.assertFalse(abandoned.exists() or orphan.exists())
+        self.assertTrue(linked.is_symlink())
+        self.assertEqual(original.read_bytes(), b"must stay")
+        self.assertEqual(unrelated.read_bytes(), b"keep staging notes")
+        self.assertEqual(also_unrelated.read_bytes(), b"keep shop notes")
 
     def test_first_upload_does_not_commit_if_a_new_parent_cannot_be_synced(self):
         directories = []

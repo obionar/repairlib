@@ -3,7 +3,9 @@
 from dataclasses import asdict
 from datetime import UTC, datetime, timedelta
 from hashlib import sha256
+import os
 from pathlib import Path
+import re
 import shutil
 import unicodedata
 
@@ -14,8 +16,9 @@ from repairlib.contracts import (
 from repairlib.domain.customers import MAX_ID, authorized
 from repairlib.domain.replay import replay as replay_receipt
 from repairlib.domain.repairs import RepairAccess, RepairError, find_repair, find_unarchived_repair
+from repairlib.lifecycle.operations import check_database_files, private_subdirectory
 from repairlib.lifecycle.workspace import (
-    WorkspaceError, database_path, maintenance_lock, workspace_status,
+    ACTIVE, WorkspaceError, database_path, maintenance_lock, workspace_status,
 )
 from repairlib.storage import attachments, blobs, repairs, settings
 
@@ -372,24 +375,37 @@ def reconcile_files(workspace: Path) -> dict:
         if workspace_status(workspace) != "initialized":
             raise WorkspaceError("Workspace must be initialized and use the current schema.")
         path = database_path(workspace)
+        check_database_files(path)
         recorded = attachments.all_stored(path)
-        staging = blobs.staging_files(workspace)
-        for leftover in staging:
-            leftover.unlink()
-        known = {(shop_id, name) for shop_id, _, name, _ in recorded}
-        orphans = 0
-        for shop_id, names in blobs.stored_names(workspace).items():
-            for name in names - {n for s, n in known if s == shop_id}:
-                blobs.shop_directory(workspace, shop_id).joinpath(name).unlink()
-                orphans += 1
-        missing, mismatched = [], []
+        known: dict[str, list[tuple[int, str, str]]] = {}
         for shop_id, attachment_id, name, digest in recorded:
-            actual = blobs.file_digest(blobs.blob_path(workspace, shop_id, name))
-            if actual is None:
-                missing.append(attachment_id)
-            elif actual != digest:
-                mismatched.append(attachment_id)
-        report = {"checked": len(recorded), "removed_staging": len(staging),
-                  "removed_orphans": orphans, "missing": missing, "mismatched": mismatched}
+            directory = blobs.blob_path(workspace, shop_id, name).parent.name
+            known.setdefault(directory, []).append((attachment_id, name, digest))
+        missing, mismatched = [], []
+        staging = orphans = 0
+        with private_subdirectory(workspace, ACTIVE, blobs.FILES) as files:
+            if files is None:
+                missing = [attachment_id for _, attachment_id, _, _ in recorded]
+            else:
+                with private_subdirectory(files, blobs.STAGING) as stages:
+                    if stages is not None:
+                        staging = blobs.remove_unreferenced(stages, blobs.UPLOAD_PART)
+                for directory in sorted(known.keys() | set(os.listdir(files))):
+                    if not re.fullmatch(r"shop-[1-9][0-9]*", directory):
+                        continue
+                    rows = known.get(directory, ())
+                    with private_subdirectory(files, directory) as shop:
+                        if shop is None:
+                            missing.extend(attachment_id for attachment_id, _, _ in rows)
+                            continue
+                        for attachment_id, name, digest in rows:
+                            actual = blobs.file_digest(shop, name)
+                            if actual is None:
+                                missing.append(attachment_id)
+                            elif actual != digest:
+                                mismatched.append(attachment_id)
+                        orphans += blobs.remove_unreferenced(shop, blobs.STORAGE_NAME, {name for _, name, _ in rows})
+        report = {"checked": len(recorded), "removed_staging": staging,
+                  "removed_orphans": orphans, "missing": sorted(missing), "mismatched": sorted(mismatched)}
         attachments.audit_reconciliation(path, report)
         return report
