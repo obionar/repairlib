@@ -5,7 +5,6 @@ from datetime import UTC, datetime, timedelta
 from hashlib import sha256
 import os
 from pathlib import Path
-import re
 import shutil
 from typing import BinaryIO
 import unicodedata
@@ -138,9 +137,10 @@ def commit_upload(workspace: Path, access: RepairAccess, repair_id: int, upload:
             if attachments.retained_count(db) >= MAX_RETAINED_ATTACHMENTS:
                 raise RepairError(409, "attachment_limit",
                                   "This workspace holds the most files a backup can carry. Purge detached files first.")
-            storage_name = upload.publish(principal.shop_id)
+            media_type = sniff(upload.head)
+            storage_name = upload.publish(principal.shop_id, folder=blobs.image_folder(media_type, repair_id))
             _, inline_limit = settings.attachment_limits(db, principal.shop_id)
-            created = attachments.insert(db, principal, repair_id, entry_id, name, sniff(upload.head),
+            created = attachments.insert(db, principal, repair_id, entry_id, name, media_type,
                                          upload.size, upload.sha256, storage_name, inline_limit)
             attachments.save_result(db, principal.shop_id, principal.user_id, operation, key,
                                     fingerprint, created)
@@ -393,10 +393,10 @@ def reconcile_files(workspace: Path) -> dict:
         path = database_path(workspace)
         check_database_files(path)
         recorded = attachments.all_stored(path)
-        known: dict[str, list[tuple[int, str, str]]] = {}
+        known: dict[tuple[str, ...], list[tuple[int, str, str]]] = {}
         for shop_id, attachment_id, name, digest in recorded:
-            directory = blobs.blob_path(workspace, shop_id, name).parent.name
-            known.setdefault(directory, []).append((attachment_id, name, digest))
+            *directory, filename = blobs.blob_parts(shop_id, name)
+            known.setdefault(tuple(directory), []).append((attachment_id, filename, digest))
         missing, mismatched = [], []
         staging = orphans = 0
         with private_subdirectory(workspace, ACTIVE, blobs.FILES) as files:
@@ -406,11 +406,9 @@ def reconcile_files(workspace: Path) -> dict:
                 with private_subdirectory(files, blobs.STAGING) as stages:
                     if stages is not None:
                         staging = blobs.remove_unreferenced(stages, blobs.UPLOAD_PART)
-                for directory in sorted(known.keys() | set(os.listdir(files))):
-                    if not re.fullmatch(r"shop-[1-9][0-9]*", directory):
-                        continue
+                for directory in sorted(known.keys() | set(blobs.blob_directories(files))):
                     rows = known.get(directory, ())
-                    with private_subdirectory(files, directory) as shop:
+                    with private_subdirectory(files, *directory) as shop:
                         if shop is None:
                             missing.extend(attachment_id for attachment_id, _, _ in rows)
                             continue
@@ -420,7 +418,7 @@ def reconcile_files(workspace: Path) -> dict:
                                 missing.append(attachment_id)
                             elif actual != digest:
                                 mismatched.append(attachment_id)
-                        orphans += blobs.remove_unreferenced(shop, blobs.STORAGE_NAME, {name for _, name, _ in rows})
+                        orphans += blobs.remove_unreferenced(shop, blobs.BLOB_NAME, {name for _, name, _ in rows})
         report = {"checked": len(recorded), "removed_staging": staging,
                   "removed_orphans": orphans, "missing": sorted(missing), "mismatched": sorted(mismatched)}
         attachments.audit_reconciliation(path, report)

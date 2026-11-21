@@ -400,7 +400,8 @@ def import_archive(workspace: Path, access: CustomerAccess, handle: BinaryIO, *,
                     raise CustomerError(507, "insufficient_storage",
                                         "Not enough disk space for this import. Free up space and retry.")
                 mapped, ids = storage.map_records(db, records, shop_id)
-                names = {row["id"]: secrets.token_hex(blobs.STORAGE_NAME_LENGTH // 2)
+                names = {row["id"]: blobs.image_folder(row["media_type"], row["repair_id"])
+                         + secrets.token_hex(blobs.STORAGE_NAME_LENGTH // 2)
                          for row in mapped["attachments"]}
                 result = PortableImport(shop_id, revision + 1, preview.source_shop,
                                         preview.counts, preview.attachment_files)

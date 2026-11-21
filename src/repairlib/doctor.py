@@ -15,7 +15,7 @@ from repairlib.lifecycle.operations import private_subdirectory, workspace_disk_
 from repairlib.lifecycle.workspace import (
     ACTIVE, STAGE_PREFIX, WorkspaceError, check_database_files, database_path, offline_lock, workspace_schema,
 )
-from repairlib.storage.blobs import FILES, STAGING, blob_path
+from repairlib.storage.blobs import FILES, IMAGE_FOLDER, IMAGES, STAGING, blob_parts
 from repairlib.storage.recovery import database_diagnostics, sidecar
 from repairlib.storage.sessions import SQLITE_BUSY_TIMEOUT_MS, SQLITE_SYNCHRONOUS
 
@@ -119,9 +119,9 @@ class DoctorReport:
         return lines
 
 
-def attachment_issue(files: int, directory: str, name: str, size: int, digest: str) -> str | None:
+def attachment_issue(files: int, directory: tuple[str, ...], name: str, size: int, digest: str) -> str | None:
     try:
-        with private_subdirectory(files, directory) as parent:
+        with private_subdirectory(files, *directory) as parent:
             if parent is None:
                 return "Missing"
             with private_file(name, directory=parent) as source:
@@ -149,7 +149,7 @@ def check_attachments(report: DoctorReport, rows: list[tuple] | None) -> None:
                 report.unsafe_storage += 1
         if rows is None:
             return
-        known: dict[str, set[str]] = {}
+        known: dict[tuple[str, ...], set[str]] = {}
         report.attachments_checked = len(rows)
         for attachment_id, shop, name, size, digest in rows:
             try:
@@ -157,11 +157,13 @@ def check_attachments(report: DoctorReport, rows: list[tuple] | None) -> None:
                         or type(size) is not int or size <= 0
                         or not isinstance(digest, str) or not SHA256.fullmatch(digest)):
                     raise ValueError
-                directory = blob_path(Path(), shop, name).parent.name
+                *folders, filename = blob_parts(shop, name)
+                directory = tuple(folders)
             except ValueError:
                 issue = "Invalid metadata for"
             else:
-                known.setdefault(directory, set()).add(name)
+                known.setdefault(directory, set()).add(filename)
+                name = filename
                 issue = "Missing" if files is None else attachment_issue(files, directory, name, size, digest)
             if issue:
                 report.attachment_issues.setdefault(issue, []).append(attachment_id)
@@ -176,10 +178,25 @@ def check_attachments(report: DoctorReport, rows: list[tuple] | None) -> None:
                     continue
                 try:
                     with private_subdirectory(files, directory) as shop_files:
-                        if shop_files is not None:
-                            report.orphans += len(set(os.listdir(shop_files)) - known.get(directory, set()))
+                        if shop_files is None:
+                            continue
+                        entries = set(os.listdir(shop_files))
+                        if IMAGES in entries:
+                            entries.discard(IMAGES)
+                            count_image_folders(report, shop_files, directory, known)
+                        report.orphans += len(entries - known.get((directory,), set()))
                 except OSError:
                     report.unsafe_storage += 1
+
+
+def count_image_folders(report: DoctorReport, shop_files: int, shop: str, known: dict) -> None:
+    with private_subdirectory(shop_files, IMAGES) as images:
+        for folder in os.listdir(images):
+            if not IMAGE_FOLDER.fullmatch(folder):
+                report.unsafe_storage += 1
+                continue
+            with private_subdirectory(images, folder) as files:
+                report.orphans += len(set(os.listdir(files)) - known.get((shop, IMAGES, folder), set()))
 
 
 def diagnose_workspace(explicit: str | Path | None = None, *, lock_fd: int | None = None) -> DoctorReport:

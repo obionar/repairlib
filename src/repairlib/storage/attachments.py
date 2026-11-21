@@ -45,12 +45,13 @@ def entry_exists(db, shop_id: int, repair_id: int, entry_id: int, *, visible_onl
 
 def insert(db, principal, repair_id: int, entry_id: int | None, filename: str, media_type: str,
            size_bytes: int, digest: str, storage_name: str, inline_limit: int) -> Attachment:
+    folder, slash, name = storage_name.rpartition("/")
     attachment_id = db.execute(
         """INSERT INTO attachments(shop_id, repair_id, uploader_id, uploader_username,
-                                   filename, media_type, size_bytes, sha256, storage_name)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id""",
+                                   filename, media_type, size_bytes, sha256, storage_folder, storage_name)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id""",
         (principal.shop_id, repair_id, principal.user_id, principal.username,
-         filename, media_type, size_bytes, digest, storage_name),
+         filename, media_type, size_bytes, digest, folder + slash, name),
     ).fetchone()["id"]
     if entry_id is not None:
         insert_link(db, principal.shop_id, repair_id, attachment_id, entry_id)
@@ -86,7 +87,8 @@ def set_entry_link(db, shop_id: int, current: Attachment, entry_id: int, linked:
 
 def find(db, shop_id: int, repair_id: int, attachment_id: int, inline_limit: int):
     row = db.execute(
-        f"SELECT {DETAIL_COLUMNS}, storage_name FROM attachments WHERE shop_id = ? AND repair_id = ? AND id = ?",
+        f"SELECT {DETAIL_COLUMNS}, storage_folder || storage_name AS storage_name FROM attachments "
+        "WHERE shop_id = ? AND repair_id = ? AND id = ?",
         (shop_id, repair_id, attachment_id),
     ).fetchone()
     if row is None:
@@ -152,7 +154,7 @@ def save_result(db, shop_id: int, actor_id: int, operation: str, key: str,
 def all_stored(path: Path) -> list[tuple[int, int, str, str]]:
     with transaction(path, write=False) as db:
         return [tuple(row) for row in db.execute(
-            "SELECT shop_id, id, storage_name, sha256 FROM attachments WHERE purged_at IS NULL "
+            "SELECT shop_id, id, storage_folder || storage_name, sha256 FROM attachments WHERE purged_at IS NULL "
             "ORDER BY shop_id, id")]
 
 

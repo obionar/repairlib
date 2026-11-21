@@ -110,7 +110,7 @@ def rows(db, shop_id: int, table: str):
 
 def retained_storage(db, shop_id: int):
     return db.execute("""
-        SELECT id, storage_name FROM attachments
+        SELECT id, storage_folder || storage_name FROM attachments
         WHERE shop_id = ? AND purged_at IS NULL ORDER BY id
     """, (shop_id,))
 
@@ -120,8 +120,12 @@ def add_rows(db, table: str, rows: list, shop_id: int, *, storage_names=None) ->
     types = {column: {"TEXT": str, "INTEGER": int}[kind]
              for _, column, kind, *_ in db.execute(f"PRAGMA table_info({table})")
              if column in columns}
-    extra = {"users": "password_hash", "attachments": "storage_name"}.get(table)
-    fields = columns + ([extra] if extra else [])
+    present = {column for _, column, *_ in db.execute(f"PRAGMA table_info({table})")}
+    # Validation runs at the portable schema, which predates 0039 image folders.
+    extra = [column for column in {"users": ["password_hash"],
+                                   "attachments": ["storage_folder", "storage_name"]}.get(table, [])
+             if column in present]
+    fields = columns + extra
     insert = f"INSERT INTO {table} ({', '.join(fields)}) VALUES ({', '.join('?' for _ in fields)})"
 
     def values():
@@ -143,7 +147,9 @@ def add_rows(db, table: str, rows: list, shop_id: int, *, storage_names=None) ->
             if table == "users":
                 data.append("")
             elif table == "attachments":
-                data.append(storage_names[row["id"]] if storage_names is not None else f"{row['id']:032x}")
+                stored = storage_names[row["id"]] if storage_names is not None else f"{row['id']:032x}"
+                folder, slash, name = stored.rpartition("/")
+                data.extend((folder + slash, name) if "storage_folder" in extra else (stored,))
             yield data
 
     db.executemany(insert, values())

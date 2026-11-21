@@ -188,8 +188,9 @@ def retained_attachments(db: sqlite3.Connection, version: int, limit: int = -1) 
     if version < 10:
         return []
     retained = "WHERE purged_at IS NULL" if version >= 13 else ""
+    name = "storage_folder || storage_name" if version >= 39 else "storage_name"  # 0039 image folders
     return db.execute(
-        f"SELECT id, shop_id, storage_name, size_bytes, sha256 FROM attachments {retained} "
+        f"SELECT id, shop_id, {name}, size_bytes, sha256 FROM attachments {retained} "
         "ORDER BY shop_id, id LIMIT ?", (limit,),
     ).fetchall()
 

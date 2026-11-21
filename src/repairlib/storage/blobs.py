@@ -13,7 +13,12 @@ from repairlib.paths import ACTIVE, sync_directory
 FILES = "files"
 STAGING = ".staging"
 STORAGE_NAME_LENGTH = 32
-STORAGE_NAME = re.compile(rf"[0-9a-f]{{{STORAGE_NAME_LENGTH}}}")
+BLOB_NAME = re.compile(rf"[0-9a-f]{{{STORAGE_NAME_LENGTH}}}")
+IMAGES = "images"
+IMAGE_FOLDER = re.compile(r"[1-9][0-9]{0,18}")
+# Images live under images/<repair id>/; older images and other files stay flat in shop-N.
+STORAGE_NAME = re.compile(rf"(?:{IMAGES}/{IMAGE_FOLDER.pattern}/)?{BLOB_NAME.pattern}")
+IMAGE_TYPES = frozenset({"image/png", "image/jpeg", "image/gif", "image/webp"})
 UPLOAD_PART = re.compile(rf"{STORAGE_NAME.pattern}\.part")
 
 
@@ -29,10 +34,46 @@ def shop_directory(workspace: Path, shop_id: int) -> Path:
     return files_root(workspace) / f"shop-{shop_id}"
 
 
-def blob_path(workspace: Path, shop_id: int, storage_name: str) -> Path:
+def blob_parts(shop_id: int, storage_name: str) -> tuple[str, ...]:
+    """Directory components below files/, then the blob name; refuses anything else."""
     if not STORAGE_NAME.fullmatch(storage_name):
         raise ValueError("Invalid storage name")
-    return shop_directory(workspace, shop_id) / storage_name
+    return (f"shop-{shop_id}", *storage_name.split("/"))
+
+
+def blob_path(workspace: Path, shop_id: int, storage_name: str) -> Path:
+    return files_root(workspace).joinpath(*blob_parts(shop_id, storage_name))
+
+
+SHOP_DIRECTORY = re.compile(r"shop-[1-9][0-9]*")
+DIRECTORY_FLAGS = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW | os.O_CLOEXEC
+
+
+def blob_directories(files: int) -> list[tuple[str, ...]]:
+    """Shop and image folders below the open files/ directory; symlinked levels raise OSError."""
+    found = []
+    for shop in sorted(os.listdir(files)):
+        if not SHOP_DIRECTORY.fullmatch(shop):
+            continue
+        found.append((shop,))
+        shop_fd = os.open(shop, DIRECTORY_FLAGS, dir_fd=files)
+        try:
+            try:
+                images = os.open(IMAGES, DIRECTORY_FLAGS, dir_fd=shop_fd)
+            except FileNotFoundError:
+                continue
+            try:
+                found.extend((shop, IMAGES, name) for name in sorted(os.listdir(images))
+                             if IMAGE_FOLDER.fullmatch(name))
+            finally:
+                os.close(images)
+        finally:
+            os.close(shop_fd)
+    return found
+
+
+def image_folder(media_type: str, repair_id: int) -> str:
+    return f"{IMAGES}/{repair_id}/" if media_type in IMAGE_TYPES else ""
 
 
 def private_directory(path: Path) -> None:
@@ -76,20 +117,20 @@ class StagedBlob:
     def sha256(self) -> str:
         return self.digest.hexdigest()
 
-    def publish(self, shop_id: int, *, storage_name: str | None = None) -> str:
-        directory = shop_directory(self.workspace, shop_id)
-        private_directory(directory.parent)
-        private_directory(directory)
-        storage_name = storage_name or secrets.token_hex(STORAGE_NAME_LENGTH // 2)
+    def publish(self, shop_id: int, *, storage_name: str | None = None, folder: str = "") -> str:
+        storage_name = storage_name or folder + secrets.token_hex(STORAGE_NAME_LENGTH // 2)
         final = blob_path(self.workspace, shop_id, storage_name)
+        root = files_root(self.workspace)
+        created = [root, *final.parents[:len(final.relative_to(root).parts) - 1][::-1]]
+        for directory in created:
+            private_directory(directory)
         os.link(self.staged, final)  # refuses to replace an existing name
         self.final = final
         self.staged.unlink()
-        sync_directory(directory)
-        # The first upload may also have created shop-N and files. Persist each
-        # directory entry before SQLite can commit a reference to the blob.
-        sync_directory(directory.parent)
-        sync_directory(directory.parent.parent)
+        # The first upload may also have created files, shop-N and image folders. Persist
+        # each directory entry, leaf first, before SQLite can commit a reference to the blob.
+        for directory in reversed([root.parent, *created]):
+            sync_directory(directory)
         return storage_name
 
     def discard(self) -> None:

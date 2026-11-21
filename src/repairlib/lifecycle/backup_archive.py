@@ -21,7 +21,7 @@ from repairlib.lifecycle.recovery import (
 )
 from repairlib.lifecycle.workspace import ACTIVE, DATABASE, LOCK, WorkspaceError, database_path
 from repairlib.paths import check_database_files
-from repairlib.storage.blobs import FILES, STORAGE_NAME_LENGTH, blob_path
+from repairlib.storage.blobs import FILES, STORAGE_NAME, blob_path
 from repairlib.storage.initialization import SCHEMA_VERSION
 from repairlib.storage.recovery import (
     SnapshotError, database_contents_digest, prepare_restored_database, snapshot_attachments,
@@ -31,9 +31,7 @@ FORMAT = "repairlib-backup-1"
 RESTORE_STAGE_PREFIX = ".restore-"
 MANIFEST = "manifest.json"
 DB_MEMBER = f"{ACTIVE}/{DATABASE}"
-ATTACHMENT_MEMBER = re.compile(
-    rf"{ACTIVE}/{FILES}/shop-[1-9][0-9]{{0,18}}/[0-9a-f]{{{STORAGE_NAME_LENGTH}}}"
-)
+ATTACHMENT_MEMBER = re.compile(rf"{ACTIVE}/{FILES}/shop-[1-9][0-9]{{0,18}}/{STORAGE_NAME.pattern}")
 SHA256 = re.compile(r"[0-9a-f]{64}")
 MAX_ATTACHMENTS = 10_000  # test_attachment_cap keeps domain.attachments.MAX_RETAINED_ATTACHMENTS equal
 MAX_MANIFEST = 2 << 20
@@ -294,7 +292,9 @@ def verify_archive(handle: BinaryIO, staging: Path, *, restore: bool = False) ->
                 output = nullcontext()
                 if restore:
                     path = staging / name
-                    path.parent.mkdir(mode=0o700, exist_ok=True)
+                    # Names come from the verified SQLite inventory, so every level is ours to create.
+                    for directory in reversed(path.relative_to(staging).parents[:-1]):
+                        (staging / directory).mkdir(mode=0o700, exist_ok=True)
                     path.touch(mode=0o600, exist_ok=False)
                     output = path.open("wb")
                 with output as destination, archive.open(members[name]) as source:

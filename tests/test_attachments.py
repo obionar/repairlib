@@ -727,7 +727,7 @@ class AttachmentTests(TokenFixture, unittest.TestCase):
         staging.write_bytes(b"partial upload")
         orphan = files / "shop-1" / ("a" * 32)
         orphan.write_bytes(b"published but never committed")
-        missing = files / "shop-1" / self.snapshot("SELECT storage_name FROM attachments WHERE id=?",
+        missing = files / "shop-1" / self.snapshot("SELECT storage_folder || storage_name FROM attachments WHERE id=?",
                                                    (lost["id"],))[0][0]
         missing.unlink()
 
