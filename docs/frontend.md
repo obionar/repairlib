@@ -41,8 +41,11 @@ adapters/web/
   `_*.html` partial; do not copy a field loop, table or panel between screens.
 - Titled windows (`ui.panel`) sit directly on the workspace canvas. The customer
   page stacks contact details and repair count, repairs, then history at every
-  width. The ticket pairs reported issue and intake notes in Device details
-  (stacked on phones), with the status control at the bottom of the panel.
+  width. The ticket header lists customer and device facts on the left and the
+  reported issue and intake notes on the right (stacked on phones), with the
+  status control at the bottom of the panel. Below it, the work log (a chat:
+  newest entry last, composer underneath) and Activity share the left column;
+  parts, payment and files share the right.
   Browser reopening does not require a note. The dropdown shows the
   current status itself, keeps the full list in workflow order, and disables
   unavailable transitions. Repair, pickup and payment share one Update status

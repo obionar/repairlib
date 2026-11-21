@@ -123,10 +123,10 @@ class PickupHandoverTests(TokenFixture, unittest.TestCase):
 
             self.write(client, auth, api + "/charges", PART)
             page, cents = shown_total()
-            self.assertIn(f"{(cents + 2000) / 100:.2f} EUR", page)  # saved charges plus default labour
+            self.assertIn(f"{(cents + 2000) / 100:.2f} €", page)  # saved charges plus default labour
             self.write(client, auth, api + "/charges", LABOR)
             page, cents = shown_total()
-            self.assertIn(f"{(cents + 2000) / 100:.2f} EUR", page)
+            self.assertIn(f"{(cents + 2000) / 100:.2f} €", page)
 
     def test_status_toasts_and_dropdown_reversal_replay_once(self):
         with self.client() as client:

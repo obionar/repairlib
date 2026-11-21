@@ -3,82 +3,57 @@
 
 {% call ui.panel('log', 'Work log', '(' ~ (entries.items|length) ~ ((' ' ~ _('shown')) if log_paged else '') ~ ')', fold=true) %}
     {% if notice_panel == 'log' %}<div class="obi-panel-body">{{ ui.notice(notice) }}</div>{% endif %}
+    {% if entries.items %}
+      {% if log_older or log_before %}
+        <nav class="obi-pager" aria-label="{{ _('Work log pages') }}">
+          {% if log_older %}<a href="{{ log_older }}">{{ _('Older entries') }}</a>{% endif %}
+          {% if log_before %}<a href="{{ log_newest }}">{{ _('Newest entries') }}</a>{% endif %}
+        </nav>
+      {% endif %}
+      {# Chat order: oldest at the top, newest just above the composer. #}
+      <ol class="obi-entry-list rl-chat">
+        {% for entry in entries.items|reverse %}
+          <li class="obi-entry{% if entry.deleted %} rl-chat-deleted{% endif %}" id="entry-{{ entry.id }}">
+            <p class="obi-entry-head">
+              <strong>{{ entry.author_username }}</strong>
+              {{ ui.local_time(entry.created_at) }}
+              {% if entry.kind != 'work' %}<span>{{ _(entry.kind|title) }}</span>{% endif %}
+              {% if entry.deleted %}{% if can_edit %}<a href="{{ request.url_for('entry_visibility', repair_id=repair.id, entry_id=entry.id).path }}">{{ _('Deleted') }}</a>{% else %}<span>{{ _('Deleted') }}</span>{% endif %}{% endif %}
+            </p>
+            {% if can_edit and not entry.deleted %}
+              {# The domain audits a reason, so the pop-up fills a fixed one; without JavaScript the visibility page asks. #}
+              <form method="post" action="{{ request.url_for('entry_visibility', repair_id=repair.id, entry_id=entry.id).path }}" class="rl-chat-delete" data-confirm="{{ _('Delete this entry?') }}" data-reason="Deleted from the work log">
+                <input type="hidden" name="csrf" value="{{ entry_visibility_csrf[entry.id] }}">
+                <input type="hidden" name="key" value="{{ entry_visibility_key[entry.id] }}">
+                <input type="hidden" name="revision" value="{{ entry.revision }}">
+                <input type="hidden" name="deleted" value="1">
+                <input type="hidden" name="reason" value="">
+                {% if log_before %}<input type="hidden" name="log_before" value="{{ log_before }}">{% endif %}
+                <button type="submit" aria-label="{{ _('Delete entry') }}" title="{{ _('Delete entry') }}">×</button>
+              </form>
+            {% endif %}
+            <p class="obi-entry-body">{{ entry.body }}</p>
+          </li>
+        {% endfor %}
+      </ol>
+    {% else %}
+      {{ ui.empty('No work entries.') }}
+    {% endif %}
     {% if can_edit %}
       <div class="obi-panel-body">
-        <form method="post" action="{{ request.url_for('entry_create', repair_id=repair.id).path }}" class="obi-composer">
+        <form method="post" action="{{ request.url_for('entry_create', repair_id=repair.id).path }}" class="obi-composer rl-chat-composer">
           <input type="hidden" name="csrf" value="{{ entry_csrf }}">
           <input type="hidden" name="key" value="{{ entry_key }}">
           {% if log_before %}<input type="hidden" name="log_before" value="{{ log_before }}">{% endif %}
           <label class="rl-sr-only" for="entry-body">{{ _('Work entry') }}</label>
-          <textarea id="entry-body" name="body" placeholder="{{ _('Work entry') }}" maxlength="5000" required{% if entry_error_fields.get('body') %} aria-invalid="true" aria-describedby="entry-body-error"{% endif %}>{{ entry_draft.get('body', '') }}</textarea>
+          <textarea id="entry-body" name="body" rows="2" placeholder="{{ _('Work entry') }}" maxlength="5000" required{% if entry_error_fields.get('body') %} aria-invalid="true" aria-describedby="entry-body-error"{% endif %}>{{ entry_draft.get('body', '') }}</textarea>
           {% if entry_error_fields.get('body') %}<span class="obi-error" id="entry-body-error">{{ _(entry_error_fields.body) }}</span>{% endif %}
           <label class="rl-sr-only" for="entry-kind">{{ _('Work entry type') }}</label>
           <select id="entry-kind" name="kind">
             {% for kind in ['work', 'test', 'contact', 'handover', 'note'] %}<option value="{{ kind }}"{% if entry_draft.get('kind', 'work') == kind %} selected{% endif %}>{{ _(kind|title) }}</option>{% endfor %}
           </select>
-          {{ ui.button('Add entry') }}
+          {{ ui.button('Add') }}
         </form>
       </div>
-    {% endif %}
-    {% if entries.items %}
-      <ol class="obi-entry-list">
-        {% for entry in entries.items %}
-          <li class="obi-entry" id="entry-{{ entry.id }}">
-            <p class="obi-entry-head">
-              {{ ui.status(entry.kind|title, 'kind') }}
-              <strong>{{ entry.author_username }}</strong>
-              {{ ui.local_time(entry.created_at) }}
-              {% if entry.deleted %}{{ ui.status('Deleted', 'warning') }}{% endif %}
-            </p>
-            <p class="obi-entry-body">{{ entry.body }}</p>
-            <div class="obi-entry-actions">
-              <a href="{{ request.url_for('entry_history', repair_id=repair.id, entry_id=entry.id).path }}">{{ _('History') }}</a>
-              {% if can_edit and not entry.deleted %}
-                <details class="obi-inline-details">
-                  <summary>{{ _('Correct') }}</summary>
-                  <form method="post" action="{{ request.url_for('entry_edit', repair_id=repair.id, entry_id=entry.id).path }}">
-                    <input type="hidden" name="csrf" value="{{ entry_correct_csrf[entry.id] }}">
-                    <input type="hidden" name="key" value="{{ entry_correct_key[entry.id] }}">
-                    <input type="hidden" name="revision" value="{{ entry.revision }}">
-                    {% if log_before %}<input type="hidden" name="log_before" value="{{ log_before }}">{% endif %}
-                    <label for="entry-kind-{{ entry.id }}">{{ _('Work entry type') }}</label>
-                    <select id="entry-kind-{{ entry.id }}" name="kind">
-                      {% for kind in ['work', 'test', 'contact', 'handover', 'note'] %}<option value="{{ kind }}"{% if kind == entry.kind %} selected{% endif %}>{{ _(kind|title) }}</option>{% endfor %}
-                    </select>
-                    <label for="entry-body-{{ entry.id }}">{{ _('Work entry') }}</label>
-                    <textarea id="entry-body-{{ entry.id }}" name="body" maxlength="5000" required>{{ entry.body }}</textarea>
-                    <label for="entry-reason-{{ entry.id }}">{{ _('Correction reason') }}</label>
-                    <textarea id="entry-reason-{{ entry.id }}" name="reason" maxlength="1000" required></textarea>
-                    {{ ui.button('Save correction') }}
-                  </form>
-                </details>
-              {% endif %}
-              {% if can_edit %}
-                <details class="obi-inline-details">
-                  <summary>{{ _('Restore') if entry.deleted else _('Delete') }}</summary>
-                  <form method="post" action="{{ request.url_for('entry_visibility', repair_id=repair.id, entry_id=entry.id).path }}">
-                    <input type="hidden" name="csrf" value="{{ entry_visibility_csrf[entry.id] }}">
-                    <input type="hidden" name="key" value="{{ entry_visibility_key[entry.id] }}">
-                    <input type="hidden" name="revision" value="{{ entry.revision }}">
-                    <input type="hidden" name="deleted" value="{{ '0' if entry.deleted else '1' }}">
-                    {% if log_before %}<input type="hidden" name="log_before" value="{{ log_before }}">{% endif %}
-                    <label for="entry-visibility-reason-{{ entry.id }}">{{ _('Restore reason') if entry.deleted else _('Removal reason') }}</label>
-                    <textarea id="entry-visibility-reason-{{ entry.id }}" name="reason" maxlength="1000" required></textarea>
-                    {{ ui.button('Restore entry' if entry.deleted else 'Delete entry', '' if entry.deleted else 'danger') }}
-                  </form>
-                </details>
-              {% endif %}
-            </div>
-          </li>
-        {% endfor %}
-      </ol>
-      {% if log_older or log_before %}
-        <nav class="obi-pager" aria-label="{{ _('Work log pages') }}">
-          {% if log_before %}<a href="{{ log_newest }}">{{ _('Newest entries') }}</a>{% endif %}
-          {% if log_older %}<a href="{{ log_older }}">{{ _('Older entries') }}</a>{% endif %}
-        </nav>
-      {% endif %}
-    {% else %}
-      {{ ui.empty('No work entries.') }}
     {% endif %}
   {% endcall %}

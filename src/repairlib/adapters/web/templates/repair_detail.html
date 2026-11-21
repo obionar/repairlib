@@ -39,14 +39,17 @@
   {% include "_repair_status.html" %}
 
   <div class="rl-repair-work-grid">
-    {% include "_repair_log.html" %}
-    {% include "_repair_stock.html" %}
+    <div class="rl-repair-side">
+      {% include "_repair_log.html" %}
+      {% call ui.panel('activity-heading', 'Activity', fold=true, expanded=activity_open) %}
+        {% include '_repair_activity.html' %}
+      {% endcall %}
+    </div>
+    <div class="rl-repair-side">
+      {% include "_repair_stock.html" %}
+      {% include "_repair_fees.html" %}
+      {% include "_repair_files.html" %}
+    </div>
   </div>
-
-  {% include "_repair_fees.html" %}
-  {% include "_repair_files.html" %}
-  {% call ui.panel('activity-heading', 'Activity', fold=true, expanded=activity_open) %}
-    {% include '_repair_activity.html' %}
-  {% endcall %}
-  {% if can_write %}<script src="{{ request.url_for('static', path='ticket-scroll.js').path }}" integrity="sha256-EM7IoPIPIgodmhS3lEZD5aqjcnRHqniP31lIlZlJ118="></script>{% endif %}
+  {% if can_write %}<script src="{{ request.url_for('static', path='ticket-scroll.js').path }}" integrity="sha256-qUn3bIvHbKqO38YIYPpoceYlhO2diYxt1R4uatgmOdA="></script>{% endif %}
 {% endblock %}

@@ -825,10 +825,8 @@ summary.obi-panel-bar:focus-visible { outline-color: var(--rl-surface); outline-
 .rl-ticket-facts dd { margin: .25rem 0 0; overflow-wrap: anywhere; }
 .rl-ticket-overview .rl-ticket-facts dt, .rl-inline-facts dt { display: inline; }
 .rl-ticket-overview .rl-ticket-facts dd, .rl-inline-facts dd { display: inline; margin: 0; }
-.rl-ticket-overview .rl-ticket-facts dt, #device-details dt { margin-inline-end: .3em; }
 .rl-customer-notes { grid-column: 1 / -1; }
 .rl-ticket-header-actions { display: flex; flex-wrap: wrap; gap: .35rem 1rem; }
-.rl-ticket-related { display: block; width: fit-content; font-size: .875rem; margin-block-start: .25rem; }
 
 .rl-ticket-controls {
   display: grid;
@@ -851,9 +849,6 @@ summary.obi-panel-bar:focus-visible { outline-color: var(--rl-surface); outline-
 }
 
 @media (max-width: 36rem) {
-  .rl-ticket-overview .rl-ticket-facts { grid-template-columns: minmax(0, 1fr); }
-  #device-details .rl-ticket-facts { gap: .5rem .75rem; }
-  .rl-ticket-text { grid-column: 1 / -1; }
 }
 
 @media (max-width: 28rem) {
@@ -937,15 +932,6 @@ summary.obi-panel-bar:focus-visible { outline-color: var(--rl-surface); outline-
 .obi-entry-body {
   margin: 0 0 .375rem;
   white-space: pre-wrap;
-}
-
-.obi-entry-actions {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: .25rem 1rem;
-  margin: 0;
-  font-size: .9375rem;
 }
 
 .obi-inline-details > summary {
@@ -1032,13 +1018,15 @@ summary.obi-panel-bar:focus-visible { outline-color: var(--rl-surface); outline-
 }
 
 .rl-repair-work-grid { display: grid; gap: 1rem; margin-block: 1rem; }
-.rl-repair-work-grid > .obi-panel { min-width: 0; margin: 0; }
+.rl-repair-work-grid > .obi-panel, .rl-repair-side > .obi-panel { min-width: 0; margin: 0; }
+.rl-repair-side { display: grid; gap: 1rem; min-width: 0; align-content: start; }
 .rl-used-parts { overflow-wrap: anywhere; }
 .rl-fee-form { display: grid; gap: .5rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, 8rem), 1fr)); align-items: end; }
 .rl-fee-form label { display: block; font-size: .875rem; color: var(--rl-muted); font-weight: 650; }
 .rl-fee-form input { width: 100%; min-width: 0; }
-/* The parts amount is computed, so it reads as a value rather than a disabled field. */
-.rl-fee-form input[readonly] { border-color: transparent; background: transparent; padding-inline: 0; font-weight: 650; }
+/* The parts amount is computed from the parts used, so it looks like an inactive field. */
+.rl-fee-form input[readonly] { background: var(--rl-canvas); color: var(--rl-muted); cursor: not-allowed; }
+.rl-fee-form button { white-space: nowrap; }
 .rl-fee-form input, .rl-fee-total, .rl-used-parts { font-variant-numeric: tabular-nums; }
 .rl-fee-total { margin: .75rem 0 0; font-size: 1.125rem; }
 @media (min-width: 40rem) {
@@ -1373,17 +1361,34 @@ summary.obi-panel-bar:focus-visible { outline-color: var(--rl-surface); outline-
   font: inherit;
 }
 
-/* Ticket record: compact device facts, the reported issue as the lead text, quiet entry actions. */
-.rl-device-facts { grid-template-columns: repeat(auto-fill, minmax(min(100%, 8rem), 1fr)); gap: .75rem 1.25rem; }
-.rl-device-facts dt { font-size: .8125rem; }
-.rl-ticket-overview .rl-ticket-facts { grid-template-columns: repeat(auto-fill, minmax(min(100%, 14rem), 1fr)); }
-.rl-device-facts .rl-ticket-text { grid-column: 1 / -1; }
-.rl-ticket-issue { grid-column: 1 / -1; border-inline-start: 3px solid var(--rl-ink); padding: .5rem .75rem; background: var(--rl-canvas); }
+/* Ticket record: device facts as a list on the left, the reported issue and intake notes on the right. */
+.rl-ticket-overview { display: grid; gap: 1rem 2rem; }
+@media (min-width: 48rem) { .rl-ticket-overview { grid-template-columns: minmax(0, 2fr) minmax(0, 3fr); } }
+.rl-ticket-overview .rl-ticket-facts { grid-template-columns: minmax(0, 1fr); align-content: start; }
+/* Rows share one label column sized to the longest label, so Greek labels stay on one line. */
+.rl-ticket-overview .rl-device-facts { grid-template-columns: max-content minmax(0, 1fr); gap: .375rem 1rem; align-items: baseline; }
+.rl-device-facts > div { display: contents; }
+.rl-ticket-story { gap: .75rem; }
+.rl-ticket-overview .rl-ticket-story dt, .rl-ticket-overview .rl-ticket-story dd { display: block; }
+.rl-ticket-overview .rl-ticket-story dt { margin-block-end: .25rem; }
+.rl-ticket-issue { border-inline-start: 3px solid var(--rl-ink); padding: .5rem .75rem; background: var(--rl-canvas); }
 .rl-ticket-issue dd { font-size: 1.0625rem; }
-.obi-entry-actions { font-size: .875rem; gap: 0 1.25rem; }
-.obi-entry-actions > a,
-.obi-entry-actions .obi-inline-details > summary { display: inline-flex; align-items: center; min-height: 1.75rem; padding-block: 0; color: #134f92; font-weight: 400; }
-.obi-entry-actions .obi-inline-details[open] > summary { font-weight: 650; }
+
+/* Work log as a chat: compact bubbles, newest at the bottom, the composer underneath. */
+.rl-chat { display: grid; gap: .5rem; padding: .75rem 1rem; }
+.rl-chat > .obi-entry { position: relative; padding: .375rem 2.25rem .5rem .75rem; border: 0; border-radius: .5rem; background: var(--rl-canvas); }
+.rl-chat .obi-entry-head { gap: .375rem; margin: 0 0 .125rem; font-size: .75rem; color: var(--rl-muted); }
+.rl-chat .obi-entry-head strong { color: var(--rl-ink); font-weight: 650; }
+.rl-chat .obi-entry-body { margin: 0; font-size: .9375rem; overflow-wrap: anywhere; }
+.rl-chat-deleted { opacity: .6; }
+.rl-chat-deleted .obi-entry-body { text-decoration: line-through; }
+.rl-chat .rl-chat-delete { position: absolute; inset-block-start: .125rem; inset-inline-end: .125rem; display: block; margin: 0; }
+.rl-chat .rl-chat-delete button { inline-size: 2rem; block-size: 2rem; min-height: 0; margin: 0; padding: 0; border: 0; border-radius: .25rem; background: transparent; color: var(--rl-muted); font: inherit; font-size: 1.125rem; line-height: 1; cursor: pointer; }
+.rl-chat .rl-chat-delete button:hover, .rl-chat .rl-chat-delete button:focus-visible { color: #82251c; background: var(--rl-surface); }
+.rl-ui .rl-chat-composer { grid-template-columns: minmax(0, 1fr) auto; align-items: stretch; max-width: none; }
+.rl-ui .rl-chat-composer > textarea { grid-column: 1; min-height: 2.75rem; resize: vertical; }
+.rl-ui .rl-chat-composer > select { grid-column: 1; grid-row: 2; justify-self: start; min-height: 2rem; padding-block: .125rem; font-size: .875rem; }
+.rl-ui .rl-chat-composer > button { grid-column: 2; grid-row: 1; margin: 0; }
 
 /* Parts: search the catalog on the ticket and use a match in one step. */
 .rl-part-search label { font-size: .875rem; }

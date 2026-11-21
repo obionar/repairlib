@@ -145,8 +145,9 @@ class WebActivityTests(TokenFixture, unittest.TestCase):
             self.assertEqual(client.get("/customers/99?repairs_before=3").status_code, 404)
 
             repair = client.get("/repairs/1")
-            self.assertIn("Other open repairs: 25", repair.text)
-            self.assertIn('href="/customers/1#customer-repairs"', repair.text)
+            # The ticket names the customer only; their other repairs live on the customer page.
+            self.assertNotIn("Other open repairs", repair.text)
+            self.assertIn('href="/customers/1"', panel(repair, "status"))
             self.assertIn("Created repair", panel(repair, "activity-heading"))
             first_activity = panel(client.get("/repairs/1?log_before=18"), "activity-heading")
             older_link = re.search(r'href="(/repairs/1\?log_before=18&amp;activity_before=\d+#activity)"',

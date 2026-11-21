@@ -74,9 +74,10 @@ class WebRepairWorkspaceTests(TokenFixture, unittest.TestCase):
             self.assertIn("Bring original cable", status)
             self.assertIn('<option value="" selected disabled hidden>New</option>', status)
             self.assertNotIn('class="obi-status"', status)
-            self.assertLess(status.index('<dt>Reported issue:</dt>'), status.index('id="ticket-controls"'))
-            self.assertLess(status.index('id="ticket-controls"'), status.index('id="device-details"'))
-            self.assertLess(status.index('id="stage-form"'), status.index('<dt>Intake notes:</dt>'))
+            # Device facts on the left, then the issue and intake notes, all above the status controls.
+            self.assertLess(status.index('id="device-details"'), status.index('<dt>Reported issue:</dt>'))
+            self.assertLess(status.index('<dt>Reported issue:</dt>'), status.index('<dt>Intake notes:</dt>'))
+            self.assertLess(status.index('<dt>Intake notes:</dt>'), status.index('id="ticket-controls"'))
             self.assertNotIn('id="repair-status-control"', status)
             controls = status.split('id="ticket-controls"', 1)[1]
             order = [controls.index(hook) for hook in ('id="stage-form"', 'id="pickup-state"',
@@ -95,7 +96,7 @@ class WebRepairWorkspaceTests(TokenFixture, unittest.TestCase):
                                  ("Model", "Model Γ"), ("Serial", "BENCH-0002"),
                                  ("Display device", "Built-in display")):
                 self.assertRegex(status, rf'<dt>{label}:</dt>\s*<dd[^>]*>\s*{re.escape(value)}\s*</dd>')
-            self.assertIn('<div class="obi-panel-body" id="device-details">', status)
+            self.assertIn('<dl class="rl-ticket-facts rl-device-facts" id="device-details">', status)
             empty = self.repair(client, auth, brand="", model="", serial="", display_device="", notes="")
             status = panel(client.get(f"/repairs/{empty['id']}").text, "status")
             for label in ("Brand", "Model", "Serial", "Display device", "Intake notes"):
@@ -108,7 +109,7 @@ class WebRepairWorkspaceTests(TokenFixture, unittest.TestCase):
             self.assertIn('class="obi-status" data-tone="new"', client.get("/repairs").text)
             status = panel(client.get(f"/repairs/{repair['id']}").text, "status")
             self.assertRegex(status, r'<dt>Serial:</dt><dd class="obi-muted">—</dd>')
-            self.assertLess(status.index('<dt>Opened:</dt>'), status.index('id="device-details"'))
+            self.assertLess(status.index('id="device-details"'), status.index('<dt>Opened:</dt>'))
 
     def test_pages_opened_from_a_ticket_name_it_and_show_their_title(self):
         with self.client() as client:
@@ -203,7 +204,7 @@ class WebRepairWorkspaceTests(TokenFixture, unittest.TestCase):
             url = f"/repairs/{repair['id']}"
             log = panel(client.get(url), "log")
             composer, = forms(log, f"{url}/entries")
-            self.assertLess(log.index('id="entry-body"'), log.index(f'id="entry-{previous["id"]}"'))
+            self.assertLess(log.index(f'id="entry-{previous["id"]}"'), log.index('id="entry-body"'))
             self.assertIn('name="body"', composer)
             self.assertIn('name="kind"', composer)
             reply = client.post(f"{url}/entries", data={
@@ -254,7 +255,7 @@ class WebRepairWorkspaceTests(TokenFixture, unittest.TestCase):
             repair = self.repair(client, auth)
             page = client.get(f"/repairs/{repair['id']}").text
             order = [page.index(f'aria-labelledby="{name}"') for name in
-                     ("status", "log", "payment-total", "files", "activity-heading")]
+                     ("status", "log", "activity-heading", "stock-usage", "payment-total", "files")]
             self.assertEqual(order, sorted(order))
             self.assertNotIn('aria-labelledby="activity"', page)
 
@@ -281,6 +282,34 @@ class WebRepairWorkspaceTests(TokenFixture, unittest.TestCase):
             self.assertEqual(forms(page.text, f"/repairs/{repair['id']}/fees"), [])
             self.assertNotIn('name="labor"', page.text)
 
+    def test_work_log_reads_like_a_chat_with_a_reasoned_delete(self):
+        with self.client() as client:
+            _, auth = self.owner_auth(client)
+            repair = self.repair(client, auth)
+            first = self.entry(client, auth, repair["id"], "First bench note")
+            self.entry(client, auth, repair["id"], "Second bench note")
+            log = panel(client.get(f"/repairs/{repair['id']}"), "log")
+            self.assertLess(log.index("First bench note"), log.index("Second bench note"))
+            self.assertLess(log.index("Second bench note"), log.index('id="entry-body"'))
+            for gone in (">History<", "Correct", "entries/%d/edit" % first["id"]):
+                self.assertNotIn(gone, log)
+            action = f'/repairs/{repair["id"]}/entries/{first["id"]}/visibility'
+            delete = re.search(rf'<form method="post" action="{action}"[^>]*data-confirm=.*?</form>', log, re.S)[0]
+            self.assertIn('name="deleted" value="1"', delete)
+            self.assertIn('name="reason" value=""', delete)
+            # Without the pop-up the empty reason is refused and nothing changes.
+            fields = dict(re.findall(r'name="([^"]+)" value="([^"]*)"', delete))
+            refused = client.post(action, data=fields)
+            self.assertEqual(refused.status_code, 422)
+            self.assertIn('name="reason"', refused.text)
+            self.assertNotIn("rl-chat-deleted", panel(client.get(f"/repairs/{repair['id']}"), "log"))
+            fields["reason"] = "Duplicate note"
+            client.post(action, data=fields)
+            self.assertIn(f'class="obi-entry rl-chat-deleted" id="entry-{first["id"]}"',
+                          panel(client.get(f"/repairs/{repair['id']}"), "log"))
+            status = panel(client.get(f"/repairs/{repair['id']}"), "status")
+            self.assertNotIn("tel:", status)
+
     def test_log_pages_keep_older_entry_reachable_and_selectable(self):
         # W3: an older live entry must stay reachable, correctable and selectable.
         with self.client() as client:
@@ -297,7 +326,7 @@ class WebRepairWorkspaceTests(TokenFixture, unittest.TestCase):
             second_log = panel(client.get(older[1].replace("&amp;", "&")), "log")
             self.assertIn("Oldest measured value", second_log)
             self.assertIn(f'value="{first["id"]}"', second_log)
-            self.assertIn(f'/repairs/{repair["id"]}/entries/{first["id"]}/edit', second_log)
+            self.assertIn(f'/repairs/{repair["id"]}/entries/{first["id"]}/visibility', second_log)
 
     def test_active_file_pages_survive_detached_history(self):
         # W4: filter statuses before limiting so an old active file stays downloadable.

@@ -10,23 +10,16 @@
     </span>
   </header>
     <div class="obi-panel-body rl-ticket-overview">
-      <dl class="rl-ticket-facts">
-        <div>
-          <dt>{{ _('Customer') }}:</dt>
-          <dd>
-            {% if repair.customer_id and names.customer %}
-              {% set customer_path = request.url_for('customer_detail', customer_id=repair.customer_id).path %}
-              <a href="{{ customer_path }}">{{ names.customer }}</a>
-              {% if names.other_open_repairs %}
-                <a class="rl-ticket-related" href="{{ customer_path }}#customer-repairs">{{ _('Other open repairs: {count}', count=names.other_open_repairs) }}</a>
-              {% endif %}
-            {% else %}
-              {{ _('No customer linked') }}
-            {% endif %}
-          </dd>
-        </div>
-        <div><dt>{{ _('Phone') }}:</dt><dd>{% if names.customer_phone %}<a href="tel:{{ names.customer_phone }}">{{ names.customer_phone }}</a>{% else %}—{% endif %}</dd></div>
+      <dl class="rl-ticket-facts rl-device-facts" id="device-details">
+        <div><dt>{{ _('Customer') }}:</dt><dd>{% if repair.customer_id and names.customer %}<a href="{{ request.url_for('customer_detail', customer_id=repair.customer_id).path }}">{{ names.customer }}</a>{% else %}<span class="obi-muted">{{ _('No customer linked') }}</span>{% endif %}</dd></div>
+        {% for label, value in [('Device type', repair.device_type), ('Brand', repair.brand), ('Model', repair.model), ('Serial', repair.serial), ('Display device', repair.display_device)] %}
+        <div><dt>{{ _(label) }}:</dt>{% if value %}<dd>{{ value }}</dd>{% else %}<dd class="obi-muted">—</dd>{% endif %}</div>
+        {% endfor %}
         <div><dt>{{ _('Opened') }}:</dt><dd>{{ ui.local_time(repair.created_at) }}</dd></div>
+      </dl>
+      <dl class="rl-ticket-facts rl-ticket-story">
+        <div class="rl-ticket-text rl-ticket-issue"><dt>{{ _('Reported issue') }}:</dt><dd class="obi-pre">{{ repair.reported_issue or '—' }}</dd></div>
+        <div class="rl-ticket-text"><dt>{{ _('Intake notes') }}:</dt>{% if repair.notes %}<dd class="obi-pre">{{ repair.notes }}</dd>{% else %}<dd class="obi-muted">—</dd>{% endif %}</div>
       </dl>
     </div>
     {% if repair.archived_at %}
@@ -36,11 +29,6 @@
       {{ _('Repair #{id} created', id=repair.id) }} · <a href="{{ request.url_for('repair_label', repair_id=repair.id).path }}">{{ _('Print label') }}</a>
     </div></div>{% endif %}
 
-    <div class="obi-panel-body">
-      <dl class="rl-ticket-facts">
-        <div class="rl-ticket-text rl-ticket-issue"><dt>{{ _('Reported issue') }}:</dt><dd class="obi-pre">{{ repair.reported_issue or '—' }}</dd></div>
-      </dl>
-    </div>
     <div class="obi-panel-body rl-ticket-controls" id="ticket-controls">
       {% set status_form_id = "stage-review-form" if stage_conflict else "stage-form" %}
       <div>
@@ -116,15 +104,4 @@
     {% elif notice_panel == 'status' %}
       {{ ui.toast(notice, 'info' if notice == 'Pickup state saved.' else 'success') }}
     {% endif %}
-    <div class="obi-panel-body" id="device-details">
-      <details class="obi-inline-details">
-        <summary class="obi-subheading">{{ _('Device details') }}</summary>
-        <dl class="rl-ticket-facts rl-device-facts">
-          {% for label, value in [('Device type', repair.device_type), ('Brand', repair.brand), ('Model', repair.model), ('Serial', repair.serial), ('Display device', repair.display_device)] %}
-          <div><dt>{{ _(label) }}:</dt>{% if value %}<dd>{{ value }}</dd>{% else %}<dd class="obi-muted">—</dd>{% endif %}</div>
-          {% endfor %}
-          <div class="rl-ticket-text"><dt>{{ _('Intake notes') }}:</dt>{% if repair.notes %}<dd class="obi-pre">{{ repair.notes }}</dd>{% else %}<dd class="obi-muted">—</dd>{% endif %}</div>
-        </dl>
-      </details>
-    </div>
 </section>

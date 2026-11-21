@@ -173,7 +173,7 @@ def create_app(
                 headers["Cache-Control"] = "no-store"
             headers["Content-Security-Policy"] = (
                 "default-src 'none'; style-src 'self'; img-src 'self'; form-action 'self'; "
-                "script-src 'sha256-EM7IoPIPIgodmhS3lEZD5aqjcnRHqniP31lIlZlJ118='; "
+                "script-src 'sha256-qUn3bIvHbKqO38YIYPpoceYlhO2diYxt1R4uatgmOdA='; "
                 "frame-ancestors 'none'; base-uri 'none'"
             )
             headers["Referrer-Policy"] = referrer_policy

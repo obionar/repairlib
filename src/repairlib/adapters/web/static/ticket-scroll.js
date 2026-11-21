@@ -1,4 +1,11 @@
 (() => {
+  // A confirmed pop-up supplies the fixed audit reason the domain requires.
+  for (const form of document.querySelectorAll('form[data-confirm]')) {
+    form.addEventListener('submit', event => {
+      if (window.confirm(form.dataset.confirm)) form.elements.reason.value = form.dataset.reason;
+      else event.preventDefault();
+    });
+  }
   const statusForm = document.querySelector('#stage-form, #stage-review-form');
   const forms = [statusForm, document.querySelector('#manual-part-form'), document.querySelector('#fees-form')].filter(Boolean);
   if (!forms.length) return;
