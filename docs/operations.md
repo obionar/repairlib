@@ -206,10 +206,12 @@ python3 -I -B "$repairlib_source/scripts/install.py" --commit HEAD --target "$re
 "$repairlib_target/repairlib" service foreground --port 8000
 ```
 
-The installer also links `~/.local/bin/repairlib` and the skill in
-`~/.agents/skills/repairlib` to this target; pass `--no-link` to skip that, or
+The installer also links `~/.local/bin/repairlib` to this target and the skill in
+`~/.agents/skills/repairlib` to this checkout's `skills/repairlib`; pass `--no-link` to skip that, or
 run `"$repairlib_target/repairlib" links` later. A real file already at either
-path is reported as `blocked` and left untouched.
+path, or a home directory that cannot be written, is reported as `blocked`; the
+installation itself stays complete. The skill link points at the checkout, so a
+later `git pull` refreshes it.
 
 Check `http://127.0.0.1:8000/health`; Ctrl+C stops the foreground process. Register the service
 instead of the last line when the app should keep running

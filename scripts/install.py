@@ -234,24 +234,29 @@ def publish_launcher(target: Path, report: dict, workspace: Path | None = None) 
     launcher.chmod(0o700)
 
 
-def link_into_home(target: Path, home: Path) -> list[dict]:
-    """Link the installed launcher and skill into the user's home; never replace a real file."""
+def link_into_home(target: Path, repo: Path, home: Path) -> list[dict]:
+    """Link the launcher and the checkout's skill into the home; never fail or replace a real file."""
     links = []
-    for name, link, destination in (
-        ("command", home / ".local/bin/repairlib", target / "repairlib"),
-        ("skill", home / ".agents/skills/repairlib", target / "generation/source/skills/repairlib"),
+    for link, destination in (
+        (home / ".local/bin/repairlib", target / "repairlib"),
+        (home / ".agents/skills/repairlib", repo / "skills/repairlib"),
     ):
-        if link.is_symlink():
-            if os.readlink(link) == str(destination):
-                links.append({"link": str(link), "target": str(destination), "status": "unchanged"})
+        entry = {"link": str(link), "target": str(destination)}
+        try:
+            if link.is_symlink():
+                if os.readlink(link) == str(destination):
+                    links.append({**entry, "status": "unchanged"})
+                    continue
+                link.unlink()
+            elif os.path.lexists(link):
+                links.append({**entry, "status": "blocked"})
                 continue
-            link.unlink()
-        elif os.path.lexists(link):
-            links.append({"link": str(link), "target": str(destination), "status": "blocked"})
-            continue
-        link.parent.mkdir(parents=True, exist_ok=True)
-        link.symlink_to(destination)
-        links.append({"link": str(link), "target": str(destination), "status": "created"})
+            link.parent.mkdir(parents=True, exist_ok=True)
+            link.symlink_to(destination)
+            links.append({**entry, "status": "created"})
+        except OSError as error:
+            # A read-only or odd home must not undo a good installation.
+            links.append({**entry, "status": "blocked", "reason": type(error).__name__})
     return links
 
 
@@ -265,7 +270,7 @@ def install(script: Path, revision: str, target: Path, *, home: Path | None = No
         report = stage_runtime(repo, commit, target)
         publish_launcher(target, report)
         if home is not None:
-            report["links"] = link_into_home(target, home)
+            report["links"] = link_into_home(target, repo, home)
             write_report(target / "install.json", report, exclusive=False)
         return report
     except BaseException:
