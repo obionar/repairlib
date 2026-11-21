@@ -33,6 +33,12 @@
               </form>
             {% endif %}
             <p class="obi-entry-body">{{ entry.body }}</p>
+            {% set picture = entry_pictures.get(entry.id) %}
+            {% if picture and not entry.deleted %}
+            {% set picture_src = request.url_for('attachment_content', repair_id=repair.id, attachment_id=picture).path ~ '?inline=1' %}
+            <a href="#entry-picture-{{ entry.id }}" class="rl-chat-picture"><img src="{{ picture_src }}" alt="{{ _('Picture for this entry') }}" loading="lazy"></a>
+            <a href="#entry-{{ entry.id }}" class="rl-zoom" id="entry-picture-{{ entry.id }}" aria-label="{{ _('Close') }}"><img src="{{ picture_src }}" alt="{{ _('Picture for this entry') }}" loading="lazy"></a>
+            {% endif %}
           </li>
         {% endfor %}
       </ol>
@@ -41,7 +47,7 @@
     {% endif %}
     {% if can_edit %}
       <div class="obi-panel-body">
-        <form method="post" action="{{ request.url_for('entry_create', repair_id=repair.id).path }}" class="obi-composer rl-chat-composer">
+        <form method="post" action="{{ request.url_for('entry_create', repair_id=repair.id).path }}" class="obi-composer rl-chat-composer" enctype="multipart/form-data">
           <input type="hidden" name="csrf" value="{{ entry_csrf }}">
           <input type="hidden" name="key" value="{{ entry_key }}">
           {% if log_before %}<input type="hidden" name="log_before" value="{{ log_before }}">{% endif %}
@@ -52,6 +58,8 @@
           <select id="entry-kind" name="kind">
             {% for kind in ['work', 'test', 'contact', 'handover', 'note'] %}<option value="{{ kind }}"{% if entry_draft.get('kind', 'work') == kind %} selected{% endif %}>{{ _(kind|title) }}</option>{% endfor %}
           </select>
+          <label class="rl-chat-attach" for="entry-picture" title="{{ _('Attach one picture') }}">{{ _('Picture') }}</label>
+          <input type="file" id="entry-picture" name="file" accept="image/*">
           {{ ui.button('Add') }}
         </form>
       </div>

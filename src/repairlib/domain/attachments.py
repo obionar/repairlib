@@ -12,10 +12,13 @@ import unicodedata
 from repairlib.config import DISK_RESERVE_BYTES
 from repairlib.contracts import (
     Attachment, AttachmentCaption, AttachmentDetach, AttachmentLink, AttachmentPage, AttachmentPurge,
+    WorkEntryInput,
 )
 from repairlib.domain.customers import MAX_ID, authorized
 from repairlib.domain.replay import replay as replay_receipt
-from repairlib.domain.repairs import RepairAccess, RepairError, find_repair, find_unarchived_repair
+from repairlib.domain.repairs import (
+    RepairAccess, RepairError, find_repair, find_unarchived_repair, normalize_entry,
+)
 from repairlib.lifecycle.operations import private_subdirectory
 from repairlib.lifecycle.workspace import (
     ACTIVE, WorkspaceError, database_path, maintenance_lock, workspace_status,
@@ -118,18 +121,34 @@ def write_chunk(upload: blobs.StagedBlob, chunk: bytes) -> None:
 
 
 def commit_upload(workspace: Path, access: RepairAccess, repair_id: int, upload: blobs.StagedBlob,
-                  *, filename: str, entry_id: int | None, key: str) -> Attachment:
-    """Publish original bytes before committing their metadata."""
+                  *, filename: str, entry_id: int | None, key: str, role: str = "",
+                  entry: WorkEntryInput | None = None) -> Attachment:
+    """Publish original bytes before committing their metadata.
+
+    role="device" marks the repair's device photo. entry creates a work entry in the same
+    transaction and links this file as its picture. Both accept images only.
+    """
     try:
         upload.finish()
         name = normalize_filename(filename)
         if upload.size == 0:
             raise RepairError(422, "validation", "Choose a non-empty file.", {"file": "The file is empty."})
+        if role not in ("", "device") or (entry is not None and entry_id is not None):
+            raise RepairError(422, "validation", "Choose a valid attachment role or entry.")
+        media_type = sniff(upload.head)
+        if (role or entry is not None) and media_type not in blobs.IMAGE_TYPES:
+            raise RepairError(422, "validation", "Choose a PNG, JPEG, GIF or WebP image.",
+                              {"file": "The file is not a supported image."})
+        kind, body = normalize_entry(entry.kind, entry.body) if entry is not None else ("", "")
         operation = "attachment.create"
         with authorized(workspace, access, write=True) as (db, principal, token_label, _):
             find_unarchived_repair(db, principal.shop_id, repair_id)
             payload = {"repair_id": repair_id, "entry_id": entry_id, "filename": name,
                        "size_bytes": upload.size, "sha256": upload.sha256}
+            if role:
+                payload["role"] = role
+            if entry is not None:
+                payload["entry"] = {"kind": kind, "body": body}
             fingerprint, previous = replay_attachment(db, principal, operation, key, payload)
             if previous is not None:
                 return previous
@@ -137,16 +156,23 @@ def commit_upload(workspace: Path, access: RepairAccess, repair_id: int, upload:
             if attachments.retained_count(db) >= MAX_RETAINED_ATTACHMENTS:
                 raise RepairError(409, "attachment_limit",
                                   "This workspace holds the most files a backup can carry. Purge detached files first.")
-            media_type = sniff(upload.head)
-            storage_name = upload.publish(principal.shop_id, folder=blobs.image_folder(media_type, repair_id))
+            if entry is not None:
+                composed = repairs.insert_entry(db, principal, repair_id, kind, body)
+                repairs.audit(db, principal, access.source, token_label, "work_entry.create", "work_entry",
+                              composed.id, {"repair_id": repair_id, "kind": kind})
+                entry_id = composed.id
             _, inline_limit = settings.attachment_limits(db, principal.shop_id)
+            if (role or entry is not None) and upload.size > inline_limit:  # it must display on the ticket
+                raise RepairError(422, "validation", "The picture is larger than the shop's inline preview limit.",
+                                  {"file": "The picture is too large to show."})
+            storage_name = upload.publish(principal.shop_id, folder=blobs.image_folder(media_type, repair_id))
             created = attachments.insert(db, principal, repair_id, entry_id, name, media_type,
-                                         upload.size, upload.sha256, storage_name, inline_limit)
+                                         upload.size, upload.sha256, storage_name, inline_limit, role)
             attachments.save_result(db, principal.shop_id, principal.user_id, operation, key,
                                     fingerprint, created)
             audit(db, principal, access.source, token_label, operation, created.id,
                   {"repair_id": repair_id, "entry_id": entry_id, "filename": name,
-                   "size_bytes": upload.size, "sha256": upload.sha256})
+                   "size_bytes": upload.size, "sha256": upload.sha256, **({"role": role} if role else {})})
             # From this point the transaction may commit. If its outcome is
             # uncertain, keep the original; reconciliation can remove orphans.
             upload.keep()
@@ -167,6 +193,12 @@ def replay_attachment(db, principal, operation: str, key: str, payload: dict):
 
 def audit(db, principal, source, token_label, operation, attachment_id, changes):
     repairs.audit(db, principal, source, token_label, operation, "attachment", attachment_id, changes)
+
+
+def ticket_pictures(workspace: Path, access: RepairAccess, repair_id: int) -> tuple[int | None, dict[int, int]]:
+    with authorized(workspace, access) as (db, principal, _, _):
+        find_repair(db, principal.shop_id, repair_id)
+        return attachments.ticket_pictures(db, principal.shop_id, repair_id)
 
 
 def list_attachments(workspace: Path, access: RepairAccess, repair_id: int, *,

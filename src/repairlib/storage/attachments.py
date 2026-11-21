@@ -10,7 +10,7 @@ from repairlib.storage import request_ledger
 INLINE_LIMIT = 8 * 1024 * 1024
 COLUMNS = ("id, repair_id, filename, media_type, size_bytes, sha256, uploader_id, "
            "uploader_username, created_at, revision, detached_at IS NOT NULL AS detached, detached_at, "
-           "purged_at IS NOT NULL AS purged, purged_at, purged_by_username, caption")
+           "purged_at IS NOT NULL AS purged, purged_at, purged_by_username, caption, role")
 LINKS = """(SELECT json_group_array(entry_id) FROM (
     SELECT entry_id FROM attachment_links
     WHERE shop_id = attachments.shop_id AND repair_id = attachments.repair_id
@@ -44,14 +44,14 @@ def entry_exists(db, shop_id: int, repair_id: int, entry_id: int, *, visible_onl
 
 
 def insert(db, principal, repair_id: int, entry_id: int | None, filename: str, media_type: str,
-           size_bytes: int, digest: str, storage_name: str, inline_limit: int) -> Attachment:
+           size_bytes: int, digest: str, storage_name: str, inline_limit: int, role: str = "") -> Attachment:
     folder, slash, name = storage_name.rpartition("/")
     attachment_id = db.execute(
         """INSERT INTO attachments(shop_id, repair_id, uploader_id, uploader_username,
-                                   filename, media_type, size_bytes, sha256, storage_folder, storage_name)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id""",
+                                   filename, media_type, size_bytes, sha256, storage_folder, storage_name, role)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id""",
         (principal.shop_id, repair_id, principal.user_id, principal.username,
-         filename, media_type, size_bytes, digest, folder + slash, name),
+         filename, media_type, size_bytes, digest, folder + slash, name, role),
     ).fetchone()["id"]
     if entry_id is not None:
         insert_link(db, principal.shop_id, repair_id, attachment_id, entry_id)
@@ -149,6 +149,18 @@ def save_result(db, shop_id: int, actor_id: int, operation: str, key: str,
                 fingerprint: str, result: Attachment) -> None:
     request_ledger.store(db, "attachment", shop_id, actor_id, operation, key, fingerprint, result,
                          link=result.id)
+
+
+def ticket_pictures(db, shop_id: int, repair_id: int) -> tuple[int | None, dict[int, int]]:
+    """Newest live device photo, and the first live image linked to each entry."""
+    live = "a.detached_at IS NULL AND a.purged_at IS NULL AND a.media_type <> 'application/octet-stream'"
+    photo = db.execute(f"""SELECT a.id FROM attachments AS a
+        WHERE a.shop_id = ? AND a.repair_id = ? AND a.role = 'device' AND {live}
+        ORDER BY a.id DESC LIMIT 1""", (shop_id, repair_id)).fetchone()
+    pictures = db.execute(f"""SELECT l.entry_id, MIN(a.id) FROM attachment_links AS l
+        JOIN attachments AS a ON a.shop_id = l.shop_id AND a.repair_id = l.repair_id AND a.id = l.attachment_id
+        WHERE l.shop_id = ? AND l.repair_id = ? AND {live} GROUP BY l.entry_id""", (shop_id, repair_id))
+    return (photo[0] if photo else None), {entry: attachment for entry, attachment in pictures}
 
 
 def all_stored(path: Path) -> list[tuple[int, int, str, str]]:

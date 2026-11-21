@@ -123,11 +123,15 @@ repairlib repairs edit-charge 1 CHARGE --revision N --reason TEXT --quantity 2 -
 
 **Files** uploads without JavaScript, optionally linked to a visible work entry of the same repair. Bytes go to private workspace storage unchanged with their SHA-256. Only PNG, JPEG, GIF and WebP (detected from bytes, not name) preview inline; everything else downloads. Admins set limits in **Shop settings** or `settings edit --max-upload-mib N --inline-preview-mib N` (defaults 256 and 8 MiB; bounds 1–2048 and 1–64), effective on the next upload. Viewers list and download; archived repairs refuse new files.
 
+- **Device photo:** the frame at the left of the ticket header uploads an image (on a phone, the picker offers the camera). The newest device photo that is not detached shows there; click it to zoom. CLI: `repairs attach ID FILE --photo`; API: `?role=device`.
+- **Work-log picture:** the work-log composer takes one optional image, saved with the entry in one step and shown in its bubble. CLI: `repairs add-entry ID --body TEXT --file IMAGE`.
+- Images are stored under `state/files/shop-N/images/<repair id>/`; other files stay directly under `shop-N/`.
 - **Detach** hides a file but keeps bytes and can be restored. After 30 days detached, an admin can **Purge bytes permanently** (`repairs purge-attachment ID ATTACHMENT --revision N --key KEY`): only bytes go; record, SHA-256 and history remain and downloads answer 410.
 - Admins and technicians can save or clear a caption (up to 1,000 printable characters) and link a file to more visible entries of the same repair or unlink them (also after an entry is soft-deleted). Original file and SHA-256 stay. Metadata of archived repairs and detached or purged files stays readable; restore a detached file before editing it. Each change advances the attachment revision.
 
 ```sh
-repairlib repairs attach 1 ./board-photo.jpg --key attach-1 --json   # --entry ID, --name NAME
+repairlib repairs attach 1 ./board-photo.jpg --key attach-1 --json   # --entry ID, --name NAME, --photo
+repairlib repairs add-entry 1 --body "Replaced U12" --file ./chip.jpg --key entry-photo-1 --json
 repairlib repairs attachments 1 --json                               # revision and entry_ids
 repairlib repairs download 1 1 --output ./board-photo-copy.jpg
 repairlib repairs detach 1 1 --revision 1 --key detach-1 --json      # --undo restores

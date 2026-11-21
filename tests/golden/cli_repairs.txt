@@ -177,7 +177,7 @@ $ repairs attachments 1  -> exit 0
 1	photo.bin	21	attached	bda33724986175450e049a44be4351a0932bc63b6aa3eb793468f56a24aa48ad
 
 $ repairs attachments 1 --json  -> exit 0
-{"items": [{"id": 1, "repair_id": 1, "entry_id": 1, "filename": "photo.bin", "media_type": "application/octet-stream", "size_bytes": 21, "sha256": "bda33724986175450e049a44be4351a0932bc63b6aa3eb793468f56a24aa48ad", "uploader_id": 2, "uploader_username": "cli", "created_at": "<ts>", "revision": 1, "detached": false, "previewable": false, "detached_at": null, "purged": false, "purged_at": null, "purged_by_username": null, "caption": "", "entry_ids": [1]}], "next_before": null}
+{"items": [{"id": 1, "repair_id": 1, "entry_id": 1, "filename": "photo.bin", "media_type": "application/octet-stream", "size_bytes": 21, "sha256": "bda33724986175450e049a44be4351a0932bc63b6aa3eb793468f56a24aa48ad", "uploader_id": 2, "uploader_username": "cli", "created_at": "<ts>", "revision": 1, "detached": false, "previewable": false, "detached_at": null, "purged": false, "purged_at": null, "purged_by_username": null, "caption": "", "entry_ids": [1], "role": ""}], "next_before": null}
 
 $ repairs edit-attachment 1 1 --revision 1 --caption Board --key k  -> exit 0
 Attachment 1, revision 2, attached, sha256 bda33724986175450e049a44be4351a0932bc63b6aa3eb793468f56a24aa48ad.

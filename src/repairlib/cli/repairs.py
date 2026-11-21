@@ -98,6 +98,7 @@ def register_repair_commands(commands) -> None:
     add.add_argument("id", type=int)
     add.add_argument("--kind", choices=KINDS, default="work")
     add.add_argument("--body", required=True)
+    add.add_argument("--file", type=Path, help="attach one image as the entry's picture, saved together")
     add.add_argument("--key", required=True)
     correct = actions.add_parser("edit-entry", help="correct an entry and preserve its history")
     correct.add_argument("id", type=int)
@@ -130,6 +131,7 @@ def register_repair_commands(commands) -> None:
     attach.add_argument("file", type=Path)
     attach.add_argument("--name", help="display file name (default: the file's own name)")
     attach.add_argument("--entry", type=int, help="link to a visible work entry of this repair")
+    attach.add_argument("--photo", action="store_true", help="set this image as the repair's device photo")
     attach.add_argument("--key", required=True)
     download = actions.add_parser("download", help="download original bytes and verify SHA-256")
     download.add_argument("id", type=int)
@@ -396,9 +398,20 @@ def _device_history(ctx, args):
     return local.device_history(ctx, args.serial)
 
 
+def open_source(path: Path):
+    try:
+        return path.expanduser().open("rb")
+    except OSError:
+        raise local.ClientError("Could not read the file to attach.", 8) from None
+
+
 @executes("add-entry")
 def _add_entry(ctx, args):
-    return local.create_work_entry(ctx, args.id, details_of(args, "kind", "body"), args.key)
+    if args.file is None:
+        return local.create_work_entry(ctx, args.id, details_of(args, "kind", "body"), args.key)
+    with open_source(args.file) as source:
+        return local.upload_attachment(ctx, args.id, source, filename=args.file.name, entry_id=None,
+                                       key=args.key, entry=details_of(args, "kind", "body"))
 
 
 @executes("edit-entry")
@@ -426,13 +439,9 @@ def _attachments(ctx, args):
 
 @executes("attach")
 def _attach(ctx, args):
-    try:
-        source = args.file.expanduser().open("rb")
-    except OSError:
-        raise local.ClientError("Could not read the file to attach.", 8) from None
-    with source:
+    with open_source(args.file) as source:
         return local.upload_attachment(ctx, args.id, source, filename=args.name or args.file.name,
-                                       entry_id=args.entry, key=args.key)
+                                       entry_id=args.entry, key=args.key, role="device" if args.photo else "")
 
 
 @executes("download")
@@ -598,6 +607,9 @@ def _show_device_history(result, args, ctx):
 
 @renders("add-entry")
 def _show_added_entry(result, args, ctx):
+    if args.file is not None:
+        print(f"Added work entry {result.entry_id} with picture {result.filename} (attachment {result.id}).")
+        return
     print(f"Added work entry {result.id} by {display_name(result.author_username)}.")
 
 

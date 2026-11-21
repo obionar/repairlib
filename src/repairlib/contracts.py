@@ -405,6 +405,7 @@ class Attachment:
     purged_by_username: str | None = None
     caption: str = ""
     entry_ids: list[int] = dataclass_field(default_factory=list)
+    role: Literal["", "device"] = ""
 
 
 @dataclass(frozen=True)

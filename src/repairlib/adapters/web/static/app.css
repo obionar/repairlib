@@ -1372,9 +1372,23 @@ summary.obi-panel-bar:focus-visible { outline-color: var(--rl-surface); outline-
   font: inherit;
 }
 
-/* Ticket record: device facts as a list on the left, the reported issue and intake notes on the right. */
+/* Ticket record: device photo, then the device facts; the reported issue and intake notes span below. */
 .rl-ticket-overview { display: grid; gap: 1rem 2rem; }
-@media (min-width: 48rem) { .rl-ticket-overview { grid-template-columns: minmax(0, 2fr) minmax(0, 3fr); } }
+@media (min-width: 48rem) { .rl-ticket-overview { grid-template-columns: 13rem minmax(0, 1fr); } }
+.rl-ticket-overview dl.rl-ticket-story { grid-column: 1 / -1; grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); }
+.rl-device-photo { display: grid; gap: .5rem; align-content: start; max-inline-size: 13rem; }
+.rl-photo-frame { display: grid; place-items: center; aspect-ratio: 4 / 3; overflow: hidden; border: 1px solid var(--rl-frame); border-radius: .5rem; background: var(--rl-canvas); }
+.rl-photo-frame img { inline-size: 100%; block-size: 100%; object-fit: cover; }
+.rl-photo-empty { border-style: dashed; color: var(--rl-muted); font-size: .875rem; text-align: center; padding: .5rem; }
+.rl-photo-form { display: grid; gap: .375rem; font-size: .875rem; }
+.rl-photo-form input[type="file"] { inline-size: 100%; font-size: .8125rem; }
+.rl-photo-form button { min-height: 2.25rem; margin: 0; }
+/* Click a picture to zoom; the overlay is a link back, so this works without JavaScript. */
+.rl-zoom { display: none; }
+.rl-zoom:target { position: fixed; inset: 0; z-index: 50; display: grid; place-items: center; padding: 1rem; background: rgb(0 0 0 / .85); cursor: zoom-out; }
+.rl-zoom:target img { max-inline-size: 100%; max-block-size: 100%; object-fit: contain; }
+.rl-chat-picture { display: inline-block; margin-block-start: .375rem; cursor: zoom-in; }
+.rl-chat-picture img { display: block; max-inline-size: min(100%, 14rem); max-block-size: 10rem; border-radius: .375rem; object-fit: cover; }
 .rl-ticket-overview .rl-ticket-facts { grid-template-columns: minmax(0, 1fr); align-content: start; }
 /* Rows share one label column sized to the longest label, so Greek labels stay on one line. */
 .rl-ticket-overview .rl-device-facts { grid-template-columns: max-content minmax(0, 1fr); gap: .375rem 1rem; align-items: baseline; }
@@ -1396,10 +1410,12 @@ summary.obi-panel-bar:focus-visible { outline-color: var(--rl-surface); outline-
 .rl-chat .rl-chat-delete { position: absolute; inset-block-start: .125rem; inset-inline-end: .125rem; display: block; margin: 0; }
 .rl-chat .rl-chat-delete button { inline-size: 2rem; block-size: 2rem; min-height: 0; margin: 0; padding: 0; border: 0; border-radius: .25rem; background: transparent; color: var(--rl-muted); font: inherit; font-size: 1.125rem; line-height: 1; cursor: pointer; }
 .rl-chat .rl-chat-delete button:hover, .rl-chat .rl-chat-delete button:focus-visible { color: #82251c; background: var(--rl-surface); }
-.rl-ui .rl-chat-composer { grid-template-columns: minmax(0, 1fr) auto; align-items: stretch; max-width: none; }
-.rl-ui .rl-chat-composer > textarea { grid-column: 1; min-height: 2.75rem; resize: vertical; }
+.rl-ui .rl-chat-composer { grid-template-columns: auto minmax(0, 1fr) auto; align-items: stretch; max-width: none; }
+.rl-ui .rl-chat-composer > textarea { grid-column: 1 / 3; min-height: 2.75rem; resize: vertical; }
 .rl-ui .rl-chat-composer > select { grid-column: 1; grid-row: 2; justify-self: start; min-height: 2rem; padding-block: .125rem; font-size: .875rem; }
-.rl-ui .rl-chat-composer > button { grid-column: 2; grid-row: 1; margin: 0; }
+.rl-ui .rl-chat-composer > .rl-chat-attach { position: absolute; inline-size: 1px; block-size: 1px; overflow: hidden; clip-path: inset(50%); }
+.rl-ui .rl-chat-composer > input[type="file"] { grid-column: 2 / 4; grid-row: 2; align-self: center; min-inline-size: 0; font-size: .8125rem; }
+.rl-ui .rl-chat-composer > button { grid-column: 3; grid-row: 1; margin: 0; }
 
 /* Parts: search the catalog on the ticket and use a match in one step. */
 .rl-part-search label { font-size: .875rem; }

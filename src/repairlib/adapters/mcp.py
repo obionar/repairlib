@@ -66,7 +66,7 @@ def read_attachment_content(ctx: Local, repair_id: int, attachment_id: int) -> A
 
 
 def upload_attachment(ctx: Local, repair_id: int, *, filename: str,
-                      content_base64: str, entry_id: int | None, key: str) -> Attachment:
+                      content_base64: str, entry_id: int | None, key: str, role: str = "") -> Attachment:
     try:
         content = b64decode(content_base64, validate=True)
     except ValueError:
@@ -78,7 +78,7 @@ def upload_attachment(ctx: Local, repair_id: int, *, filename: str,
     if not filename.isprintable():
         raise local.ClientError("Supply a printable filename.", code="validation")
     return local.upload_attachment(ctx, repair_id, content, filename=filename,
-                                  entry_id=entry_id, key=key)
+                                  entry_id=entry_id, key=key, role=role)
 
 
 @dataclass(frozen=True)
@@ -317,8 +317,10 @@ def repairlib_server(ctx: Local) -> "Server":
                       "Supply EUR cents for amount, a whole percentage for percent, or 0 for none.",
                       local.set_discount, **REPAIR, body=DiscountChange, revision_type=DISCOUNT_REVISION, destructive=True)
     register_mutation("upload_attachment", "Upload original bytes to a repair, optionally linked to a visible "
-                      "work entry on that repair. Use the CLI for files larger than 64 KiB.",
+                      "work entry on that repair. role='device' sets an image as the device photo. "
+                      "Use the CLI for files larger than 64 KiB.",
                       upload_attachment, **REPAIR, entry_id=(Id | None, None),
+                      role=(Literal["", "device"], ""),
                       filename=(Annotated[str, Field(min_length=1, max_length=255)], ...),
                       content_base64=(Annotated[str, Field(
                           min_length=4, max_length=ATTACHMENT_BASE64_MAX_LENGTH,

@@ -41,6 +41,7 @@ POST	/repairs/{repair_id}/fees	repair_fees
 POST	/repairs/{repair_id}/pickup	repair_pickup
 POST	/repairs/{repair_id}/archive	repair_archive
 POST	/repairs/{repair_id}/attachments	attachment_upload
+POST	/repairs/{repair_id}/photo	repair_photo
 GET	/repairs/{repair_id}/attachments/{attachment_id}/content	attachment_content
 POST	/repairs/{repair_id}/attachments/{attachment_id}/caption	attachment_caption
 POST	/repairs/{repair_id}/attachments/{attachment_id}/links	attachment_links

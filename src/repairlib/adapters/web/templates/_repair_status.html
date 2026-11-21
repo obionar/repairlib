@@ -10,6 +10,25 @@
     </span>
   </header>
     <div class="obi-panel-body rl-ticket-overview">
+      <div class="rl-device-photo" id="device-photo">
+        {% if photo_id %}
+        {% set photo_src = request.url_for('attachment_content', repair_id=repair.id, attachment_id=photo_id).path ~ '?inline=1' %}
+        <a href="#device-photo-zoom" class="rl-photo-frame"><img src="{{ photo_src }}" alt="{{ _('Device photo') }}"></a>
+        <a href="#device-photo" class="rl-zoom" id="device-photo-zoom" aria-label="{{ _('Close') }}"><img src="{{ photo_src }}" alt="{{ _('Device photo') }}" loading="lazy"></a>
+        {% else %}
+        <span class="rl-photo-frame rl-photo-empty">{{ _('No device photo') }}</span>
+        {% endif %}
+        {% if can_write and not repair.archived_at %}
+        <form method="post" action="{{ request.url_for('repair_photo', repair_id=repair.id).path }}" enctype="multipart/form-data" class="rl-photo-form">
+          <input type="hidden" name="csrf" value="{{ attachment_csrf }}">
+          <input type="hidden" name="key" value="{{ photo_key }}">
+          <label for="device-photo-file">{{ _('Device photo') }}</label>
+          <input type="file" id="device-photo-file" name="file" accept="image/*" required{% if photo_error %} aria-invalid="true" aria-describedby="device-photo-error"{% endif %}>
+          {% if photo_error %}<span class="obi-error" id="device-photo-error">{{ _(photo_error) }}</span>{% endif %}
+          {{ ui.button('Upload') }}
+        </form>
+        {% endif %}
+      </div>
       <dl class="rl-ticket-facts rl-device-facts" id="device-details">
         <div><dt>{{ _('Customer') }}:</dt><dd>{% if repair.customer_id and names.customer %}<a href="{{ request.url_for('customer_detail', customer_id=repair.customer_id).path }}">{{ names.customer }}</a>{% else %}<span class="obi-muted">{{ _('No customer linked') }}</span>{% endif %}</dd></div>
         {% for label, value in [('Device type', repair.device_type), ('Brand', repair.brand), ('Model', repair.model), ('Serial', repair.serial), ('Display device', repair.display_device)] %}

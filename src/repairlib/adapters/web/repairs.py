@@ -250,7 +250,7 @@ def repair_routes(workspace: Path, templates, key: bytearray) -> APIRouter:
 
     def detail_page(request, repair_id, *, status=200, stage_error=None, stage_fields=None,
                     stage_key=None, stage_revision=None, flag_error=None, flag_operation=None,
-                    attachment_error=None, attachment_key=None,
+                    attachment_error=None, attachment_key=None, photo_error=None,
                     metadata_draft=None, entry_error=None, entry_fields=None, manual=None, manual_error=None,
                     fees_error=None, fees_draft=None,
                     log_before=None, files_before=None, detached_before=None,
@@ -268,6 +268,7 @@ def repair_routes(workspace: Path, templates, key: bytearray) -> APIRouter:
             summary, used_parts = charges.work_log_billing(workspace, access(request), repair_id)
             fees, fees_can_write = charges.ticket_fees(workspace, access(request), repair_id)
             upload_mib, is_admin = attachments.upload_context(workspace, access(request))
+            photo_id, entry_pictures = attachments.ticket_pictures(workspace, access(request), repair_id)
         except RepairError as error:
             return failure(request, error)
         credential = access(request).credential
@@ -375,6 +376,8 @@ def repair_routes(workspace: Path, templates, key: bytearray) -> APIRouter:
             files=files, detached_files=detached_files,
             attachment_error=str(attachment_error) if attachment_error else "",
             attachment_key=attachment_key or uuid4().hex,
+            photo_id=photo_id, entry_pictures=entry_pictures, photo_key=uuid4().hex,
+            photo_error=str(photo_error) if photo_error else "",
             attachment_csrf=csrf_token(key, f"attachment.create:{repair_id}", credential),
             caption_csrf=csrf_token(key, f"attachment.caption:{repair_id}", credential),
             link_csrf=csrf_token(key, f"attachment.link:{repair_id}", credential),
@@ -560,6 +563,14 @@ def repair_routes(workspace: Path, templates, key: bytearray) -> APIRouter:
 
     @router.post("/{repair_id}/attachments")
     async def attachment_upload(request: Request, repair_id: int):
+        return await receive_attachment(request, repair_id)
+
+    @router.post("/{repair_id}/photo")
+    async def repair_photo(request: Request, repair_id: int):
+        return await receive_attachment(request, repair_id, role="device")
+
+    async def receive_attachment(request: Request, repair_id: int, *, role: str = ""):
+        error_name = "photo_error" if role else "attachment_error"
         credential = access(request).credential
         origin = request.headers.get("origin")
         if origin is not None and origin != f"{request.url.scheme}://{request.url.netloc}":
@@ -570,8 +581,8 @@ def repair_routes(workspace: Path, templates, key: bytearray) -> APIRouter:
                                              repair_id, "upload", None, declared_size=declared)
         except RepairError as error:
             if error.status == 413:
-                return await run_in_threadpool(detail_page, request, repair_id, status=413,
-                                               attachment_error=error)
+                return await run_in_threadpool(lambda: detail_page(request, repair_id, status=413,
+                                                                   **{error_name: error}))
             return failure(request, error)
         fields = {}
         try:
@@ -583,20 +594,22 @@ def repair_routes(workspace: Path, templates, key: bytearray) -> APIRouter:
         except BaseException as error:
             staged.discard()
             if isinstance(error, RepairError):
-                return await run_in_threadpool(detail_page, request, repair_id, status=error.status,
-                                               attachment_error=error, attachment_key=fields.get("key"))
+                return await run_in_threadpool(lambda: detail_page(
+                    request, repair_id, status=error.status, attachment_key=fields.get("key"),
+                    **{error_name: error}))
             raise
         request_key = fields.get("key", "")
         try:
             await run_in_threadpool(lambda: attachments.commit_upload(
                 workspace, access(request), repair_id, staged, filename=filename,
-                entry_id=entry_id, key=request_key))
+                entry_id=entry_id, key=request_key, role=role))
         except RepairError as error:
             if error.status in (409, 413, 422):
-                return await run_in_threadpool(detail_page, request, repair_id, status=error.status,
-                                               attachment_error=error, attachment_key=request_key)
+                return await run_in_threadpool(lambda: detail_page(
+                    request, repair_id, status=error.status, attachment_key=request_key,
+                    **{error_name: error}))
             return failure(request, error)
-        return back(request, repair_id, "files", fields, saved="attachment")
+        return back(request, repair_id, "status" if role else "files", fields, saved="attachment")
 
     @router.get("/{repair_id}/attachments/{attachment_id}/content")
     def attachment_content(request: Request, repair_id: int, attachment_id: int, inline: bool = False):
@@ -764,8 +777,43 @@ def repair_routes(workspace: Path, templates, key: bytearray) -> APIRouter:
                       field_errors={}, kinds=sorted(repairs.ENTRY_KINDS))
 
     @router.post("/{repair_id}/entries")
-    def entry_create(request: Request, repair_id: int,
-                     form: Annotated[dict[str, str], Depends(entry_form)]):
+    async def entry_create(request: Request, repair_id: int):
+        if not request.headers.get("content-type", "").startswith("multipart/form-data"):
+            form = await entry_form(request)
+            return await run_in_threadpool(save_entry, request, repair_id, form)
+        credential = access(request).credential
+        try:
+            declared = attachments.check_declared_length(request.headers.get("content-length"))
+            staged = await run_in_threadpool(attachments.prepare_upload, workspace, access(request),
+                                             repair_id, "upload", None, declared_size=declared)
+        except RepairError as error:
+            return failure(request, error)
+        try:
+            form, filename = await receive_upload(request, staged)
+            check_csrf(request, form, csrf_token(key, f"entry.create:{repair_id}", credential))
+        except BaseException as error:
+            staged.discard()
+            if isinstance(error, RepairError):
+                return await run_in_threadpool(lambda: detail_page(request, repair_id, status=error.status,
+                                                                   entry_error=error))
+            raise
+        if not filename:  # the browser sends an empty file part when no picture was chosen
+            staged.discard()
+            return await run_in_threadpool(save_entry, request, repair_id, form)
+        fields = {"kind": form.get("kind", ""), "body": form.get("body", "")}
+        try:
+            await run_in_threadpool(lambda: attachments.commit_upload(
+                workspace, access(request), repair_id, staged, filename=filename, entry_id=None,
+                key=form.get("key", ""), entry=WorkEntryInput(**fields)))
+        except RepairError as error:
+            if error.status in (409, 413, 422):
+                return await run_in_threadpool(lambda: detail_page(
+                    request, repair_id, status=error.status, entry_error=error, entry_fields=fields,
+                    log_before=cursor_value(form, "log_before")))
+            return failure(request, error)
+        return back(request, repair_id, "log", form, saved="entry")
+
+    def save_entry(request: Request, repair_id: int, form: dict[str, str]):
         credential = access(request).credential
         purpose = f"entry.create:{repair_id}"
         check_csrf(request, form, csrf_token(key, purpose, credential) if credential else None)

@@ -1,7 +1,7 @@
 """Repair attachment JSON metadata and raw-byte upload/download resources."""
 
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends, Header, Request
 from pydantic import TypeAdapter
@@ -46,7 +46,7 @@ def attachment_routes(workspace: Path, access_dependency) -> APIRouter:
     async def upload(repair_id: int, request: Request,
                      access: Annotated[RepairAccess, Depends(access_dependency)],
                      key: Annotated[str, Depends(idempotency_key)],
-                     filename: str, entry_id: int | None = None):
+                     filename: str, entry_id: int | None = None, role: Literal["", "device"] = ""):
         declared = attachments.check_declared_length(request.headers.get("content-length"))
         staged = await run_in_threadpool(attachments.prepare_upload, workspace, access,
                                          repair_id, filename, entry_id, declared_size=declared)
@@ -57,7 +57,7 @@ def attachment_routes(workspace: Path, access_dependency) -> APIRouter:
             staged.discard()
             raise
         return await run_in_threadpool(lambda: attachments.commit_upload(
-            workspace, access, repair_id, staged, filename=filename, entry_id=entry_id, key=key))
+            workspace, access, repair_id, staged, filename=filename, entry_id=entry_id, key=key, role=role))
 
     @router.get("/{attachment_id}", response_model=Attachment)
     def detail(repair_id: int, attachment_id: int,

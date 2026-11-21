@@ -325,7 +325,8 @@ def list_attachments(ctx, repair_id, *, limit, before) -> AttachmentPage:
     return run(ctx, attachments.list_attachments, repair_id, before=before, limit=limit)[0]
 
 
-def upload_attachment(ctx, repair_id, source: bytes | BinaryIO, *, filename, entry_id, key) -> Attachment:
+def upload_attachment(ctx, repair_id, source: bytes | BinaryIO, *, filename, entry_id, key,
+                      role="", entry=None) -> Attachment:
     """Stage original bytes (or a binary file) and commit them as one attachment."""
     with local_lock(ctx.workspace):
         staged = call(attachments.prepare_upload, ctx.workspace, ctx.access, repair_id, filename, entry_id)
@@ -339,7 +340,8 @@ def upload_attachment(ctx, repair_id, source: bytes | BinaryIO, *, filename, ent
             staged.discard()
             raise
         return call(attachments.commit_upload, ctx.workspace, ctx.access, repair_id, staged,
-                    filename=filename, entry_id=entry_id, key=key)
+                    filename=filename, entry_id=entry_id, key=key, role=role,
+                    entry=parse(WorkEntryInput, entry) if entry is not None else None)
 
 
 def show_attachment(ctx, repair_id, attachment_id) -> Attachment:
