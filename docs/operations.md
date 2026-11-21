@@ -235,6 +235,9 @@ python3 -I -B repairlib-source/scripts/install.py --reopen-update \
 "$HOME/.local/opt/repairlib/repairlib" status --json
 ```
 
+After the reopen the selection is the live installation: the same launcher runs ordinary CLI
+commands against its workspace (unit control stays with the user manager).
+
 On an OpenRC host, remove the registered service with `repairlib service remove --openrc-system` before staging; the installer refuses to stage while `/etc/init.d/repairlib` exists.
 
 `--commit` takes a local Git revision (default `HEAD`); run the copy of `scripts/install.py` from that commit. The installer archives the commit into the target, checks that it starts on the installed packages, and records the exact commit and interpreter in `install.json`. The launcher runs `/usr/bin/python3` against the staged source; upgrade distribution packages through the distribution's package manager and rehearse an update before relying on it. Keep the target at its original path and workspace files and backups outside it. After an interruption that leaves a partial target, use a fresh path.

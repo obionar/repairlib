@@ -143,6 +143,10 @@ def launch_selected() -> int:
     if ((command == ["doctor"] and not options)
             or (command == ["status"] and options in ([], ["--json"]))):
         return main([*command, *options, "--workspace", workspace], update_state=state)
+    # Once writes are open the selected generation is the live installation, so ordinary
+    # commands run against its workspace; service control stays on the documented paths.
+    if state["update_phase"] == "open" and command != ["service"]:
+        return main([*command, *options, "--workspace", workspace], update_state=state)
     if args[:2] == ["service", "managed-foreground"]:
         port = selection.get("managed", {}).get("port")
         if not isinstance(port, int) or not 1 <= port <= 65535 or tuple(args) != foreground_args(
