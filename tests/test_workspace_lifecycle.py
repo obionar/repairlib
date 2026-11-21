@@ -12,7 +12,7 @@ import unittest
 
 from repairlib.domain.sessions import login, principal_for_session
 from repairlib.domain.setup import initialize_demo_workspace, initialize_workspace
-from repairlib.lifecycle.workspace import database_path, maintenance_lock
+from repairlib.lifecycle.workspace import LOCK, WorkspaceError, database_path, maintenance_lock
 from repairlib.storage.initialization import SCHEMA_VERSION, initialize_database
 from test_baseline import python_env
 from test_cli_identity import COMMAND
@@ -123,6 +123,56 @@ class WorkspaceLifecycleTests(unittest.TestCase):
         staging.symlink_to(originals.parent, target_is_directory=True)
         self.assertNotEqual(self.command("cleanup").returncode, 0)
         self.assertEqual(originals.read_bytes(), b"keep original bytes")
+
+    def test_plain_migration_refuses_a_hard_linked_database(self):
+        original = self.root / "original.sqlite3"
+        initialize_database(original, "Old", "UTC", "owner", "unused", target=SCHEMA_VERSION - 1)
+        path = database_path(self.workspace)
+        path.parent.mkdir(parents=True)
+        path.hardlink_to(original)
+        before = original.read_bytes()
+        code, report = self.status()
+        self.assertNotEqual(code, 0)
+        self.assertEqual((report["status"], report["ready"]), ("invalid", False))
+        migrated = self.command("migrate")
+        self.assertNotEqual(migrated.returncode, 0, migrated.stdout)
+        self.assertEqual(original.read_bytes(), before)
+        self.assertFalse((self.workspace / LOCK).exists())
+
+    def test_linked_sqlite_sidecars_make_workspace_unavailable(self):
+        self.demo()
+        db = database_path(self.workspace)
+        outside = self.root / "unrelated"
+        outside.write_bytes(b"not a SQLite sidecar")
+        before = db.read_bytes()
+        for suffix in ("-wal", "-shm", "-journal"):
+            with self.subTest(suffix=suffix):
+                sidecar = db.with_name(db.name + suffix)
+                sidecar.symlink_to(outside)
+                try:
+                    code, report = self.status()
+                    self.assertNotEqual(code, 0)
+                    self.assertEqual((report["status"], report["ready"]), ("invalid", False))
+                    self.assertNotEqual(self.command("cleanup").returncode, 0)
+                    self.assertEqual(db.read_bytes(), before)
+                    self.assertTrue(sidecar.is_symlink())
+                    self.assertEqual(outside.read_bytes(), b"not a SQLite sidecar")
+                finally:
+                    sidecar.unlink()
+        self.assertTrue(self.status()[1]["ready"])
+
+    def test_workspace_and_maintenance_lock_must_not_be_aliased(self):
+        self.demo()
+        original = self.workspace
+        self.workspace = self.root / "workspace alias"
+        self.workspace.symlink_to(original, target_is_directory=True)
+        self.assertEqual(self.status()[1]["status"], "invalid")
+        with self.assertRaises(OSError), maintenance_lock(self.workspace, exclusive=True):
+            self.fail("A linked workspace must not acquire a lock.")
+        shared = self.root / "lock alias"
+        shared.hardlink_to(original / LOCK)
+        with self.assertRaisesRegex(WorkspaceError, "lock is invalid"), maintenance_lock(original, exclusive=True):
+            self.fail("A hard-linked lock must not authorize workspace maintenance.")
 
     def test_confirmed_reset_preserves_credentials_and_is_atomic(self):
         self.demo()

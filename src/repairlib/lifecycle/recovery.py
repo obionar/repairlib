@@ -6,8 +6,8 @@ from contextlib import contextmanager
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-from repairlib.lifecycle.operations import check_database_files
 from repairlib.lifecycle.workspace import DATABASE, WorkspaceError, database_path, maintenance_lock, offline_lock
+from repairlib.paths import check_database_files
 from repairlib.storage.recovery import (
     SIDECAR_SUFFIXES, SnapshotError, copy_database, online_copy_database, sidecar,
     verify_database_snapshot,

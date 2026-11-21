@@ -16,10 +16,11 @@ from repairlib.contracts import (
 from repairlib.domain.customers import MAX_ID, authorized
 from repairlib.domain.replay import replay as replay_receipt
 from repairlib.domain.repairs import RepairAccess, RepairError, find_repair, find_unarchived_repair
-from repairlib.lifecycle.operations import check_database_files, private_subdirectory
+from repairlib.lifecycle.operations import private_subdirectory
 from repairlib.lifecycle.workspace import (
     ACTIVE, WorkspaceError, database_path, maintenance_lock, workspace_status,
 )
+from repairlib.paths import check_database_files
 from repairlib.storage import attachments, blobs, repairs, settings
 
 # Hard ceiling; each shop's bounded settings (default 256 MiB upload, 8 MiB inline

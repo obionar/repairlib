@@ -15,11 +15,12 @@ from typing import BinaryIO, TypedDict
 from zipfile import BadZipFile, ZIP_STORED, ZipFile, ZipInfo
 
 from repairlib.domain.attachments import MAX_UPLOAD_BYTES
-from repairlib.lifecycle.operations import check_database_files, private_subdirectory
+from repairlib.lifecycle.operations import private_subdirectory
 from repairlib.lifecycle.recovery import (
     publish_backup, require_private, staged_workspace_snapshot, verify_snapshot,
 )
 from repairlib.lifecycle.workspace import ACTIVE, DATABASE, LOCK, WorkspaceError, database_path
+from repairlib.paths import check_database_files
 from repairlib.storage.blobs import FILES, STORAGE_NAME_LENGTH, blob_path
 from repairlib.storage.initialization import SCHEMA_VERSION
 from repairlib.storage.recovery import (

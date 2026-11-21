@@ -11,10 +11,11 @@ from repairlib.config import DISK_RESERVE_BYTES, resolve_workspace
 from repairlib.contracts import StockReconciliation
 from repairlib.lifecycle.backup_archive import MAX_ATTACHMENTS, RESTORE_STAGE_PREFIX, SHA256, hash_stream, private_file
 from repairlib.lifecycle.backup_schedule import backup_line, backup_state
-from repairlib.lifecycle.operations import check_database_files, private_subdirectory, workspace_disk_free_bytes
+from repairlib.lifecycle.operations import private_subdirectory, workspace_disk_free_bytes
 from repairlib.lifecycle.workspace import (
     ACTIVE, STAGE_PREFIX, WorkspaceError, database_path, offline_lock, workspace_schema,
 )
+from repairlib.paths import check_database_files
 from repairlib.storage.blobs import FILES, STAGING, blob_path
 from repairlib.storage.recovery import database_diagnostics, sidecar
 from repairlib.storage.sessions import SQLITE_BUSY_TIMEOUT_MS, SQLITE_SYNCHRONOUS

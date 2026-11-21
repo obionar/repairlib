@@ -13,6 +13,7 @@ from repairlib.config import DISK_RESERVE_BYTES
 from repairlib.lifecycle.workspace import (
     ACTIVE, WorkspaceError, database_path, maintenance_lock, workspace_schema, workspace_status,
 )
+from repairlib.paths import check_database_files
 from repairlib.storage.blobs import FILES, STAGING, UPLOAD_PART
 from repairlib.storage.initialization import SCHEMA_VERSION
 from repairlib.storage.sessions import connect
@@ -25,19 +26,6 @@ RECEIPT_TABLES = (
     "inventory_requests", "portable_imports", "printer_requests", "repair_requests", "settings_requests",
     "stock_requests", "user_requests",
 )
-
-
-def check_database_files(path: Path) -> None:
-    for candidate in (path, *(path.with_name(path.name + suffix)
-                              for suffix in ("-wal", "-shm", "-journal"))):
-        try:
-            info = candidate.lstat()
-        except FileNotFoundError:
-            if candidate == path:
-                raise
-            continue
-        if not stat.S_ISREG(info.st_mode) or info.st_nlink != 1:
-            raise OSError("Workspace database files must be private regular files.")
 
 
 def workspace_disk_free_bytes(workspace: Path) -> int | None:

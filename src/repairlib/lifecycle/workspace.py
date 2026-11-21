@@ -11,6 +11,7 @@ from pathlib import Path
 from tempfile import NamedTemporaryFile, TemporaryDirectory
 
 from repairlib.paths import ACTIVE, DATABASE, database_path  # noqa: F401  (re-exported for lifecycle callers)
+from repairlib.paths import check_database_files
 from repairlib.storage.initialization import (
     UpgradeError,
     initialize_database,
@@ -33,12 +34,16 @@ class WorkspaceError(Exception):
 
 
 def workspace_schema(workspace: Path) -> tuple[str, int | None]:
-    if not workspace.is_dir():
+    if workspace.is_symlink() or not workspace.is_dir():
         return ("invalid" if os.path.lexists(workspace) else "missing"), None
     active = workspace / ACTIVE
     if os.path.lexists(active):
         db = database_path(workspace)
-        if active.is_symlink() or db.is_symlink() or not db.is_file():
+        if active.is_symlink() or not active.is_dir():
+            return "invalid", None
+        try:
+            check_database_files(db)
+        except OSError:
             return "invalid", None
         return schema_details(db)
     if any(workspace.glob(f"{STAGE_PREFIX}*")):
@@ -59,9 +64,14 @@ def maintenance_lock(workspace: Path, *, exclusive: bool, create: bool = True) -
         flags |= os.O_WRONLY | os.O_CREAT
     else:
         flags |= os.O_RDONLY
-    fd = os.open(workspace / LOCK, flags, 0o600)
+    directory = os.open(workspace, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW | os.O_CLOEXEC)
     try:
-        if not stat.S_ISREG(os.fstat(fd).st_mode):
+        fd = os.open(LOCK, flags, 0o600, dir_fd=directory)
+    finally:
+        os.close(directory)
+    try:
+        info = os.fstat(fd)
+        if not stat.S_ISREG(info.st_mode) or info.st_nlink != 1:
             raise WorkspaceError("Workspace lock is invalid.")
         mode = fcntl.LOCK_EX if exclusive else fcntl.LOCK_SH
         try:
@@ -141,7 +151,8 @@ def offline_lock(workspace: Path, inherited: int | None = None) -> Iterator[int]
             yield fd
         return
     held, current = os.fstat(inherited), (workspace / LOCK).lstat()
-    if not stat.S_ISREG(held.st_mode) or not os.path.samestat(held, current):
+    if (not stat.S_ISDIR(workspace.lstat().st_mode)
+            or not stat.S_ISREG(held.st_mode) or held.st_nlink != 1 or not os.path.samestat(held, current)):
         raise WorkspaceError("The inherited workspace lock does not match this workspace.")
     try:
         if fcntl is None:
