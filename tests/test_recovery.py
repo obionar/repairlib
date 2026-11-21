@@ -62,6 +62,24 @@ class RecoveryFixture(unittest.TestCase):
 
 
 class DatabaseRecoveryTests(RecoveryFixture):
+    def test_snapshot_reports_directory_sync_failure_without_discarding_the_backup(self):
+        source = self.database.read_bytes()
+        real_fsync = os.fsync
+
+        def fail_parent(fd):
+            if os.path.samestat(os.fstat(fd), self.root.stat()):
+                self.assertTrue(self.output.is_file())
+                raise OSError("Synthetic backup directory sync failure")
+            real_fsync(fd)
+
+        with patch("os.fsync", side_effect=fail_parent), redirect_stdout(StringIO()) as stdout, \
+                redirect_stderr(StringIO()) as stderr:
+            self.assertEqual(main(list(self.snapshot_args())), 1)
+        self.assertEqual(stdout.getvalue(), "")
+        self.assertIn("directory could not be synced", stderr.getvalue())
+        self.assertEqual(backup_archive.verify_backup(self.output), ("SQLite snapshot", SCHEMA_VERSION))
+        self.assertEqual(self.database.read_bytes(), source)
+
     def test_snapshot_includes_committed_wal_and_honors_maintenance_lock(self):
         with closing(sqlite3.connect(self.database)) as source:
             source.execute("PRAGMA wal_autocheckpoint = 0")
@@ -720,6 +738,31 @@ class ArchiveRecoveryTests(RecoveryFixture):
         self.assert_refusal(self.command(*self.restore_args(destination)), "attachment hash")
         self.assertEqual(set(self.root.iterdir()), {self.workspace, self.archive})
         self.assertEqual(self.archive.read_bytes(), before)
+
+    def test_restore_syncs_files_before_publish_and_reports_parent_sync_failure(self):
+        self.create_archive()
+        destination = self.root / "new"
+        real_fsync = os.fsync
+        synced = set()
+
+        def sync(fd):
+            if os.path.samestat(os.fstat(fd), self.root.stat()):
+                self.assertTrue(destination.is_dir())
+                self.assertIn(database_path(destination).name, synced)
+                self.assertTrue({Path(path).name for path in self.blobs} <= synced)
+                raise OSError("Synthetic restore parent sync failure")
+            self.assertFalse(destination.exists())
+            synced.add(Path(os.readlink(f"/proc/self/fd/{fd}")).name)
+            real_fsync(fd)
+
+        with patch("os.fsync", side_effect=sync), redirect_stdout(StringIO()) as stdout, \
+                redirect_stderr(StringIO()) as stderr:
+            self.assertEqual(main(self.restore_args(destination)), 1)
+        self.assertEqual(stdout.getvalue(), "")
+        self.assertIn("parent directory could not be synced", stderr.getvalue())
+        for path, content in self.blobs.items():
+            self.assertEqual((destination / path).read_bytes(), content)
+        self.assertEqual(workspace_status(destination), "initialized")
 
     def test_restore_failed_interrupted_and_late_publication(self):
         self.create_archive()

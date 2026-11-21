@@ -363,6 +363,21 @@ def publish_restore(parent_fd: int, staged: str, destination: str) -> None:
         raise OSError(error, os.strerror(error))
 
 
+def sync_restored_tree(directory: Path) -> None:
+    """Flush the private restored files and directory entries from the leaves up."""
+    for path in directory.iterdir():
+        if path.is_dir():
+            sync_restored_tree(path)
+        else:
+            with path.open("rb") as file:
+                os.fsync(file.fileno())
+    fd = os.open(directory, os.O_RDONLY | os.O_DIRECTORY | os.O_CLOEXEC)
+    try:
+        os.fsync(fd)
+    finally:
+        os.close(fd)
+
+
 def restore_archive(artifact: Path, destination: Path) -> int:
     if sys.platform != "linux":
         raise WorkspaceError("Safe workspace restore currently requires Linux.")
@@ -399,6 +414,10 @@ def restore_archive(artifact: Path, destination: Path) -> int:
             except SnapshotError as error:
                 raise WorkspaceError(str(error)) from error
         (staged / LOCK).touch(mode=0o600, exist_ok=False)
+        try:
+            sync_restored_tree(staged)
+        except OSError as error:
+            raise WorkspaceError("Could not sync restored files before publication.") from error
         # The lock file moves with the state, so normal runtime locking works
         # as soon as the destination becomes visible.
         try:
@@ -409,4 +428,9 @@ def restore_archive(artifact: Path, destination: Path) -> int:
             raise WorkspaceError("Restore destination already exists.") from error
         except OSError as error:
             raise WorkspaceError("Could not publish the restored workspace.") from error
+        try:
+            os.fsync(parent_fd)
+        except OSError as error:
+            raise WorkspaceError("Restore was published, but its parent directory could not be synced. "
+                                 "Verify the restored workspace before using it.") from error
         return version
