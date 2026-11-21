@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from functools import lru_cache
+import json
 import os
 from pathlib import Path
 import re
@@ -101,4 +102,9 @@ def restart_service(workspace: Path, port: int, openrc: bool) -> None:
                           + (["--openrc-system"] if openrc else []),
                           capture_output=True, text=True, env=environment)
     if done.returncode:
-        raise CheckoutError(done.stderr.strip() or "The service did not restart.")
+        try:
+            report = json.loads(done.stdout)
+        except (ValueError, TypeError):
+            report = None
+        detail = report.get("error") if isinstance(report, dict) else None
+        raise CheckoutError(done.stderr.strip() or detail or "The service did not restart.")

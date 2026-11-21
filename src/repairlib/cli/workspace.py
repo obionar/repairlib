@@ -355,7 +355,12 @@ def run_update(args) -> int:
     if target is None:
         print(f"Updated {old[:7]} → {new[:7]}; no registered service to restart.")
         return 0
-    restart_service(*target)
+    try:
+        restart_service(*target)
+    except CheckoutError as error:
+        raise CheckoutError(
+            f"Checkout updated {old[:7]} → {new[:7]}, but service restart failed: {error}"
+        ) from error
     print(f"Updated {old[:7]} → {new[:7]}; service restarted.")
     return 0
 

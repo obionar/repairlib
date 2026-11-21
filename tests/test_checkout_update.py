@@ -4,8 +4,9 @@ import subprocess
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
-from repairlib.lifecycle.checkout import CheckoutError, parse_service_target, pull
+from repairlib.lifecycle.checkout import CheckoutError, parse_service_target, pull, restart_service
 
 
 def git(repo: Path, *arguments: str) -> str:
@@ -62,6 +63,20 @@ class ServiceTargetTests(unittest.TestCase):
 
     def test_text_without_both_options_is_ignored(self):
         self.assertIsNone(parse_service_target("ExecStart=/usr/bin/python3 -m repairlib\n"))
+
+
+class RestartTests(unittest.TestCase):
+    @patch("repairlib.lifecycle.checkout.subprocess.run")
+    def test_reports_service_error_from_json_stdout(self, run):
+        run.return_value = subprocess.CompletedProcess([], 1, '{"error":"permission denied"}', "")
+        with self.assertRaisesRegex(CheckoutError, "permission denied"):
+            restart_service(Path("/home/owner/shop"), 8000, True)
+
+    @patch("repairlib.lifecycle.checkout.subprocess.run")
+    def test_uses_fallback_for_invalid_json(self, run):
+        run.return_value = subprocess.CompletedProcess([], 1, "not json", "")
+        with self.assertRaisesRegex(CheckoutError, "service did not restart"):
+            restart_service(Path("/home/owner/shop"), 8000, True)
 
 
 if __name__ == "__main__":
