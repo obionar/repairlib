@@ -472,11 +472,19 @@ has passed; native managed handoff and power-loss validation remain open.
 ## Linux service lifecycle
 
 On a systemd host, the service commands register one `repairlib.service` per
-Linux user with a systemd user manager. The initial unit uses the absolute Python
-executable and source directory from the invocation. Keep those paths stable and
-use the same workspace and port for every command. Use the installed launcher in
-place of `python3 -m repairlib` when registering a private installation. An
-installer managed handoff adopts the stable launcher for subsequent unit starts.
+Linux user with a systemd user manager. Keep the runtime paths stable and use
+the same workspace and port for every command. Use the installed launcher when
+registering a private installation. An installer managed handoff adopts the
+stable launcher for subsequent unit starts.
+
+New systemd and OpenRC registrations from a Git checkout use a command like
+`/usr/bin/python3 -I -B /path/to/repairlib/bin/repairlib service foreground --workspace … --port 8000`,
+without embedding Python code in the unit or init script. Existing registrations
+are recognized without being rewritten; no action is needed. To opt into the
+shorter checkout registration, plan downtime, record the current workspace and
+port, then run `service remove`, `service install` and `service start` with those
+same arguments (and `--openrc-system` on OpenRC). Confirm `service status`
+reports `running` and `health: ready`. Private-install registrations are unchanged.
 
 From the project root, as an unprivileged user, try the commands with a new
 disposable workspace:

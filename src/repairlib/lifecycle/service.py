@@ -62,6 +62,18 @@ def python_args(executable: Path, source: Path, boot: str) -> tuple[str, ...]:
     return (str(executable), "-I", "-B", "-c", boot, str(source))
 
 
+def service_launchers(executable: Path) -> tuple[tuple[str, ...], ...]:
+    """Preferred registration first, followed by exact compatible legacy launchers."""
+    legacy = python_args(executable, SOURCE, BOOT)
+    checkout = SOURCE.parent
+    launcher = checkout / "bin" / "repairlib"
+    if not (checkout / ".git").exists() or not launcher.is_file():
+        # Versioned installations have their own launcher and handoff protocol.
+        return (legacy,)
+    check_path(launcher)
+    return ((str(executable), "-I", "-B", str(launcher)), legacy)
+
+
 def unit_bytes(argv: tuple[str, ...]) -> bytes:
     command = " ".join(map(quote_unit_arg, argv))
     # The colon disables systemd's environment substitution in argv.
@@ -267,7 +279,8 @@ def service_paths(workspace: Path) -> tuple[Path, Path]:
 def manage(action: str, workspace: Path, port: int) -> int:
     unit, control = service_paths(workspace)
     executable = check_path(Path(sys.executable), canonical=False)
-    content = unit_bytes(python_args(executable, SOURCE, BOOT) + foreground_args(workspace, port))
+    contents = tuple(unit_bytes(launcher + foreground_args(workspace, port))
+                     for launcher in service_launchers(executable))
     state, version = workspace_schema(workspace)
     report = {
         "unit": str(unit), "service": "unknown", "workspace": str(workspace),
@@ -282,20 +295,21 @@ def manage(action: str, workspace: Path, port: int) -> int:
         with ExitStack() as stack:
             # Preflight a new installation before creating the private control directory.
             if action == "install" and not control.exists():
-                read_unit(unit, bool(registered_unit(unit, content)), allow_reload=True)
+                read_unit(unit, bool(registered_unit(unit, *contents)), allow_reload=True)
             locked = private_control(control, create=action == "install")
             if locked:
                 stack.enter_context(maintenance_lock(
                     control, exclusive=action != "status", create=action == "install",
                 ))
-            present = bool(registered_unit(unit, content))
+            existing = registered_unit(unit, *contents)
+            present = existing is not None
             if present and not locked:
                 raise WorkspaceError("The unit has no service lock. Retry service install to register it.")
             current = read_unit(unit, present, allow_reload=action == "install")
             if action == "install":
                 if not present:
                     create_private_dirs(unit.parent)
-                    publish_unit(unit, content)
+                    publish_unit(unit, contents[0])
                 if not present or current["LoadState"] != "loaded" or current["NeedDaemonReload"] != "no":
                     try:
                         apply_systemctl("daemon-reload")
@@ -312,7 +326,7 @@ def manage(action: str, workspace: Path, port: int) -> int:
                 if action in {"start", "restart"}:
                     if hint := setup_hint(workspace_schema(workspace)[0]):
                         raise WorkspaceError(hint)
-                if present:
+                if existing is not None:
                     apply_systemctl("stop" if action == "remove" else action, UNIT)
                     current = read_unit(unit, True)
                     if action == "remove" and current["ActiveState"] == "inactive" and current["MainPID"] == "0":
@@ -321,7 +335,7 @@ def manage(action: str, workspace: Path, port: int) -> int:
                             apply_systemctl("daemon-reload")
                             current = read_unit(unit, False)
                         except WorkspaceError:
-                            publish_unit(unit, content)
+                            publish_unit(unit, existing)
                             with suppress(SupervisorError):
                                 apply_systemctl("daemon-reload")
                             raise
@@ -436,7 +450,7 @@ def openrc_script(argv: tuple[str, ...], user: str, group: str) -> bytes:
     ).encode()
 
 
-def registered_script(script: Path, expected: bytes) -> bytes | None:
+def registered_script(script: Path, *expected: bytes) -> bytes | None:
     try:
         fd = os.open(script, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK | os.O_CLOEXEC)
     except FileNotFoundError:
@@ -447,7 +461,7 @@ def registered_script(script: Path, expected: bytes) -> bytes | None:
         info = os.fstat(file.fileno())
         content = file.read(1 << 20) if stat.S_ISREG(info.st_mode) else b""
         if (not stat.S_ISREG(info.st_mode) or (info.st_uid, info.st_gid) != OPENRC_OWNER
-                or stat.S_IMODE(info.st_mode) != 0o755 or info.st_nlink != 1 or content != expected):
+                or stat.S_IMODE(info.st_mode) != 0o755 or info.st_nlink != 1 or content not in expected):
             raise UnmanagedScript(UNMANAGED_SCRIPT, sha256(content).hexdigest() if content else None)
     return content
 
@@ -662,8 +676,6 @@ def manage_openrc(action: str, workspace: Path, port: int) -> int:
     script, control = openrc_paths(workspace)
     executable = check_path(Path(sys.executable), canonical=False)
     user, group = current_identity()
-    launcher = python_args(executable, SOURCE, BOOT)
-    command = launcher + foreground_args(workspace, port)
     state, version = workspace_schema(workspace)
     quoted = f"--workspace {shlex.quote(str(workspace))} --port {port}"
     report = {
@@ -677,12 +689,18 @@ def manage_openrc(action: str, workspace: Path, port: int) -> int:
         "next": setup_hint(state),
     }
     try:
-        content = openrc_script(command, user, group)
+        launchers = service_launchers(executable)
+        argv = foreground_args(workspace, port)
+        registrations = {openrc_script(launcher + argv, user, group): launcher + argv for launcher in launchers}
+        content = next(iter(registrations))
+        preferred = registrations[content]
         if action == "install" and state in {"invalid", "unsupported_schema"}:
             raise WorkspaceError(setup_hint(state))
         with ExitStack() as stack:
             # Unprivileged preflight: nothing is written and no privilege is used before this.
-            present = bool(registered_script(script, content))
+            existing = registered_script(script, *registrations)
+            present = existing is not None
+            command = registrations.get(existing, preferred)
             current = openrc_state(script, present, command)
             mutating = action != "status" and (present or action == "install")
             if action in {"start", "stop", "restart"} and not present:
@@ -695,13 +713,15 @@ def manage_openrc(action: str, workspace: Path, port: int) -> int:
             if mutating:
                 private_control(control, create=True)
                 stack.enter_context(maintenance_lock(control, exclusive=True))
-                present = bool(registered_script(script, content))
+                existing = registered_script(script, *registrations)
+                present = existing is not None
+                command = registrations.get(existing, preferred)
                 current = openrc_state(script, present, command)
             if action == "install" and tool:
                 rollbacks: list[Callable[[], None]] = []
                 try:
                     if not present:
-                        rollbacks.append(publish_script(tool, script, content, launcher))
+                        rollbacks.append(publish_script(tool, script, content, launchers[0]))
                         if not registered_script(script, content):
                             raise SupervisorError("The published OpenRC script could not be verified.")
                     if not runlevel_entry(script):
@@ -731,7 +751,8 @@ def manage_openrc(action: str, workspace: Path, port: int) -> int:
                             privileged(tool, "rc-update", "del", OPENRC_SERVICE, OPENRC_RUNLEVEL)
                             readd = True
                         # Re-verify the exact bytes right before deleting the matching script.
-                        registered_script(script, content)
+                        if existing is None or registered_script(script, existing) is None:
+                            raise SupervisorError("The OpenRC script disappeared before removal.")
                         privileged(tool, "rm", str(script))
                     except (WorkspaceError, OSError):
                         if readd and os.path.lexists(script):

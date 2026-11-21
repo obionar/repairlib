@@ -21,12 +21,23 @@ from unittest.mock import patch
 from repairlib.__main__ import main
 from repairlib.domain import sessions, tokens
 from repairlib.domain.setup import initialize_demo_workspace
-from repairlib.lifecycle.service import BOOT, SOURCE, find_process, foreground_args, ignored_in_checkout, python_args
+from repairlib.lifecycle.service import (
+    BOOT, SOURCE, current_identity, find_process, foreground_args, ignored_in_checkout, openrc_script, python_args,
+    unit_bytes,
+)
 from repairlib.lifecycle.workspace import WorkspaceError, database_path, maintenance_lock
 from repairlib.storage.initialization import initialize_database
 from test_baseline import python_env
 from test_cli_identity import COMMAND, running_listener
 from test_demo import PASSWORD
+
+
+def checkout_source(root: Path) -> Path:
+    checkout = root / "checkout"
+    for name in (".git", "bin", "src"):
+        (checkout / name).mkdir(parents=True, exist_ok=True)
+    (checkout / "bin" / "repairlib").touch()
+    return checkout / "src"
 
 
 class ServiceManagerTests(unittest.TestCase):
@@ -139,6 +150,22 @@ class UserServiceTests(unittest.TestCase):
 
     def demo(self):
         initialize_demo_workspace(self.workspace, username="owner", password=PASSWORD)
+
+    def test_checkout_installs_short_unit_and_preserves_legacy_on_failed_remove(self):
+        source = checkout_source(self.root)
+        executable, args = Path(sys.executable), foreground_args(self.workspace, 8000)
+        legacy = unit_bytes(python_args(executable, source, BOOT) + args)
+        short = unit_bytes((str(executable), "-I", "-B", str(source.parent / "bin" / "repairlib")) + args)
+        with patch("repairlib.lifecycle.service.SOURCE", source):
+            self.assertEqual(self.service("install")[0], 0, self.last_output)
+            self.assertEqual(self.unit.read_bytes(), short)
+            self.unit.write_bytes(legacy)
+            self.assertEqual(self.service("status")[0], 0, self.last_output)
+            self.assertEqual(self.service("install")[0], 0, self.last_output)
+            self.assertEqual(self.unit.read_bytes(), legacy)
+            self.fail_reload = True
+            self.assertNotEqual(self.service("remove")[0], 0, self.last_output)
+            self.assertEqual(self.unit.read_bytes(), legacy)
 
     def test_register_setup_lifecycle_and_preserve_populated_workspace(self):
         code, report = self.service("install")
@@ -523,6 +550,36 @@ class OpenRCSystemServiceTests(unittest.TestCase):
         self.assertNotEqual(code, 0, self.last_output)
         self.assertIn("repeated spaces", report["error"])
         self.assertEqual(self.privileged_calls(), [])
+
+    def test_checkout_installs_short_script_and_can_restart_and_remove_legacy_script(self):
+        source = checkout_source(self.root)
+        executable, args = Path(sys.executable), foreground_args(self.workspace, 8092)
+        legacy = python_args(executable, source, BOOT) + args
+        short = (str(executable), "-I", "-B", str(source.parent / "bin" / "repairlib")) + args
+        self.demo()
+        with patch("repairlib.lifecycle.service.SOURCE", source):
+            self.assertEqual(self.service("install")[0], 0, self.last_output)
+            with patch("repairlib.lifecycle.service.OPENRC_RUN", self.openrc_run), \
+                    patch("repairlib.lifecycle.service.OPENRC_PIDFILE", self.pidfile):
+                user, group = current_identity()
+                self.assertEqual(self.script.read_bytes(), openrc_script(short, user, group))
+                old = openrc_script(legacy, user, group)
+            self.script.write_bytes(old)
+            self.assertEqual(self.service("install")[0], 0, self.last_output)
+            self.assertEqual(self.script.read_bytes(), old)
+            self.assertEqual(self.service("start")[0], 0, self.last_output)
+            (self.svcdir / "options" / "repairlib" / "child_pid").unlink()
+
+            def inspect_argv(predicate, uid):
+                self.assertTrue(predicate(list(legacy)))
+                self.assertFalse(predicate(list(short)))
+                return os.getpid()
+
+            with patch("repairlib.lifecycle.service.find_process", side_effect=inspect_argv) as find:
+                self.assertEqual(self.service("status")[1]["service"], "running")
+                find.assert_called_once()
+            self.assertEqual(self.service("restart")[1]["service"], "running")
+            self.assertEqual(self.service("remove")[1]["service"], "absent")
 
     def test_install_lifecycle_runs_unprivileged_user_under_root_supervision(self):
         code, report = self.service("install")
