@@ -61,64 +61,64 @@ real shop.
 
 Run the steps in order against the same workspace. Every mutation needs `--key`: reuse the
 same key and the same payload to replay the stored result, or pass `--key auto` to mint a
-fresh one. `--json` prints one machine-readable object (or the error envelope below).
+fresh one. When supported, `--json` prints machine-readable results and structured operation errors.
+Set the `*_id` variables from the records the CLI returns; seeded demos already contain customers.
 
 1. Read the revision before any change; `repairs show`, `customers show` and
-   `inventory show` print it.
+   `inventory show` print it. Set `repair_revision` or `item_revision` from the corresponding
+   read and refresh it before the next mutation.
 
-   ```sh
-   repairlib repairs show 1 --workspace "$repairlib_workspace"
-   ```
-
-2. Create the customer and keep the returned `id`:
+2. Create the customer and keep the returned `id` as `customer_id`:
 
    ```sh
    repairlib customers create --workspace "$repairlib_workspace" \
      --key customer-1 --name "Synthetic Customer" --phone "+357 555 0100" --json
    ```
 
-3. Create the repair for that customer:
+3. Create the repair for that customer and keep its `id` as `repair_id`:
 
    ```sh
    repairlib repairs create --workspace "$repairlib_workspace" \
-     --key repair-1 --customer 1 --device-type Laptop --brand Acme --model K1 \
+     --key repair-1 --customer "$customer_id" --device-type Laptop --brand Acme --model K1 \
      --reported-issue "Does not power on" --json
    ```
 
 4. Add a free-text charge (never changes stock):
 
    ```sh
-   repairlib repairs add-charge 1 --workspace "$repairlib_workspace" \
+   repairlib repairs add-charge "$repair_id" --workspace "$repairlib_workspace" \
      --kind labor --description "Replace power jack" --quantity 1 --unit-price 45.00 \
      --key charge-1 --json
    ```
 
    Or consume a catalog part, which deducts stock and adds the charge together. Create and
-   receive the item first, then pass both revisions to `consume-part`:
+   receive the item first, setting `item_id` from its receipt. Re-read both revisions
+   before `consume-part`:
 
    ```sh
    repairlib inventory create --workspace "$repairlib_workspace" \
      --key item-1 --sku JACK-K1 --description "Power jack K1" --unit pcs \
      --selling-price 12.00 --purchase-cost 4.00 --low-stock 2 --json
-   repairlib inventory receive 1 --workspace "$repairlib_workspace" \
-     --revision 1 --quantity 5 --key receive-1 --json
-   repairlib repairs consume-part 1 1 --workspace "$repairlib_workspace" \
-     --repair-revision 1 --item-revision 2 --consumed-quantity 1 --billed-quantity 1 \
+   repairlib inventory receive "$item_id" --workspace "$repairlib_workspace" \
+     --revision "$item_revision" --quantity 5 --key receive-1 --json
+   # Refresh repair_revision and item_revision with repairs show and inventory show.
+   repairlib repairs consume-part "$repair_id" "$item_id" --workspace "$repairlib_workspace" \
+     --repair-revision "$repair_revision" --item-revision "$item_revision" --consumed-quantity 1 --billed-quantity 1 \
      --key part-1 --json
    ```
 
    Read the totals back in integer cents; totals record work value, not payments:
 
    ```sh
-   repairlib repairs charges 1 --workspace "$repairlib_workspace" --include-consumption --json
+   repairlib repairs charges "$repair_id" --workspace "$repairlib_workspace" --include-consumption --json
    ```
 
 5. Record pickup with the current repair revision (pickup is independent of stage; add
    `--undo` to clear it):
 
    ```sh
-   repairlib repairs pickup 1 --workspace "$repairlib_workspace" \
-     --revision 1 --key pickup-1 --json
+   repairlib repairs pickup "$repair_id" --workspace "$repairlib_workspace" \
+     --revision "$repair_revision" --key pickup-1 --json
    ```
 
 6. Print the handover. There is no CLI command for the customer handover summary: it is the
@@ -132,11 +132,11 @@ fresh one. `--json` prints one machine-readable object (or the error envelope be
      --revision 1 --printer-revision 1 --key label-1 --json
    ```
 
-Validate a mutation before doing it: the global `--dry-run` reports what it would write and
-rolls the change back.
+For covered mutations, the global `--dry-run` reports what would be written and rolls the
+change back. Put it before the command.
 
 ```sh
-repairlib --dry-run repairs add-charge 1 --workspace "$repairlib_workspace" \
+repairlib --dry-run repairs add-charge "$repair_id" --workspace "$repairlib_workspace" \
   --kind part --description "Dry run" --quantity 1 --unit-price 1.00 --key dry-1
 ```
 
@@ -148,7 +148,7 @@ Exit codes are part of the CLI contract:
 |---|---|---|
 | 0 | success | change recorded, receipt stored |
 | 1 | local error | unreadable or occupied path, a `profile check` blocker |
-| 2 | usage | unknown subcommand or flag; fix the command, nothing was written |
+| 2 | usage | unknown flag, missing argument or rejected parser value; the command did not run |
 | 3 | unavailable | workspace not initialized, wrong `--workspace`, or busy database |
 | 4 | unauthenticated | no or expired API token (HTTP API only) |
 | 5 | forbidden | role or token cannot perform this action |
@@ -156,16 +156,17 @@ Exit codes are part of the CLI contract:
 | 7 | conflict | stale revision, key reused with a different payload, archived or deleted record, insufficient stock, printer receipt not acknowledged |
 | 8 | invalid fields | bad decimal, bad date, missing `--reason`, invalid form field |
 
-With `--json`, any failure prints one object to stdout and nothing to stderr:
+With `--json`, a structured operation error looks like this on stdout:
 
 ```json
 {"error": {"code": "stale_revision", "message": "The record changed after you reviewed it. Read it again and retry with the new revision.", "fields": {}}}
 ```
 
 Without `--json` the same message is printed as `prefix: message` on stderr. `code` is the
-stable identifier to branch on; `message` is for humans. Input that the CLI itself rejects
-(half-parsed decimals, for example) reports `client_error` at exit 8, while API-shaped
-validation reports `validation`.
+stable identifier to branch on; `message` is for humans. Operation-level validation can
+report `client_error` at exit 8 or `validation` for rejected fields. Do not assume every
+failure produces JSON: parser errors, including invalid inventory quantities, can print
+usage to stderr and exit 2.
 
 Common refusals and what to do:
 

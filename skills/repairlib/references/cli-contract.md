@@ -5,11 +5,12 @@
 | Flag | Meaning |
 |---|---|
 | `--workspace PATH` | workspace directory (per command; also `REPAIRLIB_WORKSPACE`) |
-| `--json` | one machine-readable object on stdout; errors print an error object |
+| `--json` | where supported, machine-readable output; use `<command> --help` to check |
 | `--dry-run` | run a covered mutation in a rolled-back transaction and print the audit events |
 | `--version` | commit identification of the running source |
 | `--help` | authoritative per-command flags and defaults |
 
+Put the global flag before the command (for example, `repairlib --dry-run customers create …`).
 `--dry-run` covers only `customers create`, `repairs create`, `repairs stage`,
 `repairs add-charge` and `repairs pickup`; anything else exits 2 with
 `dry_run_unsupported`. It prints `{"dry_run": true, "events": [...]}`.
@@ -20,7 +21,7 @@
 |---|---|---|
 | 0 | success | change recorded, receipt stored |
 | 1 | local error | unreadable/occupied path, a `profile check` blocker |
-| 2 | usage | unknown subcommand or flag; nothing was written |
+| 2 | usage | unknown flag, missing positional argument or rejected parser value; command did not run |
 | 3 | unavailable | workspace not initialized, wrong `--workspace`, busy database |
 | 4 | unauthenticated | HTTP API only: missing/expired bearer token |
 | 5 | forbidden | role or token cannot perform the action (HTTP) |
@@ -37,8 +38,11 @@ keep the field names). Failure prints:
 {"error": {"code": "stale_revision", "message": "The record changed after you reviewed it. Read it again and retry with the new revision.", "fields": {}}}
 ```
 
-`code` is stable; `message` is for humans. CLI-side argument rejections report
-`client_error` at exit 8; API-shaped validation reports `validation` with `fields`.
+`code` is stable; `message` is for humans. Operation-level validation can report
+`client_error` at exit 8 or `validation` for rejected fields. Parser errors, including
+invalid quantities passed to `inventory receive` or `inventory adjust`, can instead
+print usage text to stderr and exit 2 even when `--json` was requested. Do not assume
+every refusal produces JSON.
 
 ## Idempotency keys
 

@@ -13,7 +13,7 @@ repair revision; charges and entries have their own revisions.
 | `repairs show ID [--json]` | full record plus diagnosis/repair/parts/discount/total, pickup and archive state, `Revision N`. |
 | `repairs edit ID --revision R --key K [--customer ID] [--technician ID] [--clear-customer] [--clear-technician] [fields…]` | supplied text fields replace values; omitted fields keep their values; `--warranty-until ""` clears the date. |
 | `repairs stage ID --revision R --key K --stage STAGE [--reason TEXT]` | transitions below; reopening a terminal repair needs `--reason`, other stages must omit it. |
-| `repairs pickup ID --revision R --key K [--undo]` | terminal stage only; `--undo` clears pickup. |
+| `repairs pickup ID --revision R --key K [--undo]` | independent of stage; `--undo` clears pickup. |
 | `repairs payment ID --revision R --key K [--undo]` | terminal stage only; records paid (`--undo` = not paid). |
 | `repairs archive ID --revision R --key K [--undo]` | archive any stage; `--undo` restores. Archived repairs stay readable. |
 | `repairs device-history --serial S` | this shop's repairs of one serial, oldest first. |

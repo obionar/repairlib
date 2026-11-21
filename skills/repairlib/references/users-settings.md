@@ -33,7 +33,10 @@ log, note or tool output.
 | `settings edit --revision R --key K [--name N] [--timezone ZONE] [--language CODE] [--address A] [--phone P] [--terms T] [--diagnosis-fee EUR] [--max-upload-mib N] [--inline-preview-mib N]` | supplied fields replace values; empty text clears address/phone/terms/language. |
 
 The diagnosis fee is the default prefilled in a new Payment window; a saved diagnosis fee
-is never overwritten by it. Timezones are IANA names (`Europe/Nicosia`). Server limits
+is never overwritten by it. CLI `settings show --json` and `settings edit --json` return it
+as integer `diagnosis_fee_cents`. A replay of an older edit can return `null` if the original
+receipt did not record the fee; run `settings show --json` for the current fee. Timezones are
+IANA names (`Europe/Nicosia`). Server limits
 (`--max-upload-mib`, `--inline-preview-mib`) apply to new uploads.
 
 ```sh
@@ -46,7 +49,7 @@ repairlib settings edit --workspace "$WS" --revision 1 --key settings-1 \
 | Command | Notes |
 |---|---|
 | `printer show [--json]` | driver (`p15` or `none`), revision, whether the P15 program is available. |
-| `printer set --revision R --key K --driver p15|none` | admin setting; `none` disables direct printing. |
+| `printer set --revision R --key K p15\|none` | driver is positional; `none` disables direct printing. |
 | `printer test --revision R --key K` | send one physical test label to P15; exit 7 unless acknowledged. |
 
 Printing and the P15 configuration are physical operations: get explicit authorization,
