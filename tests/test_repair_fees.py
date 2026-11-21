@@ -103,5 +103,39 @@ class RepairFeeTests(TokenFixture, unittest.TestCase):
                 self.assertEqual(db.execute("PRAGMA foreign_key_check").fetchall(), [])
 
 
+    def test_discount_above_the_subtotal_is_refused_by_the_form_and_the_cli(self):
+        with self.client() as client:
+            self.sign_in(client)
+            token = issued_secret(client.post(ACCOUNT, data=self.issue_form(client)))
+            auth = {"Authorization": f"Bearer {token}"}
+            repair = client.post(API, json=DEVICE, headers=auth | {"Idempotency-Key": uuid4().hex}).json()
+            ticket = f"/repairs/{repair['id']}"
+            action = ticket + "/fees"
+            charge = client.post(f"{API}/{repair['id']}/charges",
+                                 json={"kind": "labor", "description": "Work", "quantity_milli": 1000,
+                                       "unit_price_cents": 1000},
+                                 headers=auth | {"Idempotency-Key": uuid4().hex})
+            self.assertEqual(charge.status_code, 201, charge.text)
+            before = (self.snapshot("SELECT count(*) FROM repair_charges"),
+                      self.snapshot("SELECT count(*) FROM repair_discounts"),
+                      self.snapshot("SELECT revision FROM repairs WHERE id = ?", (repair["id"],)))
+            # 99.00 against a 10.00 subtotal: the domain must refuse with a typed error, not a bare
+            # ValueError, so the form shows a refusal page and the CLI prints its message.
+            refused = client.post(action, data=form_for(client.get(ticket), action) | {
+                "diagnosis": "0", "labor": "0", "discount": "99.00"})
+            self.assertEqual(refused.status_code, 409, refused.text)
+            self.assertIn("cannot exceed the subtotal", refused.text)
+            self.assertEqual((self.snapshot("SELECT count(*) FROM repair_charges"),
+                              self.snapshot("SELECT count(*) FROM repair_discounts"),
+                              self.snapshot("SELECT revision FROM repairs WHERE id = ?", (repair["id"],))),
+                             before)
+            result = subprocess.run([*COMMAND, "repairs", "fees", str(repair["id"]),
+                                     "--workspace", str(self.workspace), "--revision", "1",
+                                     "--key", "fee-refusal", "--discount", "99.00"],
+                                    text=True, capture_output=True, timeout=20, env=python_env())
+            self.assertEqual(result.returncode, 7, result.stdout + result.stderr)
+            self.assertIn("cannot exceed the subtotal", result.stderr)
+            self.assertNotIn("workspace", result.stderr.lower())
+
 if __name__ == "__main__":
     unittest.main()

@@ -6,7 +6,7 @@ All commands take `--workspace`; mutations take `--key` and (except create) a re
 
 | Command | Notes |
 |---|---|
-| `customers list [--query TEXT] [--include-archived] [--limit 25] [--before ID]` | newest first; search is case- and accent-insensitive over name, phone and email. |
+| `customers list [--query TEXT] [--include-archived] [--limit 25] [--before ID]` | newest first; search is case- and accent-insensitive over name, phone and email. It does not transliterate: search `Ελένη` in Greek, not `eleni`. Phone search matches digits only. |
 | `customers create --key K --name NAME [--phone P] [--email E] [--address A] [--notes N]` | prints `Created customer ID.`; `--json` returns the record with `revision`. |
 | `customers show ID [--json]` | record fields and `Revision N`; archived rows are labelled. |
 | `customers edit ID --revision R --key K [--name N] [--phone P] [--email E] [--address A] [--notes N]` | only supplied fields change; empty text clears a field. |

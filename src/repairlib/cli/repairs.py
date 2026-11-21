@@ -474,10 +474,11 @@ def _charges(ctx, args):
 @executes("fees")
 def _fees(ctx, args):
     details = {}
-    for name, value in (("diagnosis", args.diagnosis), ("labor", args.repair),
-                        ("discount", args.discount)):
-        if value is not None:
-            details[name] = money.parse_cents(value)
+    with plain_numbers():
+        for name, value in (("diagnosis", args.diagnosis), ("labor", args.repair),
+                            ("discount", args.discount)):
+            if value is not None:
+                details[name] = money.parse_cents(value)
     return local.set_fees(ctx, args.id, details, args.revision, args.key)
 
 

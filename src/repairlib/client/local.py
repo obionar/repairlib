@@ -62,7 +62,7 @@ MESSAGES = {
     "already_reversed": "That stock movement is already reversed.",
     "unit_locked": "The unit is locked because the item already has stock movements.",
     "too_many_charges": "The repair has reached the maximum number of charge lines.",
-    "discount_exceeds_subtotal": "The discount is larger than the charges subtotal.",
+    "discount_exceeds_subtotal": "The discount cannot exceed the subtotal.",
     "total_out_of_range": "The charge total is outside the supported range.",
     "inventory_linked": "Catalog details are fixed on a stock-linked charge; change its billing fields only.",
     "detached": "That attachment is detached. Restore it before changing it.",
