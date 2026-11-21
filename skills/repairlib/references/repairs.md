@@ -1,8 +1,9 @@
 # Repairs, entries, charges, fees and attachments
 
-Every command takes `--workspace`; mutations take `--key` and the reviewed revision(s).
-Re-read the record after every write: stage, pickup, payment, archive and `fees` bump the
-repair revision; charges and entries have their own revisions.
+Pass `--workspace` and use `--key` plus reviewed revisions where required. Chain a fresh
+repair result from stage, pickup, payment, or archive. `fees --json` returns a charges
+summary, so use `repairs show` before another revisioned repair write. Charges and entries
+have their own revisions; receipt replays may contain old revisions.
 
 ## Repairs
 

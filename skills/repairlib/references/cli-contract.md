@@ -57,10 +57,10 @@ Every mutation needs `--key` (MCP: `key`): 1–128 ASCII letters, digits, `_` or
 
 ## Revisions
 
-Records carry a `revision` that increments on every write. Read it immediately before a
-mutation and pass it (`--revision`, or the specific flag the command documents). A stale
-revision exits 7 `stale_revision`: read again and retry with the new revision and a new
-key. Never retry the old payload blindly.
+Pass the reviewed `revision` for the record you are changing. A fresh mutation result can
+supply the next revision if it returns that same record. Read again if another actor may have
+written, the result is a receipt replay, or it lacks the relevant revision. A stale revision
+exits 7 `stale_revision`: re-read, review, and use a new key for the new revision.
 
 Separate cursors exist where a repair holds independent state:
 
@@ -87,7 +87,7 @@ List commands take `--limit` (default 25, max 100) and `--before CURSOR`. The re
 returns `next_before`; pass it as `--before` for the next older page; `null` means the
 last page. Human output prints `Next page: --before N` on stderr when another page exists.
 
-## `catalog` and `mcp`
+## MCP and catalog
 
 `repairlib catalog` lists every runnable CLI command path and every MCP tool with its
 arguments (add `--json` for one JSON object). Use it instead of guessing.
