@@ -139,6 +139,28 @@ class WorkspaceLifecycleTests(unittest.TestCase):
         self.assertEqual(original.read_bytes(), before)
         self.assertFalse((self.workspace / LOCK).exists())
 
+    def test_cleanup_refuses_unsafe_staging_before_pruning_expired_sessions(self):
+        self.demo()
+        self.assertIsNotNone(login(self.workspace, "owner", PASSWORD, now=1_600_000_000))
+        outside = self.root / "unrelated uploads"
+        outside.mkdir()
+        staging = database_path(self.workspace).parent / "files" / ".staging"
+        staging.parent.mkdir()
+        staging.symlink_to(outside, target_is_directory=True)
+        with self.connect() as db:
+            self.assertEqual(db.execute("SELECT count(*) FROM sessions").fetchone(), (1,))
+        result = self.command("cleanup")
+        self.assertNotEqual(result.returncode, 0, result.stdout)
+        with self.connect() as db:
+            self.assertEqual(db.execute("SELECT count(*) FROM sessions").fetchone(), (1,))
+        self.assertTrue(staging.is_symlink())
+
+        staging.unlink()
+        result = self.command("cleanup")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        with self.connect() as db:
+            self.assertEqual(db.execute("SELECT count(*) FROM sessions").fetchone(), (0,))
+
     def test_linked_sqlite_sidecars_make_workspace_unavailable(self):
         self.demo()
         db = database_path(self.workspace)

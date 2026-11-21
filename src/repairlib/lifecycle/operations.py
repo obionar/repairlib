@@ -121,20 +121,24 @@ def cleanup_workspace(workspace: Path) -> dict[str, int]:
     with maintenance_lock(workspace, exclusive=True, create=False):
         if workspace_status(workspace) != "initialized":
             raise WorkspaceError("Workspace must be initialized and use the current schema.")
-        sessions, receipts = prune_workspace_records(database_path(workspace), int(time.time()))
+        now = time.time()
+        stale = []
         with private_subdirectory(workspace, ACTIVE, FILES, STAGING) as staging:
-            if staging is None:
-                return {"staging": 0, "sessions": sessions, "receipts": receipts}
-            removed = 0
-            cutoff = time.time() - STALE_AFTER_SECONDS
-            for name in os.listdir(staging):
-                if not UPLOAD_PART.fullmatch(name):
-                    continue
-                info = os.stat(name, dir_fd=staging, follow_symlinks=False)
-                if stat.S_ISREG(info.st_mode) and info.st_nlink == 1 and info.st_mtime <= cutoff:
+            if staging is not None:
+                cutoff = now - STALE_AFTER_SECONDS
+                for name in os.listdir(staging):
+                    if not UPLOAD_PART.fullmatch(name):
+                        continue
+                    info = os.stat(name, dir_fd=staging, follow_symlinks=False)
+                    if stat.S_ISREG(info.st_mode) and info.st_nlink == 1 and info.st_mtime <= cutoff:
+                        stale.append(name)
+            # An unsafe or unreadable staging path is a refusal, not a partial
+            # cleanup that already pruned sessions or request receipts.
+            sessions, receipts = prune_workspace_records(database_path(workspace), int(now))
+            if staging is not None:
+                for name in stale:
                     os.unlink(name, dir_fd=staging)
-                    removed += 1
-            return {"staging": removed, "sessions": sessions, "receipts": receipts}
+            return {"staging": len(stale), "sessions": sessions, "receipts": receipts}
 
 
 def reset_demo_workspace(workspace: Path) -> None:
