@@ -484,6 +484,64 @@ verification, native systemd and Alpine/OpenRC install/start/restart/status/stop
 removal rehearsals, and real foreground smoke tests. Native managed handoff,
 reboot persistence and power-loss validation remain open.
 
+## Laptop deployment on postmarketOS / OpenRC
+
+Verified on this machine: postmarketOS v26.06 (Alpine-based), aarch64, with OpenRC
+and no systemd. The OpenRC system service is selected automatically; it runs as
+the invoking user on loopback port 8000, and the workspace lives in the
+checkout's `data/` directory.
+
+Prerequisites: the stock Python 3 and the distribution packages. They are already
+installed on this machine; from scratch:
+
+```sh
+sudo apk add python3 py3-fastapi py3-jinja2 uvicorn py3-pydantic \
+  py3-httpx py3-argon2-cffi py3-python-multipart tzdata
+```
+
+From the checkout root (`/home/ian/Dev/repairlib`):
+
+```sh
+# 1. Initialize the workspace and the first admin. Setup reads the admin
+#    password from a hidden prompt (or one line of piped stdin) and takes the
+#    timezone from this machine unless --timezone is given.
+bin/repairlib setup --shop "My Shop" --username owner
+
+# 2. Register the root-supervised OpenRC service: writes /etc/init.d/repairlib
+#    and adds `repairlib` to the default runlevel. This step does not start it.
+bin/repairlib service install --workspace /home/ian/Dev/repairlib/data
+
+# 3. Explicit start: runs `sudo rc-service repairlib start` and waits until
+#    the app is ready.
+bin/repairlib service start --workspace /home/ian/Dev/repairlib/data
+```
+
+Verify the deployment:
+
+```sh
+sudo rc-service repairlib status
+#  * status: started
+curl http://127.0.0.1:8000/health
+# {"status":"ok","state":"initialized","ready":true,"workspace_exists":true}
+rc-update show default | grep repairlib
+#             repairlib | default
+```
+
+The browser app is served at http://127.0.0.1:8000; `GET /` redirects to the
+`/login` page. Without the supervised service, run in the foreground:
+
+```sh
+bin/repairlib service foreground --workspace /home/ian/Dev/repairlib/data
+```
+
+Notes:
+
+- `service install` only registers the service; `service start` is the explicit
+  start (separate commands; `service status` reports `started` when healthy).
+- Service logs go through syslog (`logger -t repairlib`); check the system log
+  for `repairlib`, for example `grep repairlib /var/log/messages` where the
+  distribution keeps that file.
+
 ## Refresh a test instance running from the checkout
 Refresh the browser after a CSS or template-only edit. After Python changes,
 restart the checkout-backed server before reviewing the UI, especially when a
