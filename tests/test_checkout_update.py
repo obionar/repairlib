@@ -6,7 +6,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from repairlib.lifecycle.checkout import CheckoutError, parse_service_target, pull, restart_service
+from repairlib.lifecycle.checkout import CheckoutError, parse_service_target, pull, remote_commit, restart_service
 
 
 def git(repo: Path, *arguments: str) -> str:
@@ -48,6 +48,29 @@ class PullTests(unittest.TestCase):
         (self.work / "file.txt").write_text("local\n", encoding="utf8")
         with self.assertRaises(CheckoutError):
             pull(self.work)
+
+    def test_check_uses_current_branch(self):
+        git(self.work, "checkout", "-q", "-b", "other")
+        git(self.work, "push", "-q", "origin", "other")
+        (self.work / "file.txt").write_text("other\n", encoding="utf8")
+        git(self.work, "commit", "-q", "-am", "other")
+        git(self.work, "push", "-q", "origin", "other")
+        self.assertEqual(remote_commit(self.work), git(self.work, "rev-parse", "--short=7", "HEAD"))
+
+    def test_check_reports_missing_remote_branch(self):
+        git(self.work, "checkout", "-q", "-b", "local-only")
+        with self.assertRaisesRegex(CheckoutError, "does not exist on origin"):
+            remote_commit(self.work)
+
+    def test_check_reports_unreachable_origin(self):
+        git(self.work, "remote", "set-url", "origin", str(self.work / "missing"))
+        with self.assertRaises(CheckoutError):
+            remote_commit(self.work)
+
+    def test_check_refuses_detached_head(self):
+        git(self.work, "checkout", "-q", "--detach")
+        with self.assertRaisesRegex(CheckoutError, "detached HEAD"):
+            remote_commit(self.work)
 
 
 class ServiceTargetTests(unittest.TestCase):

@@ -343,8 +343,8 @@ def run_update(args) -> int:
     repo = SOURCE.parent
     if not (repo / ".git").exists():
         raise CheckoutError("update applies to a Git checkout; an installed launcher uses the staged update recipe.")
-    now, available = current_commit(repo), remote_commit(repo)
     if args.check:
+        now, available = current_commit(repo), remote_commit(repo)
         print(f"checkout {now} · origin {available}")
         return 0
     old, new = pull(repo)

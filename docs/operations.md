@@ -272,9 +272,18 @@ Check `http://127.0.0.1:8000/health`; Ctrl+C stops the foreground process. To re
 ## Update a checkout or an installation
 
 A source checkout updates with `bin/repairlib update`: it refuses a dirty tree, checks out the
-tracked branch with `--ff-only`, then restarts the registered service (systemd user unit or
+current branch from the same-named branch on `origin` with `--ff-only`, then restarts the registered service (systemd user unit or
 OpenRC script) and reports the old and new commits. `bin/repairlib update --check` prints both
-commits without changing anything.
+the checkout and origin commits for the current branch without changing anything. Both commands
+need access to the configured Git `origin`; SSH remotes may require an unlocked key. A missing
+remote branch, detached HEAD or unreachable remote is reported as an error.
+
+Before updating a workspace containing records, stop its writers and make and verify a backup
+as described in [Data transfer and recovery](data.md). If the checkout has uncommitted changes
+or local commits that diverge from origin, the update refuses to proceed; preserve your work
+and reconcile it in Git before retrying. If the checkout advances but the service restart
+fails, the command reports that distinction: inspect the service status and logs before retrying
+the restart. An up-to-date checkout does not restart the service.
 
 An installation created by `scripts/install.py` keeps immutable generations and updates with the
 staged recipe below; never `git pull` inside an installation.

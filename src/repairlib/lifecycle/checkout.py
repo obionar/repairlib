@@ -35,13 +35,20 @@ def current_commit(repo: Path) -> str | None:
         return None
 
 
-def remote_commit(repo: Path, branch: str = "main") -> str | None:
-    """The commit this branch would update to, without changing the checkout."""
-    try:
-        out = git(repo, "ls-remote", "origin", f"refs/heads/{branch}")
-    except CheckoutError:
-        return None
-    return out.split()[0][:7] if out else None
+def current_branch(repo: Path) -> str:
+    branch = git(repo, "rev-parse", "--abbrev-ref", "HEAD")
+    if branch == "HEAD":
+        raise CheckoutError("The checkout is on a detached HEAD; check out a branch first.")
+    return branch
+
+
+def remote_commit(repo: Path) -> str:
+    """Get the origin commit for the current branch without changing the checkout."""
+    branch = current_branch(repo)
+    out = git(repo, "ls-remote", "origin", f"refs/heads/{branch}")
+    if not out:
+        raise CheckoutError(f"Branch {branch!r} does not exist on origin.")
+    return out.split()[0][:7]
 
 
 def pull(repo: Path) -> tuple[str, str]:
@@ -49,9 +56,7 @@ def pull(repo: Path) -> tuple[str, str]:
     if git(repo, "status", "--porcelain"):
         raise CheckoutError("The checkout has uncommitted changes; commit or discard them first.")
     before = git(repo, "rev-parse", "HEAD")
-    branch = git(repo, "rev-parse", "--abbrev-ref", "HEAD")
-    if branch == "HEAD":
-        raise CheckoutError("The checkout is on a detached HEAD; check out a branch first.")
+    branch = current_branch(repo)
     git(repo, "fetch", "--quiet", "origin")
     git(repo, "merge", "--ff-only", "--quiet", f"origin/{branch}")
     return before, git(repo, "rev-parse", "HEAD")
