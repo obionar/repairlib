@@ -168,7 +168,8 @@ def find_unarchived_repair(db, shop_id: int, repair_id: int) -> Repair:
 def list_repairs(workspace: Path, access: RepairAccess, *, before: int | None = None,
                  limit: int = 25, query: str = "", stage: str | None = None,
                  picked_up: bool | None = None, archived: bool | None = None,
-                 technician: str = "", customer_id: int | None = None, queue: str = ""):
+                 technician: str = "", customer_id: int | None = None, queue: str = "",
+                 paid: bool | None = None):
     if not 1 <= limit <= 100 or (before is not None and not 1 <= before <= MAX_ID):
         raise RepairError(422, "validation", "Invalid repair page.")
     if stage is not None and stage not in STAGE_TRANSITIONS:
@@ -190,7 +191,7 @@ def list_repairs(workspace: Path, access: RepairAccess, *, before: int | None = 
         rows, total = repairs.list_page(
             db, principal.shop_id, before, limit + 1, pattern, stage,
             picked_up=False if queue == "pickup" else picked_up,
-            archived=archived, technician=principal.user_id if technician == "me" else technician_id,
+            archived=archived, paid=paid, technician=principal.user_id if technician == "me" else technician_id,
             unassigned=technician == "unassigned", customer_id=customer_id, queue_stages=REPAIR_QUEUES.get(queue, ()),
             phone_pattern=phone_search_pattern(query),
         )

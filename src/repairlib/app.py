@@ -35,6 +35,10 @@ from repairlib.storage import StorageOperationalError
 logger = logging.getLogger("uvicorn.error.repairlib")
 
 
+# Subresource hash of static/live-search.js; templates carry the same value.
+LIVE_SEARCH_SHA = "thF48QvDEvENP4+0Vm17obSkSDvRs0HYr8eH7A/U3HI="
+
+
 def create_app(
     *, workspace: str | Path | None = None, bootstrap_token: str | None = None,
     require_initialized: bool = False,
@@ -172,8 +176,8 @@ def create_app(
             if "cache-control" not in headers:  # only attachment previews opt out
                 headers["Cache-Control"] = "no-store"
             headers["Content-Security-Policy"] = (
-                "default-src 'none'; style-src 'self'; img-src 'self'; form-action 'self'; "
-                "script-src 'sha256-qUn3bIvHbKqO38YIYPpoceYlhO2diYxt1R4uatgmOdA='; "
+                "default-src 'none'; style-src 'self'; img-src 'self'; form-action 'self'; connect-src 'self'; "
+                f"script-src 'sha256-{LIVE_SEARCH_SHA}' 'sha256-qUn3bIvHbKqO38YIYPpoceYlhO2diYxt1R4uatgmOdA='; "
                 "frame-ancestors 'none'; base-uri 'none'"
             )
             headers["Referrer-Policy"] = referrer_policy

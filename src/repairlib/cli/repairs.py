@@ -42,6 +42,7 @@ def register_repair_commands(commands) -> None:
     listing.add_argument("--queue", choices=("open", "pickup"), default="")
     listing.add_argument("--picked-up", action=BooleanOptionalAction)
     listing.add_argument("--archived", action=BooleanOptionalAction)
+    listing.add_argument("--paid", action=BooleanOptionalAction, help="--no-paid includes no payment recorded")
     listing.add_argument("--customer", type=int)
     listing.add_argument("--technician", default="", help="technician ID, me, or unassigned")
     create = actions.add_parser("create", help="create a repair")
@@ -326,7 +327,7 @@ def details_of(args, *names, **extra) -> dict:
 def _list(ctx, args):
     return local.list_repairs(ctx, limit=args.limit, before=args.before, query=args.query, stage=args.stage,
                               picked_up=args.picked_up, archived=args.archived, technician=args.technician,
-                              customer_id=args.customer, queue=args.queue)
+                              customer_id=args.customer, queue=args.queue, paid=args.paid)
 
 
 @executes("create")

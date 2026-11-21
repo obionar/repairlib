@@ -179,7 +179,7 @@ def repairlib_server(ctx: Local) -> "Server":
              local.customer_history, **CUSTOMER, **PAGE)
     register("list_repairs", "Search, filter or page through repairs by descending ID.",
              local.list_repairs, **PAGE, query=QUERY, stage=(Stage | None, None),
-             picked_up=(bool | None, None), archived=(bool | None, None),
+             picked_up=(bool | None, None), archived=(bool | None, None), paid=(bool | None, None),
              technician=(Annotated[str, Field(description="Technician ID, me, or unassigned.")], ""),
              customer_id=(Id | None, None), queue=(Literal["", "open", "pickup"], ""))
     register("get_repair", "Read a repair by ID, including its revision, stage and lifecycle state.",

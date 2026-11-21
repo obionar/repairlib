@@ -535,19 +535,15 @@ class WorkspaceFeedbackTests(TokenFixture, unittest.TestCase):
                 self.assertNotIn(label, page.text)
             self.assertIn("Επεξεργασία στοιχείων", page.text)
 
-    def test_register_status_chips_keep_the_search_and_mark_the_active_status(self):
+    def test_register_status_select_keeps_the_search_and_marks_the_active_status(self):
         with self.client() as client:
             _, auth = self.owner_auth(client)
             self.repair(client, auth)
             plain = client.get("/repairs")
-            links = re.findall(r'class="rl-chip" href="([^"]+)"', plain.text)
-            self.assertGreaterEqual(len(links), 2)
-            self.assertNotIn("q=", links[0])
-            self.assertRegex(plain.text, r'<a class="rl-chip" href="/repairs"[^>]*aria-current="page"')
-            searched = client.get("/repairs?q=Bench")
-            self.assertRegex(searched.text, r'href="/repairs\?stage=[^"&]+&amp;q=Bench"')
-            picked = re.search(r'<a class="rl-chip" href="(/repairs\?stage=[^"]+)"', plain.text)[1]
-            active = client.get(picked.replace("&amp;", "&"))
-            self.assertIn(f'<a class="rl-chip" href="{picked}" aria-current="page">', active.text)
+            self.assertNotIn("rl-chip", plain.text)
+            self.assertIn('<option value="">Any status</option>', plain.text)
+            active = client.get("/repairs?q=Bench&stage=new")
+            self.assertIn('<option value="new" selected>New</option>', active.text)
+            self.assertIn('value="Bench"', active.text)
             empty = client.get("/repairs?q=zzz-no-such-repair")
             self.assertIn("No repairs match these filters.", empty.text)

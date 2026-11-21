@@ -400,9 +400,10 @@ def repair_routes(workspace: Path, templates, key: bytearray) -> APIRouter:
     @router.get("")
     def repair_list(request: Request, before: int | None = None, q: str = "", stage: str = "",
                     picked_up: Literal["", "true", "false"] = "", archived: Literal["", "true", "false"] = "",
-                    technician: str = "", customer_id: int | None = None, queue: str = ""):
+                    technician: str = "", customer_id: int | None = None, queue: str = "",
+                    paid: Literal["", "true", "false"] = ""):
         actor = access(request)
-        filters = {"q": q, "stage": stage, "picked_up": picked_up, "archived": archived,
+        filters = {"q": q, "stage": stage, "picked_up": picked_up, "paid": paid, "archived": archived,
                    "technician": technician, "customer_id": customer_id, "queue": queue}
         filters = {name: value for name, value in filters.items() if value not in ("", None)}
         try:
@@ -410,6 +411,7 @@ def repair_routes(workspace: Path, templates, key: bytearray) -> APIRouter:
                 workspace, actor, before=before, query=q, stage=stage or None,
                 picked_up=picked_up == "true" if picked_up else None,
                 archived=archived == "true" if archived else None,
+                paid=paid == "true" if paid else None,
                 technician=technician, customer_id=customer_id, queue=queue,
             )
         except RepairError as error:

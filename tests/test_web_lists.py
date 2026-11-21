@@ -73,6 +73,33 @@ class WebListsTests(TokenFixture, unittest.TestCase):
                 self.assertEqual(client.get(f"/api/v1/repairs?{filters}", headers=auth).status_code, 422)
                 self.assertEqual(client.get(f"/repairs?{filters}").status_code, 422)
 
+    def test_payment_filter_combines_with_pickup_in_every_adapter(self):
+        seed_registers(self.db)
+        with closing(sqlite3.connect(self.db)) as db, db:
+            db.execute("UPDATE repairs SET payment_paid = 1 WHERE id IN (6, 30)")
+            db.execute("UPDATE repairs SET payment_paid = 0 WHERE id = 31")
+            db.execute("UPDATE repairs SET payment_paid = 1, picked_up_at = '2026-01-01T00:00:00.000Z' WHERE shop_id = 2")
+            picked = [row[0] for row in db.execute(
+                "SELECT id FROM repairs WHERE shop_id = 1 AND picked_up_at IS NOT NULL ORDER BY id DESC")]
+        self.assertIn(6, picked)
+        with self.client() as client:
+            auth = self.auth(client)
+
+            def ids(**params):
+                result = client.get("/api/v1/repairs", headers=auth, params={**params, "limit": 100})
+                self.assertEqual(result.status_code, 200, result.text)
+                return [row["id"] for row in result.json()["items"]]
+
+            # "Not paid" covers both recorded unpaid and no payment recorded; other shops never appear.
+            self.assertEqual(ids(paid=True), [30, 6])
+            self.assertEqual(ids(picked_up=True, paid=False), [i for i in picked if i != 6])
+            self.assertIn(31, ids(paid=False))
+            self.assertNotIn(30, ids(paid=False))
+            web = client.get("/repairs?picked_up=true&paid=false")
+            self.assertEqual(links(web.text, "repairs"), [i for i in picked if i != 6][:25])
+            self.assertIn('<option value="false" selected>', web.text.split('id="repair-paid"', 1)[1].split("</select>", 1)[0])
+            self.assertEqual(client.get("/repairs?paid=bogus").status_code, 422)
+
     def test_repair_rows_show_customer_status_and_date_without_technician(self):
         seed_registers(self.db)
         with self.client() as client:

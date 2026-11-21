@@ -258,10 +258,10 @@ def customer_history(ctx, customer_id, *, limit, before) -> CustomerHistoryPage:
 # Repairs and work entries
 
 def list_repairs(ctx, *, limit, before, query="", stage=None, picked_up=None, archived=None,
-                 technician="", customer_id=None, queue="") -> RepairPage:
+                 technician="", customer_id=None, queue="", paid=None) -> RepairPage:
     return run(ctx, repairs.list_repairs, before=before, limit=limit, query=query, stage=stage,
                picked_up=picked_up, archived=archived, technician=technician, customer_id=customer_id,
-               queue=queue)[0]
+               queue=queue, paid=paid)[0]
 
 
 def create_repair(ctx, details, key) -> Repair:

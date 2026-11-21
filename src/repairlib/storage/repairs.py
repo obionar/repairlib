@@ -17,6 +17,7 @@ ENTRY_COLUMNS = ("id, repair_id, author_id, author_username, kind, body, created
 
 def list_page(db, shop_id: int, before: int | None, limit: int, pattern: str | None = None,
               stage: str | None = None, *, picked_up: bool | None = None, archived: bool | None = None,
+              paid: bool | None = None,
               technician: int | None = None, unassigned: bool = False, customer_id: int | None = None,
               queue_stages: tuple[str, ...] = (), phone_pattern: str | None = None) -> tuple[list[RepairListRow], int]:
     filters = ["r.shop_id = ?"]
@@ -40,6 +41,9 @@ def list_page(db, shop_id: int, before: int | None, limit: int, pattern: str | N
         if value is not None:
             filters.append(f"(r.{column} IS NOT NULL) = ?")
             params.append(value)
+    if paid is not None:  # unpaid includes repairs with no payment recorded
+        filters.append("COALESCE(r.payment_paid, 0) = ?")
+        params.append(paid)
 
     joins = """FROM repairs AS r
         LEFT JOIN customers AS c ON c.shop_id = r.shop_id AND c.id = r.customer_id"""

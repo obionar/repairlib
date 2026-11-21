@@ -26,7 +26,7 @@ class WebShellTests(TokenFixture, TestCase):
             page = client.get('/customers')
             self.assertEqual(page.status_code, 200)
             self.assertIn('<h1 class="rl-page-title rl-sr-only">Customers</h1>', page.text)
-            self.assertRegex(page.text, r'<section class="obi-panel" aria-labelledby="customer-search-title">\s*<header class="obi-panel-bar">\s*<h2 id="customer-search-title">Search</h2>')
+            self.assertRegex(page.text, r'<section class="rl-search-card" aria-labelledby="customer-search-title">\s*<h2 class="rl-sr-only" id="customer-search-title">Search</h2>')
             self.assertRegex(page.text, r'<input[^>]*id="customer-search"[^>]*placeholder="Search"')
             self.assertRegex(page.text, r'<button[^>]*type="submit"[^>]*aria-label="Search"')
             self.assertNotIn('type="checkbox"', page.text)
@@ -41,8 +41,13 @@ class WebShellTests(TokenFixture, TestCase):
             page = client.get('/repairs?queue=open')
             self.assertEqual(page.status_code, 200)
             self.assertIn('<h1 class="rl-page-title rl-sr-only">Repairs</h1>', page.text)
-            self.assertRegex(page.text, r'<section class="obi-panel" aria-labelledby="repair-search-title">\s*<header class="obi-panel-bar">\s*<h2 id="repair-search-title">Search</h2>')
-            self.assertIn('<option value="open" selected>Open work</option>', page.text)
+            self.assertRegex(page.text, r'<section class="rl-search-card" aria-labelledby="repair-search-title">\s*<h2 class="rl-sr-only" id="repair-search-title">Search</h2>')
+            # Dashboard queue links keep their filter as a hidden field in the one-row search bar.
+            self.assertIn('<input type="hidden" name="queue" value="open">', page.text)
+            bar = page.text.split('class="rl-search-bar"', 1)[1].split("</form>", 1)[0]
+            for name in ('name="q"', 'name="stage"', 'name="picked_up"', 'name="paid"'):
+                self.assertIn(name, bar)
+            self.assertNotIn('name="archived"', bar)
             self.assertRegex(page.text, r'<h2 id="repair-results">[^\n]+</h2>\s*<a href="/repairs/new">New repair</a>')
             self.assertEqual(page.text.count('href="/repairs/new"'), 1)
 
@@ -154,3 +159,19 @@ class WebShellTests(TokenFixture, TestCase):
             signed_out = client.post("/logout", data={"csrf": token[1]})
             self.assertEqual((signed_out.status_code, signed_out.headers["location"]), (303, "/login"))
             self.assertEqual(client.get("/").headers["location"], "/login")
+
+
+class ScriptHashTests(TestCase):
+    def test_every_static_script_is_allowed_by_csp_with_its_current_hash(self):
+        # A script edit without a hash update would silently stop running under the CSP.
+        import base64, hashlib
+        root = Path(__file__).resolve().parents[1] / "src" / "repairlib"
+        templates = "".join(path.read_text(encoding="utf-8") for path in (root / "adapters/web/templates").glob("*.html"))
+        with TemporaryDirectory() as tmp, TestClient(create_app(workspace=tmp)) as client:
+            policy = client.get("/static/app.css").headers["content-security-policy"]
+        self.assertIn("connect-src 'self'", policy)
+        for script in sorted((root / "adapters/web/static").glob("*.js")):
+            digest = base64.b64encode(hashlib.sha256(script.read_bytes()).digest()).decode()
+            with self.subTest(script=script.name):
+                self.assertIn(f"'sha256-{digest}'", policy)
+                self.assertIn("path='" + script.name + "').path }}\" integrity=\"sha256-" + digest + '"', templates)

@@ -45,16 +45,19 @@
         </form>
       {% elif page %}
         {% set path = request.url_for('customer_list').path %}
-        {% call ui.panel('customer-search-title', 'Search') %}
-        <form class="rl-compact-search" method="get" action="{{ path }}" role="search">
-          <label class="rl-sr-only" for="customer-search">{{ _('Search name, phone or email') }}</label>
-          <input id="customer-search" type="search" name="q" value="{{ query }}" maxlength="100" placeholder="{{ _('Search') }}">
-          {% if include_archived %}<input type="hidden" name="include_archived" value="true">{% endif %}
-          <button type="submit" aria-label="{{ _('Search') }}">
-            <svg class="rl-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="10" cy="10" r="6"/><path d="m15 15 5 5"/></svg>
-          </button>
-        </form>
-        {% endcall %}
+        <section class="rl-search-card" aria-labelledby="customer-search-title">
+          <h2 class="rl-sr-only" id="customer-search-title">{{ _('Search') }}</h2>
+          <form class="rl-search-bar" method="get" action="{{ path }}" role="search" data-live='section[aria-labelledby="customer-results"]'>
+            <div class="rl-search-text">
+              <label class="rl-sr-only" for="customer-search">{{ _('Search name, phone or email') }}</label>
+              <input id="customer-search" type="search" name="q" value="{{ query }}" maxlength="100" placeholder="{{ _('Search') }}" autocomplete="off">
+              <button type="submit" aria-label="{{ _('Search') }}">
+                <svg class="rl-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="10" cy="10" r="6"/><path d="m15 15 5 5"/></svg>
+              </button>
+            </div>
+            {% if include_archived %}<input type="hidden" name="include_archived" value="true">{% endif %}
+          </form>
+        </section>
         {% call ui.panel('customer-results', 'Customers', path=request.url_for('customer_new').path if can_write else '', link='New customer') %}
           {% if page.items %}
             {% call ui.table('Customers', wide=true) %}
@@ -85,4 +88,5 @@
                       'Newest customers', 'Older customers') }}
         {% endcall %}
       {% endif %}
+      {% if page %}<script src="{{ request.url_for('static', path='live-search.js').path }}" integrity="sha256-thF48QvDEvENP4+0Vm17obSkSDvRs0HYr8eH7A/U3HI="></script>{% endif %}
 {% endblock %}

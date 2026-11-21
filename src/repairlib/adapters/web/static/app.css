@@ -639,6 +639,17 @@ button.rl-nav-link {
 .rl-compact-search button[type="submit"]:hover { background: var(--rl-canvas); }
 .rl-compact-search button[type="submit"]:focus-visible { outline-offset: -3px; }
 
+/* Registers: one-row search bar (text, then filter selects), wrapping on narrow screens. */
+.rl-search-card { margin-block-end: 1rem; padding: .625rem; border: 1px solid var(--rl-frame); background: var(--rl-surface); }
+.rl-ui .obi-window form.rl-search-bar { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; max-width: none; margin: 0; }
+.rl-search-text { position: relative; flex: 1 1 16rem; min-width: 0; }
+.rl-search-text input[type="search"] { width: 100%; min-height: 2.75rem; box-sizing: border-box; padding: .5rem 3rem .5rem .75rem; border: 1px solid var(--rl-frame); font: inherit; }
+.rl-search-text button[type="submit"] { position: absolute; inset-block: 1px; inset-inline-end: 1px; display: grid; place-items: center; width: 2.75rem; min-height: 0; margin: 0; padding: 0; border: 0; background: transparent; color: var(--rl-ink); }
+.rl-search-text button[type="submit"]:hover { background: var(--rl-canvas); }
+.rl-search-bar > select { flex: 0 1 auto; min-width: 0; min-height: 2.75rem; padding: .375rem .5rem; border: 1px solid var(--rl-frame); background: var(--rl-surface); font: inherit; font-size: .9375rem; }
+.rl-search-clear { font-size: .875rem; white-space: nowrap; }
+@media (max-width: 36rem) { .rl-search-bar > select { flex: 1 1 calc(50% - .25rem); } }
+
 .rl-search-filters {
   border-block-start: 1px solid var(--rl-frame);
 }

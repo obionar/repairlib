@@ -52,10 +52,12 @@ def repair_routes(workspace: Path, access_dependency) -> APIRouter:
     def index(access: Annotated[RepairAccess, Depends(access_dependency)],
               before: str | None = None, limit: str | None = None, q: str = "",
               stage: str | None = None, picked_up: bool | None = None, archived: bool | None = None,
-              technician: str = "", customer_id: int | None = None, queue: str = ""):
+              technician: str = "", customer_id: int | None = None, queue: str = "",
+              paid: bool | None = None):
         page, _ = list_repairs(workspace, access, before=page_number(before),
                                limit=page_number(limit, 25), query=q, stage=stage, picked_up=picked_up,
-                               archived=archived, technician=technician, customer_id=customer_id, queue=queue)
+                               archived=archived, technician=technician, customer_id=customer_id, queue=queue,
+                               paid=paid)
         return page
 
     @router.post("", response_model=Repair, status_code=201, openapi_extra=body_schema(INPUT))
