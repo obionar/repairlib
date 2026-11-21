@@ -531,6 +531,11 @@ if __name__ == "__main__":"""))
             self.assertEqual(reopened.returncode, 0, reopened.stderr)
             self.assertEqual(phase(), "open")
             self.assertEqual(status()["writes_open"], True)
+            # A completed update leaves ordinary launcher commands usable on the selected workspace.
+            listed = subprocess.run([launcher, "customers", "list"], capture_output=True,
+                                    text=True, timeout=10)
+            self.assertEqual(listed.returncode, 0, listed.stderr)
+            self.assertIn("Synthetic Customer One", listed.stdout)
         # An exit after publishing the boundary must make exactly the same
         # promise as a successful reopen. Use a second disposable selection.
         other_target = self.root / "second installation"

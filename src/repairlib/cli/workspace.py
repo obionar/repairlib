@@ -78,7 +78,8 @@ def register_workspace_commands(commands) -> None:
 
     service = commands.add_parser("service", help="manage a Linux systemd user or OpenRC system service, or run in foreground")
     service.add_argument("action", choices=("install", "status", "start", "stop", "restart", "remove", "foreground"))
-    service.add_argument("--workspace", required=True)
+    # Optional so `bin/repairlib service install` needs no paths: the launcher exports REPAIRLIB_WORKSPACE.
+    add_workspace(service)
     service.add_argument("--port", type=int, default=8000)
     service.add_argument("--openrc-system", action="store_true",
                          help="manage a root-supervised OpenRC system service that runs as this user")

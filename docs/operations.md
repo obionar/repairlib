@@ -200,9 +200,14 @@ git clone https://github.com/obionar/repairlib.git repairlib-source
 git -C repairlib-source checkout --detach <commit>
 python3 -I -B repairlib-source/scripts/install.py --commit <commit> \
   --target "$HOME/.local/opt/repairlib"
-"$HOME/.local/opt/repairlib/repairlib" setup --workspace "$HOME/.repairlib" \
-  --shop "My Shop" --timezone Europe/Nicosia --username owner
+"$HOME/.local/opt/repairlib/repairlib" setup --shop "My Shop" --timezone Europe/Nicosia --username owner
+"$HOME/.local/opt/repairlib/repairlib" service foreground --port 8000
 ```
+
+The installed launcher uses the default state directory `$HOME/.local/state/repairlib` unless
+`REPAIRLIB_WORKSPACE` names another one; `setup` creates it, so no `--workspace` is needed here
+or in the update recipe below. Check `http://127.0.0.1:8000/health`, then Ctrl+C stops the
+foreground process.
 
 ### Upgrade that installation from GitHub
 
@@ -213,7 +218,7 @@ git -C repairlib-source fetch origin
 git -C repairlib-source checkout --detach origin/main
 repairlib_head="$(git -C repairlib-source rev-parse HEAD)"
 python3 -I -B repairlib-source/scripts/install.py --stage-update --commit "$repairlib_head" \
-  --target "$HOME/.local/opt/repairlib" --workspace "$HOME/.repairlib" \
+  --target "$HOME/.local/opt/repairlib" --workspace "$HOME/.local/state/repairlib" \
   --candidate "$HOME/.local/opt/repairlib-next"
 python3 -I -B repairlib-source/scripts/install.py --activate-update \
   --target "$HOME/.local/opt/repairlib" --candidate "$HOME/.local/opt/repairlib-next"
@@ -229,6 +234,9 @@ python3 -I -B repairlib-source/scripts/install.py --reopen-update \
   --target "$HOME/.local/opt/repairlib" --candidate "$HOME/.local/opt/repairlib-next" --port 8000
 "$HOME/.local/opt/repairlib/repairlib" status --json
 ```
+
+After the reopen the selection is the live installation: the same launcher runs ordinary CLI
+commands against its workspace (unit control stays with the user manager).
 
 On an OpenRC host, remove the registered service with `repairlib service remove --openrc-system` before staging; the installer refuses to stage while `/etc/init.d/repairlib` exists.
 
