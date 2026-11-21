@@ -5,8 +5,13 @@ import tempfile
 import unittest
 from pathlib import Path
 from unittest.mock import patch
+from argparse import Namespace
+from contextlib import redirect_stderr
+from io import StringIO
 
 from repairlib.lifecycle.checkout import CheckoutError, parse_service_target, pull, remote_commit, restart_service
+from repairlib.lifecycle.service import unit_bytes
+from repairlib.cli.workspace import run_update
 
 
 def git(repo: Path, *arguments: str) -> str:
@@ -79,6 +84,12 @@ class ServiceTargetTests(unittest.TestCase):
                 '--workspace /home/owner/shop --port 8099\n')
         self.assertEqual(parse_service_target(text), (Path("/home/owner/shop"), 8099))
 
+    def test_generated_unit_yields_workspace_and_port(self):
+        workspace = "/home/owner/shop 100% ready"
+        text = unit_bytes(("/usr/bin/python3", "service", "foreground",
+                           "--workspace", workspace, "--port", "8099")).decode()
+        self.assertEqual(parse_service_target(text), (Path(workspace), 8099))
+
     def test_a_quoted_openrc_command_line_is_read(self):
         text = "command_args='-I -B -c ... /opt/repairlib/src service foreground " \
                "--workspace \"/home/owner/shop data\" --port 8092'\n"
@@ -100,6 +111,17 @@ class RestartTests(unittest.TestCase):
         run.return_value = subprocess.CompletedProcess([], 1, "not json", "")
         with self.assertRaisesRegex(CheckoutError, "service did not restart"):
             restart_service(Path("/home/owner/shop"), 8000, True)
+
+
+class UpdateCliTests(unittest.TestCase):
+    @patch("repairlib.lifecycle.checkout.remote_commit", side_effect=CheckoutError("remote unavailable"))
+    def test_update_check_reports_error_without_traceback(self, remote):
+        stderr = StringIO()
+        with redirect_stderr(stderr):
+            result = run_update(Namespace(check=True))
+        self.assertEqual(result, 1)
+        self.assertIn("update: remote unavailable", stderr.getvalue())
+        self.assertNotIn("Traceback", stderr.getvalue())
 
 
 if __name__ == "__main__":

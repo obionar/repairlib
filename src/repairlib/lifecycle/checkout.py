@@ -7,6 +7,7 @@ import json
 import os
 from pathlib import Path
 import re
+import shlex
 import subprocess
 
 UNIT = "repairlib.service"
@@ -64,6 +65,16 @@ def pull(repo: Path) -> tuple[str, str]:
 
 def parse_service_target(text: str) -> tuple[Path, int] | None:
     """Workspace and port from a unit or init script, when both are present."""
+    for line in text.splitlines():
+        if not line.startswith("ExecStart="):
+            continue
+        try:
+            args = shlex.split(line.removeprefix("ExecStart=").removeprefix(":"))
+            workspace = args[args.index("--workspace") + 1].replace("%%", "%")
+            port = int(args[args.index("--port") + 1])
+            return Path(workspace), port
+        except (ValueError, IndexError):
+            return None
     match = ARGUMENTS.search(text)
     if match is None:
         return None

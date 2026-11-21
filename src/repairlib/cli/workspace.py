@@ -17,6 +17,7 @@ from repairlib.lifecycle.backup_archive import (
     create_archive, restore_archive, verify_backup, verify_restore_point,
 )
 from repairlib.lifecycle.backup_schedule import backup_line, backup_state, scheduled_snapshot
+from repairlib.lifecycle.checkout import CheckoutError
 from repairlib.lifecycle.operations import cleanup_workspace, local_status, reset_demo_workspace
 from repairlib.lifecycle.profile import profile_check, profile_lines
 from repairlib.lifecycle.recovery import snapshot_workspace
@@ -333,7 +334,7 @@ def run_demo(args) -> int:
     return 0
 
 
-@guarded("update", "could not update this checkout.", refusals=(ValueError,))
+@guarded("update", "could not update this checkout.", refusals=(ValueError, CheckoutError))
 def run_update(args) -> int:
     from repairlib.lifecycle.checkout import (
         CheckoutError, current_commit, pull, remote_commit, restart_service, service_target,
