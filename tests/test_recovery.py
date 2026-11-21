@@ -471,8 +471,9 @@ class ArchiveRecoveryTests(RecoveryFixture):
             self.assertEqual(other.exception.status, 404)
             self.assertEqual(repairs.read_repair(destination, access, 1)[0].reported_issue, "Prior repair")
             item, blob = attachments.attachment_content(destination, access, 1, 1, inline=False)
-            self.assertEqual((item.entry_ids, item.caption), ([1], ""))
-            self.assertEqual(blob.read_bytes(), content)
+            with blob:
+                self.assertEqual((item.entry_ids, item.caption), ([1], ""))
+                self.assertEqual(blob.read(), content)
         with closing(sqlite3.connect(database_path(destination))) as db:
             self.assertEqual(db.execute("SELECT * FROM audit_events ORDER BY id").fetchall(), audit)
             self.assertEqual(db.execute("SELECT * FROM schema_migrations WHERE version <= 14 "
@@ -692,9 +693,10 @@ class ArchiveRecoveryTests(RecoveryFixture):
             self.assertFalse(active.detached)
             self.assertTrue(detached.detached)
             self.assertTrue(purged.purged)
-            for item in (active, detached):
-                _, path = attachments.attachment_content(destination, api, repair.id, item.id, inline=False)
-                self.assertEqual(path.read_bytes(), self.blobs[str(path.relative_to(destination))])
+            for item, expected in zip((active, detached), self.blobs.values(), strict=True):
+                _, original = attachments.attachment_content(destination, api, repair.id, item.id, inline=False)
+                with original:
+                    self.assertEqual(original.read(), expected)
             self.assertFalse((destination / "state" / "files" / "shop-1" / ("3" * 32)).exists())
             with self.assertRaises(repairs.RepairError) as gone:
                 attachments.attachment_content(destination, api, repair.id, purged.id, inline=False)

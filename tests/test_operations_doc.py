@@ -1,6 +1,7 @@
 """Every `repairlib` command line quoted in the agent operations document is real."""
 
 import re
+import shlex
 import subprocess
 import sys
 import unittest
@@ -12,6 +13,7 @@ ROOT = Path(__file__).resolve().parents[1]
 DOC = ROOT / "docs" / "repairlib-operations.md"
 COMMAND = [sys.executable, "-m", "repairlib"]
 GLOBAL_FLAGS = ("--json", "--dry-run")
+EXAMPLE_IDS = {"$repair_id": "1", "$item_id": "1"}
 ENV_ASSIGNMENT = r"[A-Za-z_][A-Za-z0-9_]*=\S+\s+"
 LAUNCHER = re.compile(rf"^(?:{ENV_ASSIGNMENT})*(?:python3 -m repairlib|repairlib)(?=\s|$)(.*)$")
 REQUIRED = (
@@ -38,14 +40,14 @@ def quoted_commands(text):
             match = LAUNCHER.match(line)
             if not match:
                 continue
-            tokens = match.group(1).split()
+            tokens = shlex.split(match.group(1))
             while tokens and tokens[0] in GLOBAL_FLAGS:
                 tokens.pop(0)
             positional = []
             for token in tokens:
                 if token.startswith("-"):
                     break
-                positional.append(token)
+                positional.append(EXAMPLE_IDS.get(token, token))
             if not positional:
                 raise AssertionError(f"Quoted RepairLib command has no subcommand: {line}")
             yield line, positional
