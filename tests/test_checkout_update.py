@@ -36,6 +36,8 @@ class GitFixture(unittest.TestCase):
         root = Path(self.temp.name)
         self.remote = root / "remote.git"
         subprocess.run(["git", "init", "-q", "--bare", str(self.remote)], check=True)
+        # Pin the bare HEAD before cloning so the clone's default branch is main on any git.
+        git(self.remote, "symbolic-ref", "HEAD", "refs/heads/main")
         self.work = root / "work"
         subprocess.run(["git", "clone", "-q", str(self.remote), str(self.work)], check=True)
         git(self.work, "config", "user.email", "test@example.org")
@@ -45,7 +47,6 @@ class GitFixture(unittest.TestCase):
         git(self.work, "commit", "-q", "-m", "one")
         git(self.work, "branch", "-M", "main")
         git(self.work, "push", "-q", "origin", "main")
-        git(self.remote, "symbolic-ref", "HEAD", "refs/heads/main")
         self.other = root / "other"
         subprocess.run(["git", "clone", "-q", "-b", "main", str(self.remote), str(self.other)], check=True)
         git(self.other, "config", "user.email", "test@example.org")
