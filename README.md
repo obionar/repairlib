@@ -74,9 +74,10 @@ bin/repairlib service install && bin/repairlib service start
 
 Open <http://127.0.0.1:8000> and sign in as `owner`. `bin/repairlib` runs this checkout with its
 workspace in `./data` and listens on port 8000, so no paths or environment variables are needed;
-`REPAIRLIB_WORKSPACE` overrides the workspace for any command. `ln -s "$PWD/bin/repairlib"
-"$HOME/.local/bin/repairlib"` runs `repairlib` from anywhere; the symlink resolves back to this
-checkout.
+`REPAIRLIB_WORKSPACE` overrides the workspace for any command. `bin/repairlib links` links the
+launcher into `~/.local/bin/repairlib` and this repository's agent skill into
+`~/.agents/skills/repairlib`, so `repairlib` runs from anywhere and any agent (pi, OpenCode, …)
+finds the skill; both links resolve back to this checkout.
 
 Update later with `bin/repairlib update`: it refuses a dirty checkout, fast-forwards the branch and
 restarts the service. To move to another machine, copy the checkout with its `data/` and

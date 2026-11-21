@@ -206,6 +206,11 @@ python3 -I -B "$repairlib_source/scripts/install.py" --commit HEAD --target "$re
 "$repairlib_target/repairlib" service foreground --port 8000
 ```
 
+The installer also links `~/.local/bin/repairlib` and the skill in
+`~/.agents/skills/repairlib` to this target; pass `--no-link` to skip that, or
+run `"$repairlib_target/repairlib" links` later. A real file already at either
+path is reported as `blocked` and left untouched.
+
 Check `http://127.0.0.1:8000/health`; Ctrl+C stops the foreground process. Register the service
 instead of the last line when the app should keep running
 ([Linux service lifecycle](#linux-service-lifecycle)). `--commit` takes a local Git revision
@@ -586,14 +591,17 @@ bin/repairlib service install
 bin/repairlib service start
 ```
 
-To use `repairlib` from any directory, link the launcher once from the checkout
-root. Make sure `~/.local/bin` is on your `PATH` and the destination does not
-already exist:
+To use `repairlib` from any directory and give agents the operating skill, link
+both once from the checkout root. It refuses to replace a real file and reports
+`blocked` instead; make sure `~/.local/bin` is on your `PATH`:
 
 ```sh
-mkdir -p "$HOME/.local/bin"
-ln -s "$PWD/bin/repairlib" "$HOME/.local/bin/repairlib"
+bin/repairlib links
 ```
+
+That creates `~/.local/bin/repairlib` and `~/.agents/skills/repairlib`, both
+pointing into this checkout. Run it again after moving the checkout; `--no-link`
+on the installer skips the same step.
 
 The link resolves to this checkout, so keep the checkout at that path. The
 launcher selects its `data/` workspace even when invoked elsewhere; set

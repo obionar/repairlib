@@ -134,8 +134,8 @@ def stage_runtime(repo: Path, commit: str, target: Path) -> dict:
     return {"commit": commit, "python": plan["python"], "launcher": str(target / "repairlib")}
 
 
-def write_report(path: Path, report: dict) -> None:
-    with path.open("x", encoding="utf-8") as file:
+def write_report(path: Path, report: dict, *, exclusive: bool = True) -> None:
+    with path.open("x" if exclusive else "w", encoding="utf-8") as file:
         file.write(json.dumps(report, indent=2) + "\n")
 
 
@@ -234,7 +234,28 @@ def publish_launcher(target: Path, report: dict, workspace: Path | None = None) 
     launcher.chmod(0o700)
 
 
-def install(script: Path, revision: str, target: Path) -> dict:
+def link_into_home(target: Path, home: Path) -> list[dict]:
+    """Link the installed launcher and skill into the user's home; never replace a real file."""
+    links = []
+    for name, link, destination in (
+        ("command", home / ".local/bin/repairlib", target / "repairlib"),
+        ("skill", home / ".agents/skills/repairlib", target / "generation/source/skills/repairlib"),
+    ):
+        if link.is_symlink():
+            if os.readlink(link) == str(destination):
+                links.append({"link": str(link), "target": str(destination), "status": "unchanged"})
+                continue
+            link.unlink()
+        elif os.path.lexists(link):
+            links.append({"link": str(link), "target": str(destination), "status": "blocked"})
+            continue
+        link.parent.mkdir(parents=True, exist_ok=True)
+        link.symlink_to(destination)
+        links.append({"link": str(link), "target": str(destination), "status": "created"})
+    return links
+
+
+def install(script: Path, revision: str, target: Path, *, home: Path | None = None) -> dict:
     repo = script.parent.parent
     validate_target(target, repo)
     commit = resolve_commit(repo, revision)
@@ -243,6 +264,9 @@ def install(script: Path, revision: str, target: Path) -> dict:
     try:
         report = stage_runtime(repo, commit, target)
         publish_launcher(target, report)
+        if home is not None:
+            report["links"] = link_into_home(target, home)
+            write_report(target / "install.json", report, exclusive=False)
         return report
     except BaseException:
         shutil.rmtree(target)
@@ -581,6 +605,8 @@ def main() -> int:
     parser.add_argument("--port", type=int, help="fixed loopback port for reopening or managed handoff")
     parser.add_argument("--workspace", type=Path, help="existing disposable workspace for update staging")
     parser.add_argument("--candidate", type=Path, help="absolute path of the disposable candidate")
+    parser.add_argument("--no-link", action="store_true",
+                        help="do not link repairlib and its skill into ~/.local/bin and ~/.agents/skills")
     args = parser.parse_args()
     if bool(args.workspace) != args.stage_update:
         parser.error("--workspace is required only for --stage-update")
@@ -611,7 +637,8 @@ def main() -> int:
         elif args.recover_update:
             report = recover_update(script, args.target, args.candidate, port=args.port, managed=args.managed)
         else:
-            report = install(script, args.commit, args.target)
+            report = install(script, args.commit, args.target,
+                             home=None if args.no_link else Path.home())
     except InstallError as error:
         parser.exit(1, f"install: {error}\n")
     except (OSError, RuntimeError, TypeError, ValueError, KeyError, subprocess.SubprocessError, tarfile.TarError) as error:

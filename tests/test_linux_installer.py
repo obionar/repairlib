@@ -249,7 +249,7 @@ os._exit(0)
 
         # Run the worker from the exact committed candidate source. Inject failures
         # into this synthetic commit only, including immediate process exits at rename.
-        for name in ("__main__.py", "lifecycle/operations.py", "lifecycle/service.py"):
+        for name in ("__main__.py", "cli/workspace.py", "lifecycle/operations.py", "lifecycle/service.py"):
             shutil.copyfile(ROOT / "src/repairlib" / name, self.repo / "src/repairlib" / name)
         update = self.repo / "src/repairlib/lifecycle/update.py"
         contents = (ROOT / "src/repairlib/lifecycle/update.py").read_text()
@@ -385,8 +385,8 @@ if __name__ == "__main__":"""))
 
     def test_listener_write_boundary_and_post_update_recovery(self):
         script = self.repo / "scripts/install.py"
-        for name in ("__main__.py", "app.py", "lifecycle/operations.py", "lifecycle/service.py",
-                     "lifecycle/update.py"):
+        for name in ("__main__.py", "app.py", "cli/workspace.py", "lifecycle/operations.py",
+                     "lifecycle/service.py", "lifecycle/update.py"):
             shutil.copyfile(ROOT / "src/repairlib" / name, self.repo / "src/repairlib" / name)
         update = self.repo / "src/repairlib/lifecycle/update.py"
         update.write_text(update.read_text().replace('if __name__ == "__main__":', """
@@ -917,6 +917,30 @@ sys.exit(code)
         self.assertEqual(launcher[1], str(self.installer.SYSTEM_PYTHON))
         self.assertEqual(launcher[-3:], [str(self.target), "", "$@"])
         self.assertFalse((generation / "venv").exists() or (generation / "uv").exists())
+
+    def test_install_links_the_command_and_the_skill_into_home(self):
+        skills = self.repo / "skills/repairlib"
+        if not (skills / "SKILL.md").is_file():
+            skills.mkdir(parents=True)
+            (skills / "SKILL.md").write_text("---\nname: repairlib\n---\n")
+            self.fixture_commit("Skill fixture")
+        home = self.root / "home"
+        with patch.object(self.installer, "provision", side_effect=self.local_runtime):
+            report = self.installer.install(self.repo / "scripts/install.py", "HEAD", self.target, home=home)
+
+        command = home / ".local/bin/repairlib"
+        skill = home / ".agents/skills/repairlib"
+        self.assertEqual([link["status"] for link in report["links"]], ["created", "created"])
+        self.assertEqual(command.resolve(), (self.target / "repairlib").resolve())
+        self.assertEqual(skill.resolve(), (self.target / "generation/source/skills/repairlib").resolve())
+        self.assertTrue((skill / "SKILL.md").is_file())
+        self.assertEqual(json.loads((self.target / "install.json").read_text()), report)
+
+    def test_install_without_a_home_writes_no_links(self):
+        with patch.object(self.installer, "provision", side_effect=self.local_runtime):
+            report = self.installer.install(self.repo / "scripts/install.py", "HEAD", self.target)
+        self.assertNotIn("links", report)
+        self.assertEqual(json.loads((self.target / "install.json").read_text()), report)
 
     def test_provision_runs_the_staged_source_on_distribution_packages_without_network(self):
         generation = self.root / "stock generation"

@@ -21,8 +21,8 @@ from repairlib.cli.printer import register_printer_commands, run_printer_command
 from repairlib.cli.settings import register_settings_commands, run_settings_command
 from repairlib.cli.users import register_user_commands, run_passwd_command, run_user_command
 from repairlib.cli.workspace import (
-    register_workspace_commands, run_backup, run_demo, run_dev, run_doctor, run_maintenance, run_migrate,
-    run_profile, run_reconcile_files, run_setup, run_status, run_support, run_update,
+    register_workspace_commands, run_backup, run_demo, run_dev, run_doctor, run_links, run_maintenance,
+    run_migrate, run_profile, run_reconcile_files, run_setup, run_status, run_support, run_update,
 )
 from repairlib.lifecycle.checkout import version_text
 from repairlib.config import resolve_workspace
@@ -117,7 +117,7 @@ def main(argv: Sequence[str] | None = None, *, update_state: dict | None = None)
     if command == "demo":
         return (run_maintenance if args.demo_command == "reset" else run_demo)(args)
     handlers = {
-        "service": run_service_command, "mcp": run_mcp_command, "support": run_support,
+        "service": run_service_command, "mcp": run_mcp_command, "support": run_support, "links": run_links,
         "backup": run_backup, "profile": run_profile, "cleanup": run_maintenance,
         "reconcile-files": run_reconcile_files, "dev": run_dev, "migrate": run_migrate,
         "setup": run_setup, "update": run_update,

@@ -12,6 +12,10 @@ Examples use the installed `repairlib` launcher. From a source checkout, run the
 arguments as `PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python3 -m repairlib …`.
 Every `--help` page is authoritative; this page is a summary, not a replacement.
 
+`repairlib links` creates `~/.local/bin/repairlib` and `~/.agents/skills/repairlib` as
+symlinks into the checkout, so the launcher and the agent skill work from any directory.
+The installer does the same unless given `--no-link`.
+
 ## Before you write
 
 Run the read-only check first and read every blocker and field it prints:

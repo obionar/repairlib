@@ -85,6 +85,10 @@ def register_workspace_commands(commands) -> None:
     service.add_argument("--openrc-system", action="store_true",
                          help="manage a root-supervised OpenRC system service that runs as this user")
 
+    links = commands.add_parser("links", help="link the repairlib command and the agent skill into this account")
+    links.add_argument("--executable", type=Path, default=None,
+                       help="launcher to link instead of this tree's (default: bin/repairlib)")
+
     doctor = commands.add_parser("doctor", help="read-only workspace diagnosis")
     doctor.add_argument("--workspace", default=None)
 
@@ -200,6 +204,24 @@ def run_doctor(args, update_state: dict | None) -> int:
     if update_state is not None:
         print_update_state(update_state)
     return report.exit_status
+
+
+def run_links(args) -> int:
+    from repairlib.lifecycle.links import APP_ROOT, LinkError, default_executable, install_links
+
+    try:
+        links = install_links(args.executable or default_executable(), APP_ROOT / "skills" / "repairlib",
+                              Path.home())
+    except LinkError as error:
+        print(f"links: {error}", file=sys.stderr)
+        return 1
+    blocked = [link for link in links.values() if link["status"] == "blocked"]
+    for link in links.values():
+        print(f"{link['path']} -> {link['target']} ({link['status']})")
+    for link in blocked:
+        print(f"links: {link['path']} exists and is not a symlink; move it and run this again.",
+              file=sys.stderr)
+    return 1 if blocked else 0
 
 
 def run_profile(args) -> int:
