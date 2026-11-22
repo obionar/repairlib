@@ -2,7 +2,7 @@
  "catalog": [
   [
    "MYTH-FLUX-WHISK",
-   "Flux whisker assembly",
+    "Flux whisker assembly (do not tickle)",
    "Temporal",
    4200,
    12
@@ -16,7 +16,7 @@
   ],
   [
    "MYTH-GNOME-HINGE",
-   "Gnome-proof hinge pair",
+    "Gnome-resistant hinge pair (gnomes not included)",
    "Chassis",
    2600,
    10
@@ -30,7 +30,7 @@
   ],
   [
    "MYTH-GRUMBLE",
-   "Grumble suppressor module",
+    "Grumble suppressor module, passive-aggressive edition",
    "Audio",
    3100,
    8
@@ -58,7 +58,7 @@
   ],
   [
    "MYTH-GREMLIN-TRAP",
-   "Gremlin trap, single use",
+    "Gremlin trap, single use (gremlin may disagree)",
    "Consumables",
    300,
    40
@@ -79,7 +79,7 @@
   ],
   [
    "MYTH-SPARE-SOUL",
-   "Refurbished ghost containment cell",
+    "Refurbished ghost containment cell, previous occupant moved on",
    "Exorcism",
    8800,
    2
@@ -91,7 +91,7 @@
    "phone": "+357 555 0110",
    "email": "customer01@example.test",
    "address": "1 Imaginary Lane, Nowhere-on-Sea",
-   "notes": "Synthetic demo record. Owns a lot of kitchen gadgets and names every one. Please use their names.",
+    "notes": "Synthetic demo record. Names every appliance. Gerald the toaster is not speaking to Brenda the fridge.",
    "repairs": [
     {
      "device_type": "Toaster",
@@ -99,8 +99,8 @@
      "model": "Crumbmaster 3000",
      "serial": "MYTH-0001",
      "display_device": "Grumblecorp Crumbmaster 3000",
-     "reported_issue": "Only toasts bread it personally approves of. Rejected a perfectly good sourdough.",
-     "notes": "Named 'Gerald'. Owner requests we speak gently.",
+     "reported_issue": "Rejects sourdough as 'too mainstream'. Accepted a crumpet after checking its references.",
+     "notes": "Named Gerald. Please speak gently; the last technician called it a bread printer.",
      "stage": "new",
      "technician": "technician",
      "warranty_until": "2027-01-15"
@@ -111,14 +111,14 @@
      "model": "Whistle Infinity",
      "serial": "MYTH-0002",
      "display_device": "Brewtopia Whistle Infinity",
-     "reported_issue": "Whistles the national anthem of a country that does not exist.",
-     "notes": "Comes with its own tiny flag.",
+     "reported_issue": "Whistles the anthem of a country that does not exist. Demands everyone stand until it boils.",
+     "notes": "Comes with a tiny flag and an application for diplomatic immunity.",
      "stage": "waiting_parts",
      "technician": "technician",
      "work": [
       {
        "kind": "note",
-       "body": "On the bench. Approached with caution."
+       "body": "On the bench. Stood respectfully for the first boil; the second verse is surprisingly long."
       },
       {
        "kind": "work",
@@ -151,8 +151,8 @@
      "model": "Frostbyte XL",
      "serial": "MYTH-0003",
      "display_device": "ChillWizard Frostbyte XL",
-     "reported_issue": "Orders 40 kg of pickles every night at 03:00.",
-     "notes": "Owner has run out of space for pickles.",
+     "reported_issue": "Orders 40 kg of pickles at 03:00. Insists this is a perfectly normal backup strategy.",
+     "notes": "Owner has run out of space. Gerald the toaster has formed an anti-pickle committee.",
      "stage": "repaired",
      "work": [
       {
@@ -191,8 +191,8 @@
      "model": "Vortex of Doom",
      "serial": "MYTH-0004",
      "display_device": "Whirlwind Vortex of Doom",
-     "reported_issue": "Blends in reverse. Smoothies come out as whole fruit.",
-     "notes": "Delivered with a very confused banana.",
+     "reported_issue": "Blends in reverse. Smoothies emerge as whole fruit with strong opinions about recycling.",
+     "notes": "Delivered with a confused banana. Banana declined to make a statement.",
      "stage": "new",
      "technician": "technician"
     }
@@ -211,8 +211,8 @@
      "model": "Cloudshield Pro",
      "serial": "MYTH-0005",
      "display_device": "Drizzlenot Cloudshield Pro",
-     "reported_issue": "Opens indoors on its own, then rains a little.",
-     "notes": "Arrived damp. Left a small puddle on the counter.",
+     "reported_issue": "Opens indoors and rains underneath itself. Forecast: localised embarrassment.",
+     "notes": "Arrived damp. Counter now has its own miniature weather advisory.",
      "stage": "waiting_parts",
      "technician": "technician",
      "work": [
@@ -244,8 +244,8 @@
      "model": "Oolong Oracle",
      "serial": "MYTH-0006",
      "display_device": "Steepwell Oolong Oracle",
-     "reported_issue": "Predicts the future, but only bad weather.",
-     "notes": "Owner wants it to predict lottery numbers instead.",
+     "reported_issue": "Predicts the future, but only bad weather. Yesterday it forecast a 90% chance of more tea.",
+     "notes": "Owner requested lottery numbers. Teapot suggested buying an umbrella.",
      "stage": "repaired",
      "work": [
       {
@@ -289,8 +289,8 @@
      "model": "Chrono-Wibble",
      "serial": "MYTH-0007",
      "display_device": "Tempus Fudge Chrono-Wibble",
-     "reported_issue": "Runs on time, but in a different time zone each hour.",
-     "notes": "Owner missed three dentist appointments.",
+     "reported_issue": "Runs perfectly on time, but in a different time zone each hour.",
+     "notes": "Owner missed three dentist appointments and accidentally arrived early for one in Tokyo.",
      "stage": "new",
      "technician": "technician"
     }
@@ -309,8 +309,8 @@
      "model": "Herald Mk II",
      "serial": "MYTH-0008",
      "display_device": "Dingdongery Herald Mk II",
-     "reported_issue": "Announces visitors before they arrive. Sometimes years before.",
-     "notes": "Owner keeps opening the door to nobody.",
+     "reported_issue": "Announces visitors years before they arrive. Already rejected a parcel due next Thursday.",
+     "notes": "Owner keeps opening the door to nobody. Nobody has not complained.",
      "stage": "waiting_parts",
      "technician": "technician",
      "warranty_until": "2027-08-15",
@@ -350,8 +350,8 @@
      "model": "Tornado Royale",
      "serial": "MYTH-0009",
      "display_device": "Breezelord Tornado Royale",
-     "reported_issue": "Produces only compliments, no air.",
-     "notes": "Owner admits the compliments are nice.",
+     "reported_issue": "Produces compliments instead of air. Hair remains wet but morale is excellent.",
+     "notes": "Owner would like both functions restored, in that order.",
      "stage": "repaired",
      "work": [
       {
@@ -394,8 +394,8 @@
      "model": "Hoovarius",
      "serial": "MYTH-0010",
      "display_device": "Dustgoblin Hoovarius",
-     "reported_issue": "Refuses to clean under the sofa; claims something lives there.",
-     "notes": "Something may live there.",
+     "reported_issue": "Refuses to clean under the sofa. Says the tenant has paid the deposit.",
+     "notes": "Something may live there. Please knock before diagnosing.",
      "stage": "new",
      "technician": "technician"
     }
@@ -497,8 +497,8 @@
      "model": "Nebulon 200",
      "serial": "MYTH-0013",
      "display_device": "Starpeek Nebulon 200",
-     "reported_issue": "Shows only the neighbour's cat, no matter where you point it.",
-     "notes": "The cat looks very pleased with itself.",
+     "reported_issue": "Shows the neighbour's cat at every magnification, including when pointed at the moon.",
+     "notes": "The cat looks pleased. Astronomers have named it the Meow Nebula.",
      "stage": "new",
      "technician": "technician"
     },
@@ -508,8 +508,8 @@
      "model": "Babblebrick 12",
      "serial": "MYTH-0014",
      "display_device": "Fonetastic Babblebrick 12",
-     "reported_issue": "Autocorrects every message to pirate speak.",
-     "notes": "Owner's boss received 'Arr, the report be late'.",
+     "reported_issue": "Autocorrects every message to pirate speak and marks meetings as mutinies.",
+     "notes": "Boss received 'Arr, the report be late'. Boss replied 'Aye, walk the spreadsheet'.",
      "stage": "waiting_parts",
      "technician": "technician",
      "work": [
@@ -557,8 +557,8 @@
      "model": "Snoozebook Air",
      "serial": "MYTH-0015",
      "display_device": "Byteberry Snoozebook Air",
-     "reported_issue": "Falls asleep during meetings. Snores audibly.",
-     "notes": "Owner was asked to leave a board meeting.",
+     "reported_issue": "Falls asleep during meetings and snores. Battery health is fine; meeting health is not.",
+     "notes": "Asked to leave a board meeting. Owner was allowed to stay.",
      "stage": "repaired",
      "warranty_until": "2027-03-15",
      "work": [
@@ -708,8 +708,8 @@
      "model": "Espressonaut",
      "serial": "MYTH-0019",
      "display_device": "Grindstone Espressonaut",
-     "reported_issue": "Makes excellent coffee but insults your posture.",
-     "notes": "Owner's posture has improved, feelings have not.",
+     "reported_issue": "Makes excellent coffee but critiques posture with the confidence of an unpaid physiotherapist.",
+     "notes": "Owner's posture improved. Machine has been promoted to middle management.",
      "stage": "new",
      "technician": "technician"
     }
@@ -871,8 +871,8 @@
      "model": "Never-Lose",
      "serial": "MYTH-0024",
      "display_device": "Pairfect Never-Lose",
-     "reported_issue": "Eats exactly one sock of every pair.",
-     "notes": "Owner suspects a portal.",
+     "reported_issue": "Eats exactly one sock per pair. Returns the other with a tiny claim form.",
+     "notes": "Owner suspects a portal. The portal insists it is a laundry reorganisation initiative.",
      "stage": "repaired",
      "work": [
       {
@@ -912,8 +912,8 @@
      "model": "Megafun 64",
      "serial": "MYTH-0025",
      "display_device": "Joypixel Megafun 64",
-     "reported_issue": "Always lets the cat win.",
-     "notes": "Cat now undefeated in 212 matches.",
+     "reported_issue": "Always lets the cat win. Controller settings now list 'paw' as a difficulty level.",
+     "notes": "Cat undefeated in 212 matches. Refuses rematch unless paid in treats.",
      "stage": "in_progress",
      "technician": "technician",
      "work": [
@@ -1044,8 +1044,8 @@
      "model": "Paperjam Supreme",
      "serial": "MYTH-0028",
      "display_device": "Inkblot Paperjam Supreme",
-     "reported_issue": "Prints everything in Comic Sans. Even photos.",
-     "notes": "Owner's CV was rejected seven times.",
+     "reported_issue": "Prints everything in Comic Sans. Even photos and the alignment page look embarrassed.",
+     "notes": "Owner's CV rejected seven times. Printer suggests a career in party planning.",
      "stage": "in_progress",
      "technician": "technician",
      "work": [
@@ -1180,8 +1180,8 @@
      "model": "Deep Blue Thought",
      "serial": "MYTH-0031",
      "display_device": "Fishbowl Ltd. Deep Blue Thought",
-     "reported_issue": "The fish have unionised and demand better lighting.",
-     "notes": "Arrived with a small petition taped to the glass.",
+     "reported_issue": "Fish have unionised and demand better lighting and shorter working tides.",
+     "notes": "Arrived with a petition. Negotiations stalled over the right to remain silent.",
      "stage": "in_progress",
      "technician": "technician",
      "work": [
@@ -1453,8 +1453,8 @@
      "model": "Over & Out",
      "serial": "MYTH-0037",
      "display_device": "Chatterbox Over & Out",
-     "reported_issue": "Only connects to a walkie-talkie in 1987.",
-     "notes": "The person in 1987 is very nice.",
+     "reported_issue": "Only connects to a walkie-talkie in 1987. Signal is clear; fashion advice is not.",
+     "notes": "The person in 1987 is very nice and recommends buying shares in something called the internet.",
      "stage": "in_progress",
      "technician": "technician",
      "work": [
@@ -1621,8 +1621,8 @@
      "model": "Γκριλ 2000",
      "serial": "MYTH-0041",
      "display_device": "Τοστάκιας Γκριλ 2000",
-     "reported_issue": "Ψήνει μόνο τυρί, αρνείται το ψωμί.",
-     "notes": "Ο πελάτης φέρνει δικό του ψωμί για δοκιμή.",
+     "reported_issue": "Ψήνει μόνο τυρί και απορρίπτει το ψωμί ως υπερβολικά συμβατικό.",
+     "notes": "Ο πελάτης έφερε ψωμί για δοκιμή. Η τοστιέρα ζήτησε βιογραφικό.",
      "stage": "customer_test",
      "technician": "technician",
      "work": [
@@ -1718,8 +1718,8 @@
      "model": "Τυφώνας 5",
      "serial": "MYTH-0043",
      "display_device": "Σκουπάκης Τυφώνας 5",
-     "reported_issue": "Ρουφάει μόνο κέρματα και κλειδιά.",
-     "notes": "Επιστράφηκαν στον πελάτη 7,40 € σε κέρματα.",
+     "reported_issue": "Ρουφάει μόνο κέρματα και κλειδιά. Τα ψίχουλα τα θεωρεί αρμοδιότητα άλλου τμήματος.",
+     "notes": "Επιστράφηκαν 7,40 € στον πελάτη. Η σκούπα ζήτησε προμήθεια.",
      "stage": "in_progress",
      "technician": "technician",
      "warranty_until": "2027-07-15",
@@ -1792,8 +1792,8 @@
      "model": "Φάρος Μίνι",
      "serial": "MYTH-0045",
      "display_device": "Φωτεινός Φάρος Μίνι",
-     "reported_issue": "Φωτίζει μόνο όταν είναι ήδη μέρα.",
-     "notes": "Δοκιμάστηκε μπροστά στον πελάτη, στο φως.",
+     "reported_issue": "Φωτίζει μόνο όταν είναι ήδη μέρα. Το βράδυ δηλώνει εκτός ωραρίου.",
+     "notes": "Δοκιμάστηκε στο φως. Για νυχτερινή δοκιμή ζήτησε υπερωρίες.",
      "stage": "no_repair",
      "work": [
       {
@@ -2002,8 +2002,8 @@
      "model": "Kuku Pro",
      "serial": "MYTH-0050",
      "display_device": "Black Forest Gadgets Kuku Pro",
-     "reported_issue": "The cuckoo comes out to give stock market tips.",
-     "notes": "Owner made 3% last week and is torn.",
+     "reported_issue": "Cuckoo gives stock tips on the hour and shouts 'diversify' on the half-hour.",
+     "notes": "Owner made 3% last week. Cuckoo now wants a corner office and a seed bonus.",
      "stage": "repaired",
      "technician": "technician",
      "warranty_until": "2027-02-15",
