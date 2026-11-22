@@ -44,12 +44,12 @@ SAVED_NOTICES = {
     "entry_visibility": "Work entry updated.", "pickup": "Pickup state saved.",
     "archive": "Archive state saved.", "attachment": "File saved.", "payment": "Payment status saved.",
     "handover": "Handed over: paid and picked up.",
-    "fees": "Amounts saved.",
+    "fees": "Amounts saved.", "photo": "Device photo saved.",
 }
 NOTICE_PANELS = {
     "stage": "status", "archive": "status", "charge": "payment-total",
     "entry": "log", "part": "stock-usage", "entry_corrected": "log", "entry_visibility": "log",
-    "attachment": "files", "pickup": "status", "payment": "status", "handover": "status", "fees": "payment-total",
+    "attachment": "files", "photo": "status", "pickup": "status", "payment": "status", "handover": "status", "fees": "payment-total",
 }
 CURSOR_FIELDS = ("log_before", "files_before", "detached_before")
 
@@ -336,6 +336,11 @@ def repair_routes(workspace: Path, templates, key: bytearray) -> APIRouter:
             notice=SAVED_NOTICES.get(saved), notice_panel=NOTICE_PANELS.get(saved), created=saved == "created",
             error_summary=error_summary, activity=activity,
             activity_open=bool(activity_before or show_activity),
+            # Files start folded; open them when the reader is working in them.
+            files_open=bool(files_before or detached_before or attachment_error or metadata_draft
+                            or NOTICE_PANELS.get(saved) == "files"),
+            # Payment starts folded; open it after a fee save or a fee error so the result shows.
+            payment_open=bool(fees_error or NOTICE_PANELS.get(saved) == "payment-total"),
             activity_older=panel_url(activity_before=activity.next_before) if activity.next_before else "",
             activity_newest=panel_url(activity_before=None, show_activity='true') if activity_before else "",
             log_paged=bool(entries.next_before or log_before),
@@ -607,7 +612,7 @@ def repair_routes(workspace: Path, templates, key: bytearray) -> APIRouter:
                     request, repair_id, status=error.status, attachment_key=request_key,
                     **{error_name: error}))
             return failure(request, error)
-        return back(request, repair_id, fields, saved="attachment")
+        return back(request, repair_id, fields, saved="photo" if role else "attachment")
 
     @router.get("/{repair_id}/attachments/{attachment_id}/content")
     def attachment_content(request: Request, repair_id: int, attachment_id: int, inline: bool = False):

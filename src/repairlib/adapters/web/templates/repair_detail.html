@@ -41,6 +41,7 @@
   <div class="rl-repair-work-grid">
     <div class="rl-repair-side">
       {% include "_repair_log.html" %}
+      {% include "_repair_files.html" %}
       {% call ui.panel('activity-heading', 'Activity', fold=true, expanded=activity_open) %}
         {% include '_repair_activity.html' %}
       {% endcall %}
@@ -48,8 +49,7 @@
     <div class="rl-repair-side">
       {% include "_repair_stock.html" %}
       {% include "_repair_fees.html" %}
-      {% include "_repair_files.html" %}
     </div>
   </div>
-  <script src="{{ request.url_for('static', path='page-scroll.js').path }}" integrity="sha256-nXxv2OlRXNgIJv3NgCDVx7xNFzdR8eQsLp7edfLvlPY="></script>
+  <script src="{{ request.url_for('static', path='page-scroll.js').path }}" integrity="sha256-40UWEiYaZtLlsYgN/gOokLabW466EDhP0cQKD2gmSec="></script>
 {% endblock %}

@@ -1,6 +1,6 @@
 {% import "_ui.html" as ui with context %}
 
-{% call ui.panel('stock-usage', 'Parts used') %}
+{% call ui.panel('stock-usage', 'Parts used', fold=true) %}
   {% if manual_error %}{{ ui.toast(manual_error, 'error', 'manual-part-error') }}{% elif notice_panel == 'stock-usage' %}{{ ui.notice(notice) }}{% endif %}
   {% if can_edit %}
     {% set picker = request.url_for('part_picker', repair_id=repair.id).path %}

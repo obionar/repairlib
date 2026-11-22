@@ -6,6 +6,17 @@
       else event.preventDefault();
     });
   }
+  // With JavaScript the composer shows a camera button and the chosen file name instead of
+  // the native file control; without it the native control stays visible.
+  document.documentElement.classList.add('rl-js');
+  for (const input of document.querySelectorAll('input[data-picked]')) {
+    const name = document.querySelector(input.dataset.picked);
+    const empty = name.textContent;
+    input.addEventListener('change', () => {
+      name.textContent = input.files[0]?.name || empty;
+      name.parentElement.classList.toggle('rl-picked', input.files.length > 0);
+    });
+  }
   // Choosing a picture uploads it at once; without JavaScript the upload button appears instead.
   for (const input of document.querySelectorAll('input[data-autosubmit]')) {
     input.addEventListener('change', () => { if (input.files.length) input.form.requestSubmit(); });
@@ -29,12 +40,17 @@
   const pageOf = path => path.match(/^\/[a-z-]+(?:\/\d+)?/)?.[0] || '/';
   const page = pageOf(location.pathname);
   const key = 'repairlib:scroll';
-  const activity = document.querySelector('section[aria-labelledby="activity-heading"] > details');
+  // Folded windows (work log, files, activity) reopen the way the reader left them.
+  const folds = Array.from(document.querySelectorAll('section.obi-panel[aria-labelledby] > details'));
   try {
     const saved = JSON.parse(sessionStorage.getItem(key));
     sessionStorage.removeItem(key);
     if (saved && saved.page === page) {
-      if (activity) activity.open = saved.activity;
+      for (const fold of folds) {
+        const id = fold.parentElement.getAttribute('aria-labelledby');
+        // A window showing a fresh notice or error stays open.
+        if (id in (saved.open || {}) && !fold.querySelector('.obi-notice, .obi-error, .obi-toast')) fold.open = saved.open[id];
+      }
       window.scrollTo(0, saved.scroll);
     }
   } catch {
@@ -42,7 +58,8 @@
   }
   function remember() {
     try {
-      sessionStorage.setItem(key, JSON.stringify({page, scroll: window.scrollY, activity: !!activity?.open}));
+      sessionStorage.setItem(key, JSON.stringify({page, scroll: window.scrollY, open: Object.fromEntries(
+        folds.map(fold => [fold.parentElement.getAttribute('aria-labelledby'), fold.open]))}));
     } catch {
       // Do not interrupt the navigation.
     }

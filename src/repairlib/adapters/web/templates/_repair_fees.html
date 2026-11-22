@@ -1,5 +1,5 @@
 {% import "_ui.html" as ui with context %}
-{% call ui.panel('payment-total', 'Payment') %}
+{% call ui.panel('payment-total', 'Payment', fold=true, expanded=payment_open) %}
   {% if fees_error %}{{ ui.toast(fees_error, 'error', 'fees-error') }}{% elif notice_panel == 'payment-total' %}{{ ui.notice(notice) }}{% endif %}
   <div class="obi-panel-body">
     {% if fees_can_write %}

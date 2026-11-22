@@ -1,7 +1,7 @@
 {% import "_ui.html" as ui with context %}
 {% import "_repair_rows.html" as rows with context %}
 
-{% call ui.panel('files', 'Files', '(' ~ (files.items|length) ~ ((' ' ~ _('shown')) if files_paged else '') ~ ')', fold=true) %}
+{% call ui.panel('files', 'Files', '(' ~ (files.items|length) ~ ((' ' ~ _('shown')) if files_paged else '') ~ ')', fold=true, expanded=files_open) %}
     {% if notice_panel == 'files' %}<div class="obi-panel-body">{{ ui.notice(notice) }}</div>{% endif %}
     {% if attachment_error %}
       <div class="obi-panel-body">

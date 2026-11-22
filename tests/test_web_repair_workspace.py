@@ -255,7 +255,7 @@ class WebRepairWorkspaceTests(TokenFixture, unittest.TestCase):
             repair = self.repair(client, auth)
             page = client.get(f"/repairs/{repair['id']}").text
             order = [page.index(f'aria-labelledby="{name}"') for name in
-                     ("status", "log", "activity-heading", "stock-usage", "payment-total", "files")]
+                     ("status", "log", "files", "activity-heading", "stock-usage", "payment-total")]
             self.assertEqual(order, sorted(order))
             self.assertNotIn('aria-labelledby="activity"', page)
 
