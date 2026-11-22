@@ -1410,10 +1410,22 @@ label.rl-photo-empty:hover { border-color: var(--rl-ink); color: var(--rl-ink); 
 .rl-ui .rl-photo-upload { min-height: 2.25rem; margin: 0; padding-block: 0; font-size: .875rem; }
 /* No file chosen yet: nothing to upload. With JavaScript the choice submits by itself. */
 .rl-photo-form:has(.rl-photo-input:invalid) .rl-photo-upload { display: none; }
-/* Click a picture to zoom; the overlay is a link back, so this works without JavaScript. */
+/* Full-size picture: a framed photo with a caption and a round close button over a dimmed
+   backdrop. It opens by fragment, so it works without JavaScript. */
 .rl-zoom { display: none; }
-.rl-zoom:target { position: fixed; inset: 0; z-index: 50; display: grid; place-items: center; padding: 1rem; background: rgb(0 0 0 / .85); cursor: zoom-out; }
-.rl-zoom:target img { max-inline-size: 100%; max-block-size: 100%; object-fit: contain; }
+.rl-zoom:target { position: fixed; inset: 0; z-index: 50; display: grid; place-items: center; padding: clamp(1rem, 4vw, 2.5rem); }
+.rl-zoom-backdrop { position: absolute; inset: 0; background: rgb(15 18 22 / .82); cursor: zoom-out; }
+.rl-zoom-frame { position: relative; display: grid; gap: .5rem; max-inline-size: min(100%, 80rem); margin: 0; padding: .5rem;
+  border-radius: .75rem; background: var(--rl-surface); box-shadow: 0 1.5rem 4rem rgb(0 0 0 / .5); animation: rl-zoom-in .16s ease-out; }
+.rl-zoom-frame img { display: block; max-inline-size: 100%; max-block-size: calc(100vh - 8rem); margin-inline: auto;
+  border-radius: .375rem; object-fit: contain; }
+.rl-zoom-frame figcaption { padding: 0 .375rem .25rem; color: var(--rl-muted); font-size: .875rem; text-align: center; overflow-wrap: anywhere; }
+.rl-ui .rl-zoom-close { position: absolute; inset-block-start: -.75rem; inset-inline-end: -.75rem; display: grid; place-items: center;
+  inline-size: 2.5rem; block-size: 2.5rem; border-radius: 50%; background: var(--rl-surface); color: var(--rl-ink);
+  font-size: 1.5rem; line-height: 1; text-decoration: none; box-shadow: 0 .25rem .75rem rgb(0 0 0 / .35); }
+.rl-ui .rl-zoom-close:hover { background: var(--rl-ink); color: var(--rl-surface); }
+@keyframes rl-zoom-in { from { opacity: 0; transform: scale(.97); } }
+@media (prefers-reduced-motion: reduce) { .rl-zoom-frame { animation: none; } }
 .rl-chat-picture { display: inline-block; margin-block-start: .375rem; cursor: zoom-in; }
 .rl-chat-picture img { display: block; max-inline-size: min(100%, 14rem); max-block-size: 10rem; border-radius: .375rem; object-fit: cover; }
 .rl-ticket-overview .rl-ticket-facts { grid-template-columns: minmax(0, 1fr); align-content: start; }

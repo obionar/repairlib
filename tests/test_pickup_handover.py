@@ -68,32 +68,24 @@ class PickupHandoverTests(TokenFixture, unittest.TestCase):
             self.assertEqual(client.post(action, data=fields | {"payment": "0"}).status_code, 303)
             self.assertIn('selected disabled hidden>Not paid</option>', client.get(detail).text)
 
-    def test_hand_over_marks_paid_and_picked_up_in_one_step(self):
+    def test_picked_up_and_paid_reads_finished_without_a_hand_over_button(self):
+        # Owner 2026-11-22: no Hand over shortcut; pickup and payment are set manually and
+        # together mean the repair is finished.
         with self.client() as client:
             auth, api, detail = self.start_repair(client)
-            self.assertNotIn(">Hand over</button>", panel(client.get(detail), "status"))
             self.write(client, auth, api + "/stage", {"revision": 1, "stage": "no_repair"}, status=200)
             status = panel(client.get(detail), "status")
-            form = re.search(r'<form[^>]*id="handover-form"[^>]*>(.*?)</form>', status, re.S)
-            self.assertIsNotNone(form)
-            self.assertIn(">Hand over</button>", form.group(1))
-            fields = dict(re.findall(r'<input type="hidden" name="([^"]+)" value="([^"]*)"', form.group(1)))
-            self.assertEqual((fields["pickup"], fields["payment"], fields.get("stage", "")), ("1", "1", ""))
-            before = client.get(api, headers=auth).json()
-            self.assertEqual(client.post(detail + "/stage", data=fields | {"revision": "1"}).status_code, 409)
-            self.assertEqual(client.get(api, headers=auth).json(), before)
-            saved = client.post(detail + "/stage", data=fields)
-            self.assertEqual(saved.status_code, 303)
-            self.assertIn("saved=handover", saved.headers["location"])
-            self.assertEqual(client.post(detail + "/stage", data=fields).status_code, 303)  # Same key replays.
-            after = client.get(api, headers=auth).json()
-            self.assertIsNotNone(after["picked_up_at"])
-            page = client.get(saved.headers["location"])
-            status = panel(page, "status")
-            self.assertIn("Handed over: paid and picked up.", status)
+            self.assertNotIn("Hand over", status)
             self.assertNotIn('id="handover-form"', status)
-            self.assertRegex(status, r'<option value=""[^>]*>Paid</option>')
-            self.assertRegex(status, r'<option value=""[^>]*>Picked up</option>')
+            self.assertNotIn(">Finished<", status)
+            action = detail + "/stage"
+            saved = client.post(action, data=form_for(client.get(detail), action) | {"pickup": "1", "payment": "1"})
+            self.assertEqual(saved.status_code, 303)
+            self.assertNotIn("handover", saved.headers["location"])
+            self.assertIn(">Finished<", panel(client.get(detail), "status"))
+            row = client.get("/repairs").text.split(f'href="{detail}"', 1)[1].split("</tr>", 1)[0]
+            self.assertIn(">Finished<", row)
+            self.assertNotIn(">Picked up<", row)
             operations = [row[0] for row in self.snapshot(
                 "SELECT operation FROM audit_events WHERE operation IN ('repair.pickup', 'repair.payment')")]
             self.assertEqual(operations, ["repair.pickup", "repair.payment"])

@@ -37,7 +37,7 @@
             {% if picture and not entry.deleted %}
             {% set picture_src = request.url_for('attachment_content', repair_id=repair.id, attachment_id=picture).path ~ '?inline=1' %}
             <a href="#entry-picture-{{ entry.id }}" class="rl-chat-picture"><img src="{{ picture_src }}" alt="{{ _('Picture for this entry') }}" loading="lazy"></a>
-            <a href="#close" class="rl-zoom" id="entry-picture-{{ entry.id }}" aria-label="{{ _('Close') }}"><img src="{{ picture_src }}" alt="{{ _('Picture for this entry') }}" loading="lazy"></a>
+            {{ ui.zoom('entry-picture-' ~ entry.id, picture_src, _('Picture for this entry'), entry.body|truncate(160)) }}
             {% endif %}
           </li>
         {% endfor %}

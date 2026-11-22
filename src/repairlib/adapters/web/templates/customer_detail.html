@@ -76,5 +76,5 @@
     </div>
   {% endcall %}
   <p class="account-link"><a href="{{ request.url_for('customer_list').path }}{% if record.archived_at %}?include_archived=true{% endif %}">{{ _('Back to customers') }}</a></p>
-  <script src="{{ request.url_for('static', path='page-scroll.js').path }}" integrity="sha256-40UWEiYaZtLlsYgN/gOokLabW466EDhP0cQKD2gmSec="></script>
+  <script src="{{ request.url_for('static', path='page-scroll.js').path }}" integrity="sha256-nE9croMF9rEH4/UbRPuTgEH1Li04b5y7h6Tk6bcks8w="></script>
 {% endblock %}

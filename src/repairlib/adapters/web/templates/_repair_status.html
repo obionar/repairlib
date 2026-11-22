@@ -2,7 +2,7 @@
 
 <section class="obi-panel" aria-labelledby="status">
   <header class="obi-panel-bar">
-    <h2 id="status">#{{ repair.id }}: {{ device }}</h2>
+    <h2 id="status">#{{ repair.id }}: {{ device }}{% if repair.picked_up_at and repair.payment_paid %} {{ ui.status('Finished', 'success') }}{% endif %}</h2>
     <span class="rl-ticket-header-actions">
       {% if can_edit %}<a href="{{ request.url_for('repair_edit', repair_id=repair.id).path }}">{{ _('Edit details') }}</a>{% endif %}
       <a href="{{ request.url_for('repair_print', repair_id=repair.id).path }}">{{ _('Print') }}</a>
@@ -16,7 +16,7 @@
         {% if photo_id %}
         {% set photo_src = request.url_for('attachment_content', repair_id=repair.id, attachment_id=photo_id).path ~ '?inline=1' %}
         <a href="#device-photo-zoom" class="rl-photo-frame"><img src="{{ photo_src }}" alt="{{ _('Device photo') }}"></a>
-        <a href="#close" class="rl-zoom" id="device-photo-zoom" aria-label="{{ _('Close') }}"><img src="{{ photo_src }}" alt="{{ _('Device photo') }}" loading="lazy"></a>
+        {{ ui.zoom('device-photo-zoom', photo_src, _('Device photo'), '#' ~ repair.id ~ ': ' ~ device) }}
         {% elif can_photo %}
         <label for="device-photo-file" class="rl-photo-frame rl-photo-empty">{{ camera }}<span>{{ _('Add device photo') }}</span></label>
         {% else %}
@@ -99,17 +99,6 @@
         </select>
       </div>
       <button type="submit" form="{{ status_form_id }}" class="obi-button"{% if not can_write or (not handover_available and not stage_options) %} disabled{% endif %}>{{ _('Review and save') if stage_conflict else _('Update status') }}</button>
-      {% if can_write and handover_available and not stage_conflict and not (repair.picked_up_at and names.payment_paid) %}
-      <form method="post" action="{{ request.url_for('repair_stage', repair_id=repair.id).path }}" id="handover-form">
-        <input type="hidden" name="csrf" value="{{ stage_csrf }}">
-        <input type="hidden" name="key" value="{{ handover_key }}">
-        <input type="hidden" name="revision" value="{{ repair.revision }}">
-        <input type="hidden" name="handover" value="1">
-        {% if not repair.picked_up_at %}<input type="hidden" name="pickup" value="1">{% endif %}
-        {% if not names.payment_paid %}<input type="hidden" name="payment" value="1">{% endif %}
-        {{ ui.button('Hand over') }}
-      </form>
-      {% endif %}
     </div>
     {% if stage_conflict %}
           <div class="obi-conflict" id="stage-conflict">

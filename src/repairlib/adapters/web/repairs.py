@@ -43,13 +43,12 @@ SAVED_NOTICES = {
     "entry": "Work entry added.", "part": "Part added.", "entry_corrected": "Work entry corrected.",
     "entry_visibility": "Work entry updated.", "pickup": "Pickup state saved.",
     "archive": "Archive state saved.", "attachment": "File saved.", "payment": "Payment status saved.",
-    "handover": "Handed over: paid and picked up.",
     "fees": "Amounts saved.", "photo": "Device photo saved.",
 }
 NOTICE_PANELS = {
     "stage": "status", "archive": "status", "charge": "payment-total",
     "entry": "log", "part": "stock-usage", "entry_corrected": "log", "entry_visibility": "log",
-    "attachment": "files", "photo": "status", "pickup": "status", "payment": "status", "handover": "status", "fees": "payment-total",
+    "attachment": "files", "photo": "status", "pickup": "status", "payment": "status", "fees": "payment-total",
 }
 CURSOR_FIELDS = ("log_before", "files_before", "detached_before")
 
@@ -362,7 +361,7 @@ def repair_routes(workspace: Path, templates, key: bytearray) -> APIRouter:
             stage_error=str(stage_error) if stage_error else "",
             stage_matches=stage_matches, stage_conflict=stage_conflict, pickup_draft=pickup_draft,
             stage_draft=fields.get("stage", ""),
-            payment_draft=payment_draft, handover_key=uuid4().hex, handover_available=record.stage in repairs.TERMINAL_REPAIR_STAGES,
+            payment_draft=payment_draft, handover_available=record.stage in repairs.TERMINAL_REPAIR_STAGES,
             stage_key=uuid4().hex if stage_matches else stage_key or uuid4().hex,
             stage_revision=record.revision if stage_revision is None or stage_matches else stage_revision,
             stage_csrf=csrf_token(key, f"repair.stage:{repair_id}", credential),
@@ -510,7 +509,7 @@ def repair_routes(workspace: Path, templates, key: bytearray) -> APIRouter:
                                                  "payment": payment if payment in ("0", "1") else ""}, stage_key=request_key,
                                    stage_revision=raw_revision)
             return failure(request, error)
-        query = "saved=handover" if form.get("handover") == "1" else "saved=pickup" if pickup else "saved=payment" if payment else "saved=stage"
+        query = "saved=pickup" if pickup else "saved=payment" if payment else "saved=stage"
         return RedirectResponse(request.url_for("repair_detail", repair_id=repair_id).path
                                 + f"?{query}", status_code=303)
 

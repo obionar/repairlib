@@ -25,7 +25,8 @@
           <td>
             <div class="obi-row-flags">
               {{ ui.status(stage_label(repair.stage), {'new': 'new', 'waiting_parts': 'warning', 'lab_test': 'test', 'customer_test': 'test', 'repaired': 'success', 'no_repair': 'stop'}.get(repair.stage, 'work')) }}
-              {% if repair.picked_up_at %}{{ ui.status('Picked up', 'success') }}{% endif %}
+              {# Picked up and paid: the repair is finished. #}
+              {% if repair.picked_up_at and repair.payment_paid %}{{ ui.status('Finished', 'success') }}{% elif repair.picked_up_at %}{{ ui.status('Picked up', 'success') }}{% endif %}
               {% if not queue and repair.archived_at %}{{ ui.status('Archived') }}{% endif %}
             </div>
           </td>

@@ -111,3 +111,16 @@
 {% macro discount_value(value) %}
   {% if value.kind == 'none' %}{{ _('No discount') }}{% elif value.kind == 'percent' %}{{ value.value }}%{% elif value.value is number %}{{ value.value|cents }} €{% else %}{{ value.value }} €{% endif %}
 {% endmacro %}
+
+{# Full-size picture without JavaScript: the thumbnail links to #id, and the backdrop and the
+   close button link to an unused fragment, which closes the view without scrolling. #}
+{% macro zoom(id, src, alt, caption='') %}
+<div class="rl-zoom" id="{{ id }}">
+  <a href="#close" class="rl-zoom-backdrop" tabindex="-1" aria-hidden="true"></a>
+  <figure class="rl-zoom-frame">
+    <img src="{{ src }}" alt="{{ alt }}" loading="lazy">
+    {% if caption %}<figcaption>{{ caption }}</figcaption>{% endif %}
+    <a href="#close" class="rl-zoom-close" aria-label="{{ _('Close') }}" title="{{ _('Close') }}">×</a>
+  </figure>
+</div>
+{% endmacro %}

@@ -17,6 +17,24 @@
       name.parentElement.classList.toggle('rl-picked', input.files.length > 0);
     });
   }
+  // Full-size pictures: focus the close button when one opens; Escape closes it.
+  // Opening or closing never moves the page underneath.
+  const openZoom = () => document.querySelector('.rl-zoom:target');
+  let keep;
+  document.addEventListener('click', event => {
+    if (event.target.closest('a[href^="#"]')) keep = window.scrollY;
+  }, true);
+  window.addEventListener('hashchange', () => {
+    if (keep !== undefined) window.scrollTo(0, keep);
+    keep = undefined;
+    openZoom()?.querySelector('.rl-zoom-close').focus({preventScroll: true});
+  });
+  document.addEventListener('keydown', event => {
+    if (event.key === 'Escape' && openZoom()) {
+      keep = window.scrollY;
+      location.hash = 'close';
+    }
+  });
   // Choosing a picture uploads it at once; without JavaScript the upload button appears instead.
   for (const input of document.querySelectorAll('input[data-autosubmit]')) {
     input.addEventListener('change', () => { if (input.files.length) input.form.requestSubmit(); });
