@@ -153,6 +153,8 @@ The repair page links **Print summary** and **Print label**; use the browser's P
 
 Direct P15 printing is off by default. An admin opens **Shop settings → Label printer**, chooses **P15** and sends a test label. It is available when the server finds the fixed `p15` executable on its PATH; the operator supplies and configures that CLI (paper size, printer). Admins and technicians then use **Send to P15** on the label page (sticker: repair number and customer name).
 
+On an inventory item's detail page, **Send to P15** prints its SKU and description using the P15 inventory layout. The button is shown to users who can change inventory when direct printing is enabled and the executable is available. Each submission is a single attempt; check the printer before requesting another label if the result is uncertain. Existing workspaces must be migrated before using this version.
+
 ```sh
 repairlib printer show --json
 repairlib printer set p15 --revision 1 --key enable-p15-001      # `none` disables

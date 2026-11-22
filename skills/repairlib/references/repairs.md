@@ -93,4 +93,7 @@ files in tests.
 | `repairs print-label ID --revision R --printer-revision P --key K` | sends one physical P15 label. Exit 7 unless acknowledged; same key and revisions return the stored receipt without printing again. |
 
 Printing is a physical side effect: get explicit permission for each label, use synthetic
-data, and never retry an uncertain print before checking the printer.
+data, and never retry an uncertain print before checking the printer. `available`
+only reports that the P15 executable was found, not printer connectivity. The P15
+label contains the repair number and customer name; the browser print preview has
+different content and layout.

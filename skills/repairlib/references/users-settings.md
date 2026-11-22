@@ -55,4 +55,21 @@ repairlib settings edit --workspace "$WS" --revision 1 --key settings-1 \
 Printing and the P15 configuration are physical operations: get explicit authorization,
 verify the printer before retrying, and never send test labels to a shop's printer
 unasked. The driver must be installed for the same user (on `PATH` or
-`/usr/local/bin/p15`).
+`/usr/local/bin/p15`). `available: true` only means that the executable was found
+on the server's absolute PATH; it does not prove that the printer is connected,
+has paper, or is configured for the correct label size. The server process and
+interactive shell may have different PATHs and P15 configuration.
+
+For an authorized physical test, use a disposable synthetic workspace, enable P15
+using the reviewed printer revision, then read `repairs label-options` and send
+one synthetic repair ticket with those exact revisions. Save the request key and
+receipt; replaying the identical request reads the receipt without printing.
+Never automatically send a fresh key after an uncertain or failed outcome.
+Inventory labels are sent from the inventory item's browser detail page when
+direct printing is enabled; they contain the SKU and description. The browser
+repair preview is not the P15 layout.
+
+The P15 CLI may use a daemon that owns the Bluetooth adapter, so `bluetoothctl`
+may not show a controller even when the printer works. Avoid scanning while its
+daemon is active. If directly using `p15`, put options such as `-dry-run` before
+`--`: everything after `--` is label content and can result in a real print.

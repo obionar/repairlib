@@ -225,6 +225,8 @@
   "Diagnosis EUR": "Διάγνωση EUR",
   "Direct label printing": "Απευθείας εκτύπωση ετικετών",
   "Direct label printing is disabled for this shop.": "Η απευθείας εκτύπωση ετικετών είναι απενεργοποιημένη για αυτό το κατάστημα.",
+  "Finding the program does not confirm that the printer is connected or ready.": "Η εύρεση του προγράμματος δεν επιβεβαιώνει ότι ο εκτυπωτής είναι συνδεδεμένος ή έτοιμος.",
+  "The P15 prints the repair number and customer name using its configured label size; the preview below is for browser printing.": "Ο P15 εκτυπώνει τον αριθμό επισκευής και το όνομα πελάτη στο ρυθμισμένο μέγεθος ετικέτας· η παρακάτω προεπισκόπηση αφορά την εκτύπωση από τον περιηγητή.",
   "Direction": "Κατεύθυνση",
   "Disabled": "Απενεργοποιημένος",
   "Discount": "Έκπτωση",

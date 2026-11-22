@@ -225,6 +225,8 @@
   "Diagnosis EUR": "Diagnosis EUR",
   "Direct label printing": "Direct label printing",
   "Direct label printing is disabled for this shop.": "Direct label printing is disabled for this shop.",
+  "Finding the program does not confirm that the printer is connected or ready.": "Finding the program does not confirm that the printer is connected or ready.",
+  "The P15 prints the repair number and customer name using its configured label size; the preview below is for browser printing.": "The P15 prints the repair number and customer name using its configured label size; the preview below is for browser printing.",
   "Direction": "Direction",
   "Disabled": "Disabled",
   "Discount": "Discount",
