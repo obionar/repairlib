@@ -4,7 +4,8 @@ import io
 import json
 import unittest
 
-from repairlib.adapters.mcp import repairlib_server
+from repairlib.adapters import mcp as mcp_adapter
+from repairlib.adapters.mcp import Server, repairlib_server
 
 
 def run(lines):
@@ -69,6 +70,39 @@ class ProtocolTests(unittest.TestCase):
         self.assertNotIn("uncertain", read["structuredContent"]["error"]["message"])
         self.assertIn("uncertain", write["structuredContent"]["error"]["message"])
         self.assertEqual(replies[2]["result"], {})
+
+    def test_a_non_string_method_keeps_the_request_id(self):
+        reply, = run([json.dumps({"jsonrpc": "2.0", "id": 7, "method": 5})])
+        self.assertEqual(reply["id"], 7)
+        self.assertEqual(reply["error"]["code"], -32600)
+
+    def test_an_unserializable_result_is_refused_and_the_session_continues(self):
+        original = mcp_adapter.local.list_customers
+
+        def broken(ctx, **kwargs):
+            return object()
+
+        broken.__annotations__ = original.__annotations__
+        mcp_adapter.local.list_customers = broken
+        try:
+            reply = repairlib_server(None).handle({
+                "jsonrpc": "2.0", "id": 1, "method": "tools/call",
+                "params": {"name": "list_customers", "arguments": {}}})
+        finally:
+            mcp_adapter.local.list_customers = original
+        self.assertTrue(reply["result"]["isError"])
+        self.assertEqual(reply["result"]["structuredContent"]["error"]["code"], "server_error")
+        self.assertNotIn("object", json.dumps(reply))
+
+    def test_a_call_tool_crash_still_answers_with_the_request_id(self):
+        def boom(name, arguments):
+            raise RuntimeError("boom")
+
+        reply = Server(boom, []).handle({"jsonrpc": "2.0", "id": 9, "method": "tools/call",
+                                         "params": {"name": "x", "arguments": {}}})
+        self.assertEqual(reply["id"], 9)
+        self.assertTrue(reply["result"]["isError"])
+        self.assertEqual(reply["result"]["structuredContent"]["error"]["code"], "server_error")
 
 
 if __name__ == "__main__":

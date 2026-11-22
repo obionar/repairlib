@@ -353,6 +353,8 @@ def repairlib_server(ctx: Local) -> "Server":
             return failure("validation", "Check the tool arguments against its input schema.")
         try:
             data = operation(ctx, **values.model_dump())
+            # Serialization is inside the guard: a bug here must not end the session.
+            return result(output.model_construct(result=data).model_dump(mode="json"))
         except local.ClientError as error:
             message = str(error)
             if not definition.annotations.read_only_hint and (
@@ -366,7 +368,6 @@ def repairlib_server(ctx: Local) -> "Server":
             if not definition.annotations.read_only_hint:
                 message += " The outcome may be uncertain. Retry with the original key and identical arguments."
             return failure("server_error", message)
-        return result(output.model_construct(result=data).model_dump(mode="json"))
 
     return Server(call_tool, [definition for definition, *_ in tools.values()])
 
@@ -384,7 +385,9 @@ class Server:
             return self.error(None, -32600, "Invalid request.")
         method, ident = message.get("method"), message.get("id")
         if ident is None or not isinstance(method, str):
-            return None if "id" not in message or method is None else self.error(None, -32600, "Invalid request.")
+            if "id" not in message or method is None:
+                return None  # a notification or a stray response
+            return self.error(ident, -32600, "Invalid request.")
         params = message.get("params") or {}
         if not isinstance(params, dict):
             return self.error(ident, -32602, "Invalid params.")
@@ -403,7 +406,12 @@ class Server:
             name = params.get("name")
             if not isinstance(name, str):
                 return self.error(ident, -32602, "Invalid params.")
-            return self.reply(ident, self.call_tool(name, params.get("arguments")))
+            try:
+                payload = self.call_tool(name, params.get("arguments"))
+            except Exception:
+                # Last line of defence: a bug must not end the stdio session.
+                payload = failure("server_error", "The tool failed unexpectedly.")
+            return self.reply(ident, payload)
         return self.error(ident, -32601, "Method not found.")
 
     @staticmethod

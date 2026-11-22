@@ -36,14 +36,9 @@
       {{ _('Repair #{id} created', id=repair.id) }} · <a href="{{ request.url_for('repair_label', repair_id=repair.id).path }}">{{ _('Print label') }}</a>
     </div></div>{% endif %}
 
-    <div class="obi-panel-body" id="device-details">
-      <h3 class="obi-subheading">{{ _('Device details') }}</h3>
-      <dl class="rl-ticket-facts rl-device-facts">
-        {% for label, value in [('Device type', repair.device_type), ('Brand', repair.brand), ('Model', repair.model), ('Serial', repair.serial), ('Display device', repair.display_device)] %}
-        <div><dt>{{ _(label) }}:</dt>{% if value %}<dd>{{ value }}</dd>{% else %}<dd class="obi-muted">—</dd>{% endif %}</div>
-        {% endfor %}
+    <div class="obi-panel-body">
+      <dl class="rl-ticket-facts">
         <div class="rl-ticket-text rl-ticket-issue"><dt>{{ _('Reported issue') }}:</dt><dd class="obi-pre">{{ repair.reported_issue or '—' }}</dd></div>
-        <div class="rl-ticket-text"><dt>{{ _('Intake notes') }}:</dt>{% if repair.notes %}<dd class="obi-pre">{{ repair.notes }}</dd>{% else %}<dd class="obi-muted">—</dd>{% endif %}</div>
       </dl>
     </div>
     <div class="obi-panel-body rl-ticket-controls" id="ticket-controls">
@@ -121,4 +116,15 @@
     {% elif notice_panel == 'status' %}
       {{ ui.toast(notice, 'info' if notice == 'Pickup state saved.' else 'success') }}
     {% endif %}
+    <div class="obi-panel-body" id="device-details">
+      <details class="obi-inline-details">
+        <summary class="obi-subheading">{{ _('Device details') }}</summary>
+        <dl class="rl-ticket-facts rl-device-facts">
+          {% for label, value in [('Device type', repair.device_type), ('Brand', repair.brand), ('Model', repair.model), ('Serial', repair.serial), ('Display device', repair.display_device)] %}
+          <div><dt>{{ _(label) }}:</dt>{% if value %}<dd>{{ value }}</dd>{% else %}<dd class="obi-muted">—</dd>{% endif %}</div>
+          {% endfor %}
+          <div class="rl-ticket-text"><dt>{{ _('Intake notes') }}:</dt>{% if repair.notes %}<dd class="obi-pre">{{ repair.notes }}</dd>{% else %}<dd class="obi-muted">—</dd>{% endif %}</div>
+        </dl>
+      </details>
+    </div>
 </section>
