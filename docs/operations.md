@@ -86,15 +86,18 @@ are done:
 
 ```sh
 demo="$(mktemp -d)/workspace"
-printf 'demo-owner-passphrase\n' | bin/repairlib setup --workspace "$demo" \
-  --shop "The Mythical Fix-It Emporium" --username owner --timezone Europe/Nicosia
+printf 'demo\n' | bin/repairlib setup --workspace "$demo" \
+  --shop "The Mythical Fix-It Emporium" --username demo --timezone Europe/Nicosia
 python3 scripts/seed_demo.py --workspace "$demo" --dataset scripts/demo-mythical.json
 bin/repairlib dev --workspace "$demo" --port 8010
 ```
 
-Open <http://127.0.0.1:8010> and sign in as `owner` with `demo-owner-passphrase`. The seed also
-creates the user `technician` with `demo-technician-passphrase`. Both passwords are public, so
-use them only for throwaway demos. Without `--dataset`, the script seeds the smaller, realistic
+Open <http://127.0.0.1:8010> and sign in as `demo` with the password `demo`. The seed also
+creates the user `technician` with `demo-technician-passphrase`. While the seeded workspace still
+accepts `demo`/`demo`, the sign-in form shows those credentials. Change that password and the
+note disappears. A workspace that was never demo-seeded never shows it. The passwords are
+public, so use them only for throwaway demos. To run the same demo in a container, see
+[Podman demo](deployment.md#try-the-demo-in-podman). Without `--dataset`, the script seeds the smaller, realistic
 presentation set (`scripts/demo-seed.json`). The seeder refuses a workspace that already has
 customers or repairs, and a running server.
 

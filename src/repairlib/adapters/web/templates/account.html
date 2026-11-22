@@ -40,6 +40,9 @@
       <input id="username" name="username" value="{{ fields.username }}" placeholder="{{ _('Admin username') if action == "setup" else _('Username') }}" autocomplete="username" maxlength="80" required>
       <label class="rl-sr-only" for="password">{{ _('Password') }}</label>
       <input id="password" name="password" type="password" placeholder="{{ _('Password') }}" maxlength="1024" autocomplete="{{ 'new-password' if action == 'setup' else 'current-password' }}" required{% if action == 'setup' %} aria-describedby="password-help"{% endif %}>
+      {% if action == 'login' and demo_login %}
+        <p class="obi-notice rl-demo-login" data-tone="info" role="note">{{ _('Demo instance. Sign in as {username} with the password {password}.', username=demo_login[0], password=demo_login[1]) }}</p>
+      {% endif %}
       {% if action == 'login' %}
         <label class="checkbox-label" for="session-only"><input id="session-only" name="session_only" type="checkbox" value="1"{% if session_only %} checked{% endif %}> {{ _('Sign in for this browser session only') }}</label>
       {% endif %}

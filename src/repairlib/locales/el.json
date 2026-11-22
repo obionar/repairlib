@@ -221,6 +221,7 @@
   "Delete work entry": "Διαγραφή καταχώρισης εργασίας",
   "Deleted": "Διαγράφηκε",
   "Deleted work entry": "Διαγράφηκε καταχώριση εργασίας",
+  "Demo instance. Sign in as {username} with the password {password}.": "Δοκιμαστική εγκατάσταση. Συνδεθείτε ως {username} με κωδικό {password}.",
   "Description": "Περιγραφή",
   "Detach": "Αποσύνδεση",
   "Detach file": "Αποσύνδεση αρχείου",

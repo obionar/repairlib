@@ -9,6 +9,7 @@ RUN apt-get update -qq && apt-get install -y -qq --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 COPY bin /app/bin
 COPY src /app/src
+COPY scripts/seed_demo.py scripts/demo-seed.json scripts/demo-mythical.json scripts/demo-container.sh /app/scripts/
 ENV REPAIRLIB_WORKSPACE=/data PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
 VOLUME /data
 WORKDIR /app

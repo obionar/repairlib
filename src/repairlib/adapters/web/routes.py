@@ -31,7 +31,7 @@ from repairlib.adapters.web.system import system_routes
 from repairlib.domain import settings as shop_settings
 from repairlib.domain.customers import CustomerError
 from repairlib.domain.dashboard import read_dashboard
-from repairlib.domain.sessions import SESSION_SECONDS, login, logout, principal_for_session
+from repairlib.domain.sessions import SESSION_SECONDS, demo_login, login, logout, principal_for_session
 from repairlib.domain.setup import initialize_workspace
 from repairlib.lifecycle.workspace import SETUP_STATES, WorkspaceError, workspace_status
 
@@ -175,6 +175,8 @@ def browser_routes(workspace: Path, bootstrap: Bootstrap | None, key: bytearray,
     router.include_router(system_routes(workspace, templates))
 
     def page(request, title, *, status=200, headers=None, **context):
+        if context.get("action") == "login":
+            context["demo_login"] = demo_login(workspace)
         return templates.TemplateResponse(
             request, "account.html", {"heading": title, **context}, status_code=status,
             headers=headers,

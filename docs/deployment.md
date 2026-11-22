@@ -158,6 +158,22 @@ sudo usermod --add-subuids 100000-165535 --add-subgids 100000-165535 "$USER"
 podman system migrate
 ```
 
+### Try the demo in Podman
+
+A throwaway instance with 20 made-up customers and 50 repairs at every stage. Sign in with user
+`demo` and password `demo`; the sign-in form shows them too. Nothing is written to the host, and
+removing the container deletes the demo.
+
+```sh
+cd "$HOME/repairlib"
+podman build -t localhost/repairlib .
+podman run -d --name repairlib-demo --network host --userns=keep-id -e PORT=8096 \
+  --entrypoint /app/scripts/demo-container.sh localhost/repairlib
+```
+
+Open <http://127.0.0.1:8096>. Stop and delete it with `podman rm -f repairlib-demo`. Never use
+this for real records. The credentials are public.
+
 ### Build and set up
 
 ```sh

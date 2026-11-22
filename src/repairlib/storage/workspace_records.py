@@ -92,3 +92,31 @@ def reset_demo_records(path: Path) -> None:
             """, (shop_id, DEMO_SEED_MARKER))
     except sqlite3.Error as error:
         raise WorkspaceDataError("Could not reset the synthetic demo database.") from error
+
+
+DEMO_MARKER_FILTER = """
+    FROM audit_events WHERE actor_kind = 'maintenance' AND actor_user_id IS NULL
+        AND operation = 'demo.seed' AND source = 'cli'
+"""
+
+
+def synthetic_demo(path: Path) -> bool:
+    """True once a synthetic demo seed was recorded; read errors count as not a demo."""
+    try:
+        with closing(connect(path, "ro")) as db:
+            return db.execute(f"SELECT 1 {DEMO_MARKER_FILTER} LIMIT 1").fetchone() is not None
+    except sqlite3.Error:
+        return False
+
+
+def record_demo_seed(path: Path, changes: str) -> None:
+    """Mark a workspace filled by scripts/seed_demo.py as a synthetic demo."""
+    try:
+        with closing(connect(path, "rw")) as db, db:
+            db.execute("BEGIN IMMEDIATE")
+            db.execute("""
+                INSERT INTO audit_events(shop_id, actor_kind, operation, source, changes)
+                VALUES (?, 'maintenance', 'demo.seed', 'cli', ?)
+            """, (local_shop(db), changes))
+    except sqlite3.Error as error:
+        raise WorkspaceDataError("Could not record the synthetic demo seed.") from error

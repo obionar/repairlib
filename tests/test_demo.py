@@ -74,6 +74,30 @@ class DemoTests(unittest.TestCase):
                 self.assertGreater(db.execute("SELECT count(*) FROM repairs WHERE picked_up_at IS NOT NULL "
                                               "AND payment_paid = 1").fetchone()[0], 0)
 
+    def test_login_page_offers_demo_credentials_only_while_they_work(self):
+        from repairlib.domain.setup import mark_synthetic_demo
+        from repairlib.domain.sessions import login as sign_in
+        with tempfile.TemporaryDirectory() as temporary:
+            workspace = Path(temporary) / "workspace"
+            setup = subprocess.run([*COMMAND, "setup", "--workspace", str(workspace), "--shop", "Demo",
+                                    "--timezone", "UTC", "--username", "demo"],
+                                   input="demo\n", text=True, capture_output=True, timeout=30, env=python_env())
+            self.assertEqual(setup.returncode, 0, setup.stderr)
+
+            def hint():
+                with TestClient(create_app(workspace=workspace), base_url="http://127.0.0.1") as client:
+                    return "Sign in as demo with the password demo." in client.get("/login").text
+
+            self.assertFalse(hint(), "a workspace without the demo seed marker never advertises a login")
+            mark_synthetic_demo(workspace, "test")
+            self.assertTrue(hint())
+            self.assertIsNotNone(sign_in(workspace, "demo", "demo", now=2_000_000_000))
+            changed = subprocess.run([*COMMAND, "passwd", "--username", "demo", "--workspace", str(workspace)],
+                                     input="a private passphrase\na private passphrase\n", text=True,
+                                     capture_output=True, timeout=30, env=python_env())
+            self.assertEqual(changed.returncode, 0, changed.stderr)
+            self.assertFalse(hint(), "a changed demo password is no longer shown")
+
     def test_demo_command_seeds_only_a_new_workspace_and_survives_restart(self):
         with tempfile.TemporaryDirectory() as temporary:
             workspace = Path(temporary) / "workspace with spaces"

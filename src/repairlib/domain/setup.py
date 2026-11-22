@@ -2,13 +2,16 @@
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from repairlib import i18n
 from repairlib.domain.passwords import hasher
 from repairlib.lifecycle.workspace import create_workspace
+from repairlib.paths import database_path
 from repairlib.storage.users import LOCAL_ACTORS
+from repairlib.storage.workspace_records import record_demo_seed
 
 
 def initialize_workspace(
@@ -39,3 +42,8 @@ def initialize_workspace(
 def initialize_demo_workspace(workspace: Path, *, username: str, password: str) -> None:
     initialize_workspace(workspace, shop="Synthetic Repair Shop", timezone="UTC",
                          username=username, password=password, demo=True)
+
+
+def mark_synthetic_demo(workspace: Path, dataset: str) -> None:
+    """Record that seed data filled this workspace; the login page then offers demo credentials."""
+    record_demo_seed(database_path(workspace), json.dumps({"synthetic": True, "dataset": dataset}))

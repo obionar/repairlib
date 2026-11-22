@@ -18,6 +18,7 @@ from repairlib.client import local
 from repairlib.contracts import (ChargeInput, CustomerInput, DiscountChange, ItemInput, PartConsumption,
                                  RepairFlagChange, RepairInput, StageChange, UserInput, WorkEntryInput)
 from repairlib.domain import charges, customers, inventory, repairs, stock, users
+from repairlib.domain.setup import mark_synthetic_demo
 from repairlib.lifecycle.workspace import WorkspaceError, database_path, maintenance_lock, workspace_status
 from repairlib.storage.workspace_records import workspace_counts
 
@@ -56,7 +57,7 @@ def milli(value) -> int:
         raise SystemExit(f"Not a quantity: {value!r}") from error
 
 
-def seed(workspace, dataset):
+def seed(workspace, dataset, dataset_name="demo-seed.json"):
     # A dataset is a customer list (stocked from CATALOG) or {"catalog": [...], "customers": [...]}.
     catalog = CATALOG
     if isinstance(dataset, dict):
@@ -65,12 +66,12 @@ def seed(workspace, dataset):
         raise SystemExit("Initialize the workspace with repairlib setup first.")
     try:
         with maintenance_lock(workspace, exclusive=True, create=False):
-            seed_stopped(workspace, dataset, catalog)
+            seed_stopped(workspace, dataset, catalog, dataset_name)
     except WorkspaceError as error:
         raise SystemExit(str(error)) from error
 
 
-def seed_stopped(workspace, dataset, catalog=CATALOG):
+def seed_stopped(workspace, dataset, catalog=CATALOG, dataset_name="demo-seed.json"):
     report = workspace_counts(database_path(workspace), stopped=True)
     if report["customers"] or report["repairs"]:
         raise SystemExit("Refusing to seed: use an initialized workspace with no customers or repairs.")
@@ -103,6 +104,7 @@ def seed_stopped(workspace, dataset, catalog=CATALOG):
     actual = result["customers"], result["repairs"]
     if actual != expected:
         raise SystemExit(f"Seed counts {actual} did not match expected {expected}.")
+    mark_synthetic_demo(workspace, dataset_name)
     print(f"Seeded {actual[0]} fictional customers, {actual[1]} repairs, {len(catalog)} catalog parts "
           f"and {charges_made} charges.")
 
@@ -180,4 +182,5 @@ if __name__ == "__main__":
     parser.add_argument("--workspace", type=Path, required=True)
     parser.add_argument("--dataset", type=Path, default=Path(__file__).with_name("demo-seed.json"))
     args = parser.parse_args()
-    seed(Path(args.workspace).expanduser().resolve(), json.loads(args.dataset.read_text(encoding="utf-8")))
+    seed(Path(args.workspace).expanduser().resolve(), json.loads(args.dataset.read_text(encoding="utf-8")),
+         args.dataset.name)
