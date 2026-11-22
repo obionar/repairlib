@@ -23,6 +23,22 @@ MINIMUM_PYTHON = (3, 13)
 REQUIRED_MODULES = ("fastapi", "jinja2", "uvicorn", "pydantic", "httpx", "argon2", "python_multipart")
 
 
+def host_gaps() -> bool:
+    """Run scripts/preflight.py's system check; on gaps print its report and fixes to stderr."""
+    from contextlib import redirect_stdout
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    try:
+        import preflight
+    except ImportError:  # an older staged tree without the checker: provision() still verifies
+        return False
+    rows, _ = preflight.survey("system")
+    if not any(status == "MISS" for status, _ in rows):
+        return False
+    with redirect_stdout(sys.stderr):
+        preflight.main(["--mode", "system"])
+    return True
+
+
 class InstallError(Exception):
     """The installer refused or could not finish provisioning."""
 
@@ -624,10 +640,11 @@ def main() -> int:
             parser.error("Reopening and managed handoff require a listener --port from 1 to 65535")
     elif args.port is not None:
         parser.error("--port requires reopening or managed handoff")
-    if sys.version_info < MINIMUM_PYTHON:
-        parser.exit(1, "install: the bootstrap requires Python 3.13 or newer.\n")
     if sys.platform != "linux" or os.geteuid() == 0:
         parser.exit(1, "install: requires unprivileged Linux.\n")
+    # Every requirement at once, with copy-paste fixes for this distribution.
+    if host_gaps() or sys.version_info < MINIMUM_PYTHON:
+        parser.exit(1, "install: this host is missing requirements; see the fixes above.\n")
     try:
         host_plan()
         script = Path(__file__).resolve()

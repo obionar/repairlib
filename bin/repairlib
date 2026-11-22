@@ -6,12 +6,28 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+# The .venv variant: a checkout .venv wins over the system Python, so `bin/repairlib` and
+# its ~/.local/bin link work the same way, and `service install` records the .venv Python.
+VENV = ROOT / ".venv"
+if (VENV / "bin" / "python").is_file() and Path(sys.prefix).resolve() != VENV.resolve() \
+        and not os.environ.get("REPAIRLIB_SYSTEM_PYTHON"):
+    os.execv(str(VENV / "bin" / "python"), [str(VENV / "bin" / "python"), *sys.argv])
+PREFLIGHT = f"python3 {ROOT / 'scripts' / 'preflight.py'}"
+if sys.version_info < (3, 13):
+    sys.exit(f"repairlib: needs Python 3.13 or newer; this is {sys.version.split()[0]}.\n"
+             f"Check this host and get copy-paste fixes: {PREFLIGHT}")
 sys.path.insert(0, str(ROOT / "src"))
 # A symlink resolves to this checkout, so the workspace stays with the clone.
 if not os.environ.get("REPAIRLIB_WORKSPACE"):
     os.environ["REPAIRLIB_WORKSPACE"] = str(ROOT / "data")
 
-from repairlib.__main__ import main  # noqa: E402
+try:
+    from repairlib.__main__ import main  # noqa: E402
+except ModuleNotFoundError as missing:
+    if not missing.name or missing.name.split(".")[0] == "repairlib":
+        raise
+    sys.exit(f"repairlib: the Python module {missing.name!r} is missing.\n"
+             f"Check this host and get copy-paste fixes: {PREFLIGHT}")
 
 if __name__ == "__main__":
     raise SystemExit(main(sys.argv[1:]))

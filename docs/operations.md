@@ -177,9 +177,9 @@ below does not manage stock-package deployments.
 
 From a local Git checkout containing the installer, use an unprivileged Linux account with Git. Choose an absolute, unused target outside the checkout; its parent must exist, belong to you and be protected from other writers.
 
-The installer uses only the distribution's `/usr/bin/python3` (3.13 or newer) and its Python packages, on `x86_64` or `aarch64` (Debian 13 and Alpine 3.24 included). It downloads nothing and creates no virtual environment. Install the packages listed in the [README](../README.md#requirements) first; the installer names any missing module and refuses to continue. Run it with that same `/usr/bin/python3`. Verification limits: [service lifecycle](#linux-service-lifecycle).
+The installer uses only the distribution's `/usr/bin/python3` (3.13 or newer) and its Python packages, on `x86_64` or `aarch64` (Debian 13 and Alpine 3.24 included). It downloads nothing and creates no virtual environment. It first runs the [host check](deployment.md) and, if anything is missing, prints the copy-paste fix for your distribution and refuses to continue. Run it with that same `/usr/bin/python3`. Verification limits: [service lifecycle](#linux-service-lifecycle).
 
-With a virtual environment instead, run the checkout directly: create the venv as the [README](../README.md#requirements) shows, install the dependency list there, and use `PYTHONPATH=src .venv/bin/python -m repairlib`. The installer below is stock-only and refuses a venv interpreter.
+With a virtual environment instead, run the checkout directly: follow the [.venv variant](deployment.md#2-venv-with-pip); `bin/repairlib` then uses `.venv/bin/python` automatically. The installer below is stock-only and refuses a venv interpreter.
 
 This installs into a disposable directory with a separate workspace:
 

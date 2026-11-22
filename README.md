@@ -8,7 +8,8 @@ Use disposable workspaces while evaluating the development build.
 
 ## Get started
 
-1. Install the source prerequisites below, or follow the [Linux installation guide](docs/operations.md).
+1. Check the host with `python3 scripts/preflight.py` and follow the [deployment guide](docs/deployment.md)
+   (system packages, `.venv` or Podman).
 2. [Initialize a disposable workspace](docs/operations.md#initialize-a-workspace-in-the-browser)
    and sign in. To start with three fictional customers, [seed an isolated demo](docs/operations.md#initialize-an-isolated-synthetic-demo).
 3. Use the [workshop guide](docs/workshop.md#daily-workflow) to run a repair from intake through pickup.
@@ -17,6 +18,7 @@ Use disposable workspaces while evaluating the development build.
 
 | Task | Guide |
 |---|---|
+| Prepare a host and choose system packages, `.venv` or a Podman container | [Deployment](docs/deployment.md) |
 | Install on Alpine/OpenRC or Linux/systemd, set up a workspace, rehearse updates | [Installation and operations](docs/operations.md) |
 | Run the workshop, manage staff and stock, print or attach files | [Workshop workflows](docs/workshop.md) |
 | Use the local CLI, set passwords, discover the versioned API or connect a stdio MCP host | [CLI, API and MCP](docs/integrations.md) |
@@ -27,42 +29,30 @@ Use disposable workspaces while evaluating the development build.
 
 ## Requirements
 
-RepairLib runs on the stock `python3` and the distribution's own Python packages.
-That is the tested setup: no `pip`, virtual environment or `uv`, Python 3.13 or
-newer, on Debian 13 (trixie) and Alpine 3.24.
+Linux on `x86_64` or `aarch64` with Python 3.13 or newer. There are three ways to deploy, all
+tested on Debian 13, Arch and Alpine 3.24:
+[system packages](docs/deployment.md#1-system-packages) (the default, no pip),
+[a `.venv` with pip](docs/deployment.md#2-venv-with-pip), or
+[a rootless Podman container](docs/deployment.md#3-podman-container).
+The [deployment guide](docs/deployment.md) covers each one, with first steps for a fresh machine.
+
+Check the host first. The check lists everything missing and prints copy-paste fix commands for
+your distribution:
 
 ```sh
-# Debian 13
-sudo apt install python3 python3-fastapi python3-jinja2 python3-uvicorn \
-  python3-pydantic python3-httpx python3-argon2 python3-python-multipart git
-# Alpine 3.24
-doas apk add python3 py3-fastapi py3-pydantic py3-jinja2 uvicorn py3-httpx \
-  py3-argon2-cffi py3-python-multipart git
+python3 scripts/preflight.py                # or --mode venv, --mode podman
 ```
-
-If your distribution does not ship these packages, or you prefer isolation, the
-same checkout runs from a virtual environment. Install the dependency list, not
-the project, and keep `PYTHONPATH=src`:
-
-```sh
-python3 -m venv .venv
-.venv/bin/pip install fastapi jinja2 uvicorn pydantic httpx argon2-cffi python-multipart
-PYTHONPATH=src .venv/bin/python -m repairlib --help
-```
-
-`scripts/install.py` remains stock-only and refuses any interpreter that is not
-the distribution's `/usr/bin/python3`.
 
 Run source commands from the checkout root with
 `PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python3 -m repairlib ...`.
 The MCP bridge is part of RepairLib itself (standard library only).
 
-For a Linux install outside the source checkout, see
+For a versioned install outside the source checkout, see
 [Linux install](docs/operations.md#linux-install).
 
 ## Quick start
 
-Install the [packages above](#requirements), then copy-paste these four lines. Change only the
+Once `python3 scripts/preflight.py` says `Ready`, copy-paste these four lines. Change only the
 shop name; the admin password is typed at the prompt and the timezone is read from this machine.
 
 ```sh

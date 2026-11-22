@@ -1,0 +1,9 @@
+# Never send shop records, backups, local environments or notes into an image build.
+data/
+data-backups/
+.venv/
+.notes/
+.git/
+tests/
+**/__pycache__/
+AGENTS.md
