@@ -15,7 +15,7 @@ from repairlib.adapters.web.security import (
     check_form, decode_form, form_int, form_token, require_runtime,
 )
 from repairlib.contracts import ItemInput
-from repairlib.domain import inventory, stock
+from repairlib.domain import inventory, printing, stock
 from repairlib.domain.customers import MAX_ID, CustomerError
 
 TEXT_FIELDS = tuple(inventory.FIELD_LIMITS)
@@ -132,6 +132,7 @@ def inventory_routes(workspace: Path, templates, key: bytearray) -> APIRouter:
             movements = stock.list_movements(workspace, actor, item_id, before=before)
             can_write = inventory.may_write(workspace, actor)
             target = stock.read_movement(workspace, actor, item_id, movement_id) if movement_id else None
+            driver, printer_revision = printing.inventory_label_printer(workspace, actor)
         except CustomerError as failed:
             return failure(request, failed)
         stale = error is not None and error.code == "stale_revision"
@@ -143,6 +144,8 @@ def inventory_routes(workspace: Path, templates, key: bytearray) -> APIRouter:
                       reverse_key=uuid4().hex if stale else (values or {}).get("key"),
                       keys={name: uuid4().hex for name in ("receive", "adjust", "reverse", "archive", "restore")},
                       csrf=form_token(request, key, f"inventory.item:{item_id}"),
+                      label_enabled=can_write and driver == "p15" and printing.p15_binary() is not None,
+                      printer_revision=printer_revision, label_key=uuid4().hex,
                       error=str(error) if error else "", stale=stale,
                       field_errors={("quantity" if name == "quantity_milli" else name): text
                                     for name, text in ((error.fields or {}) if error else {}).items()},
@@ -151,6 +154,22 @@ def inventory_routes(workspace: Path, templates, key: bytearray) -> APIRouter:
     @router.get("/{item_id}")
     def inventory_detail(request: Request, item_id: int, before: int | None = None):
         return detail_page(request, item_id, before=before)
+
+    @router.post("/{item_id}/label")
+    def inventory_label_send(request: Request, item_id: int,
+                             form: Annotated[dict[str, str], Depends(item_form)]):
+        check_form(request, form, key, f"inventory.item:{item_id}")
+        back = request.url_for("inventory_detail", item_id=item_id).path
+        try:
+            receipt = printing.print_p15(
+                workspace, access(request), item_id=item_id, item_revision=revision_of(form.get("revision", "")),
+                printer_revision=revision_of(form.get("printer_revision", "")), key=form.get("key", ""),
+            )
+        except CustomerError as error:
+            if error.status == 401:
+                return failure(request, error)
+            return render(request, "print_result.html", status=error.status, back=back, message=str(error))
+        return render(request, "print_result.html", back=back, receipt=receipt, message=receipt.message)
 
     def stock_submit(request, form, item_id, action, movement_id=None):
         actor = access(request)

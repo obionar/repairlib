@@ -1,8 +1,9 @@
 # Repairs, entries, charges, fees and attachments
 
-Every command takes `--workspace`; mutations take `--key` and the reviewed revision(s).
-Re-read the record after every write: stage, pickup, payment, archive and `fees` bump the
-repair revision; charges and entries have their own revisions.
+Pass `--workspace` and use `--key` plus reviewed revisions where required. Chain a fresh
+repair result from stage, pickup, payment, or archive. `fees --json` returns a charges
+summary, so use `repairs show` before another revisioned repair write. Charges and entries
+have their own revisions; receipt replays may contain old revisions.
 
 ## Repairs
 
@@ -107,4 +108,7 @@ Remote programs without shell access use the HTTP API:
 | `repairs print-label ID --revision R --printer-revision P --key K` | sends one physical P15 label. Exit 7 unless acknowledged; same key and revisions return the stored receipt without printing again. |
 
 Printing is a physical side effect: get explicit permission for each label, use synthetic
-data, and never retry an uncertain print before checking the printer.
+data, and never retry an uncertain print before checking the printer. `available`
+only reports that the P15 executable was found, not printer connectivity. The P15
+label contains the repair number and customer name; the browser print preview has
+different content and layout.

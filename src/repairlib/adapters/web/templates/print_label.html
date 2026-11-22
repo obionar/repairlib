@@ -9,6 +9,7 @@
 <body class="print-label-page">
   <p class="print-hint"><a href="{{ request.url_for('repair_detail', repair_id=view.repair.id).path }}">{{ _('Back to repair') }}</a> · {{ _('Print on a 62 × 29 mm label or plain paper.') }}</p>
   {% if view.label_options and view.label_options.enabled %}
+    <p class="print-hint">{{ _('The P15 prints the repair number and customer name using its configured label size; the preview below is for browser printing.') }}</p>
     {% if view.label_options.available %}
       <form class="print-hint" method="post" action="{{ request.url_for('repair_label_send', repair_id=view.repair.id).path }}">
         <input type="hidden" name="csrf" value="{{ print_csrf }}">

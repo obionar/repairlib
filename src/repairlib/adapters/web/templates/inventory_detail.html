@@ -48,6 +48,15 @@
     {% if can_write %}<dt>{{ _('Purchase cost') }}</dt><dd>{{ '—' if item.purchase_cost_cents is none else item.purchase_cost_cents|cents }} €</dd>{% endif %}
     <dt>{{ _('Selling price') }}</dt><dd>{{ item.selling_price_cents|cents }} €</dd>
   </dl>
+  {% if label_enabled %}
+    <form method="post" action="{{ request.url_for('inventory_label_send', item_id=item.id).path }}">
+      <input type="hidden" name="csrf" value="{{ csrf }}">
+      <input type="hidden" name="key" value="{{ label_key }}">
+      <input type="hidden" name="revision" value="{{ item.revision }}">
+      <input type="hidden" name="printer_revision" value="{{ printer_revision }}">
+      <button type="submit">{{ _('Send to P15') }}</button>
+    </form>
+  {% endif %}
   {% set active_stock = can_write and not item.archived_at %}
   {% if active_stock %}
     {% for action, heading in [('receive', _('Receive stock')), ('adjust', _('Adjust stock'))] %}

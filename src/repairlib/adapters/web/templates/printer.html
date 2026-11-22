@@ -3,6 +3,7 @@
 {% block content %}
   {% include '_settings_nav.html' %}
   <p>{{ _('P15 program found on the server.') if printer.available else _('P15 program unavailable on the server.') }}</p>
+  <p>{{ _('Finding the program does not confirm that the printer is connected or ready.') }}</p>
   <form method="post" action="{{ request.url_for('printer_save').path }}">
     <input type="hidden" name="csrf" value="{{ configure_csrf }}">
     <input type="hidden" name="key" value="{{ configure_key }}">

@@ -1,8 +1,14 @@
-"""The shipped agent skill must describe the real CLI: every command, every link, real examples."""
+"""The shipped agent skill covers the real CLI and runs its synthetic example."""
 
+import json
+import os
 import re
+from secrets import token_urlsafe
+import shutil
 import unittest
 from pathlib import Path
+from tempfile import TemporaryDirectory
+import subprocess
 
 from repairlib.adapters import mcp as mcp_adapter
 from repairlib.__main__ import build_parser
@@ -94,6 +100,22 @@ class SkillDocumentTests(unittest.TestCase):
     def test_the_skill_states_the_two_hard_refusals(self):
         self.assertIn("No direct SQL", self.text)
         self.assertIn("No service control", self.text)
+
+    @unittest.skipUnless(shutil.which("sh") and shutil.which("jq"), "shell example needs sh and jq")
+    def test_quick_workflow_uses_returned_ids_and_chained_revisions(self):
+        script, = code_blocks((REFERENCES / "quick-workflow.md").read_text(encoding="utf-8"))
+        with TemporaryDirectory() as temporary:
+            env = dict(os.environ, TMPDIR=temporary, DEMO_PASSWORD=token_urlsafe(24),
+                       PATH=f"{ROOT / 'bin'}{os.pathsep}{os.environ['PATH']}")
+            env.pop("REPAIRLIB_BASE_URL", None)
+            result = subprocess.run(["sh", "-c", script], cwd=temporary, env=env,
+                                    capture_output=True, text=True, timeout=90)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        record = json.loads(result.stdout)
+        self.assertGreater(record["customer_id"], 3)
+        self.assertEqual(record["stage"], "repaired")
+        self.assertTrue(record["payment_paid"])
+        self.assertIsNotNone(record["picked_up_at"])
 
 
 if __name__ == "__main__":

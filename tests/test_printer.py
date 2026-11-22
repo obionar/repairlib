@@ -58,6 +58,25 @@ class PrinterTests(TokenFixture, TestCase):
         return client.request(method, path, json=body,
                               headers={**auth, "Idempotency-Key": key or uuid4().hex})
 
+    def test_inventory_label_single_attempt_and_revision(self):
+        from test_tokens import hidden
+
+        with self.client() as client:
+            _, auth = self.admin_auth(client)
+            self.write(client, auth, SETTINGS, {"driver": "p15", "revision": 1}, method="PATCH")
+            item = self.write(client, auth, "/api/v1/inventory",
+                              {"sku": "--part", "description": "Synthetic component",
+                               "selling_price_cents": 0}).json()
+            page = client.get(f"/inventory/{item['id']}")
+            self.assertIn("Send to P15", page.text)
+            form = {name: hidden(page, name) for name in ("csrf", "key", "revision", "printer_revision")}
+            path = f"/inventory/{item['id']}/label"
+            self.assertEqual(client.post(path, data={**form, "csrf": "bad"}).status_code, 403)
+            self.assertEqual(client.post(path, data={**form, "revision": "9"}).status_code, 409)
+            self.assertEqual(client.post(path, data=form).status_code, 200)
+            self.assertEqual(client.post(path, data=form).status_code, 200)
+            self.assertEqual(self.calls(), [["inv", "-n", "1", "--", "--part", "Synthetic component"]])
+
     def test_settings_and_label_guards_replay_and_uncertainty(self):
         with self.client() as client, self.client() as viewer:
             _, auth = self.admin_auth(client)

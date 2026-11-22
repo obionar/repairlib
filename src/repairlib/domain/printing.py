@@ -11,6 +11,7 @@ from repairlib.contracts import (
     WorkEntry,
 )
 from repairlib.domain.charges import build_summary
+from repairlib.domain import inventory
 from repairlib.domain.customers import FIELD_LIMITS, MAX_ID, authorized
 from repairlib.domain.replay import replay as replay_receipt
 from repairlib.domain.users import authorized as admin_authorized, validate_key
@@ -79,6 +80,12 @@ def read_printer(workspace: Path, access: RepairAccess) -> PrinterSettings:
     return PrinterSettings(driver, revision, p15_binary() is not None)
 
 
+def inventory_label_printer(workspace: Path, access: RepairAccess) -> tuple[str, int]:
+    """Printer driver and revision for an inventory label; any inventory reader may see them."""
+    with inventory.authorized(workspace, access, resource="inventory") as (db, principal, _, _):
+        return printer.configuration(db, principal.shop_id)
+
+
 def read_label_options(workspace: Path, access: RepairAccess, repair_id: int) -> LabelOptions:
     with authorized(workspace, access) as (db, principal, _, can_write):
         repair = find_repair(db, principal.shop_id, repair_id)
@@ -129,33 +136,48 @@ def configure_printer(workspace: Path, access: RepairAccess, change: PrinterChan
 
 
 def print_p15(workspace: Path, access: RepairAccess, *, printer_revision: int, key: str,
-              repair_id: int | None = None, repair_revision: int | None = None) -> PrintReceipt:
+              repair_id: int | None = None, repair_revision: int | None = None,
+              item_id: int | None = None, item_revision: int | None = None) -> PrintReceipt:
     validate_key(key)
     reviewed_revision(printer_revision)
-    operation = "printer.test" if repair_id is None else "printer.label"
-    with authorized(workspace, access, write=True) as (db, principal, token_label, _):
+    if item_id is not None and repair_id is not None:
+        raise RepairError(422, "validation", "Choose one label.")
+    operation = "printer.inventory_label" if item_id is not None else (
+        "printer.test" if repair_id is None else "printer.label")
+    with authorized(workspace, access, write=True, **({"resource": "inventory"} if item_id is not None else {})) as (db, principal, token_label, _):
         shop_id = principal.shop_id
         repair = None
-        if repair_id is None:
+        item = None
+        if item_id is not None:
+            item = inventory.find_item(db, shop_id, item_id)
+            reviewed_revision(item_revision)
+        elif repair_id is None:
             if principal.role != "admin":
                 raise RepairError(403, "forbidden", "Only an administrator can print a test label.")
         else:
             repair = find_repair(db, shop_id, repair_id)
             reviewed_revision(repair_revision)
-        fingerprint, previous = replay(db, principal, operation, key, {
+        payload = {
             "repair_id": repair_id, "repair_revision": repair_revision, "printer_revision": printer_revision,
-        })
+        }
+        if item_id is not None:
+            payload.update(item_id=item_id, item_revision=item_revision)
+        fingerprint, previous = replay(db, principal, operation, key, payload)
         if previous is not None:
             return PrintReceipt(**previous)
         driver, revision = printer.configuration(db, shop_id)
-        if printer_revision != revision or (repair is not None and repair_revision != repair.revision):
+        if (printer_revision != revision or (repair is not None and repair_revision != repair.revision)
+                or (item is not None and item_revision != item.revision)):
             raise RepairError(409, "stale_revision", "The printer configuration or repair changed. Review it again.")
         if driver != "p15":
             raise RepairError(409, "printer_disabled", "Direct label printing is disabled for this shop.")
         binary = p15_binary()
         if binary is None:
             raise RepairError(503, "printer_unavailable", "The P15 program is unavailable on the server.")
-        if repair is None:
+        if item is not None:
+            args = [binary, "inv", "-n", "1", "--", item.sku, item.description]
+            entity_type, entity_id = "inventory_item", item.id
+        elif repair is None:
             args = [binary, "text", "-n", "1", "--", "RepairLib test"]
             entity_type, entity_id = "shop_settings", shop_id
         else:

@@ -13,6 +13,7 @@ GET	/inventory	inventory_list
 GET	/inventory/new	inventory_new
 POST	/inventory/new	inventory_create
 GET	/inventory/{item_id}	inventory_detail
+POST	/inventory/{item_id}/label	inventory_label_send
 POST	/inventory/{item_id}/receive	inventory_receive
 POST	/inventory/{item_id}/adjust	inventory_adjust
 POST	/inventory/{item_id}/movements/{movement_id}/reverse	inventory_reverse
