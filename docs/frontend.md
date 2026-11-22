@@ -50,9 +50,8 @@ adapters/web/
   current status itself, keeps the full list in workflow order, and disables
   unavailable transitions. Repair, pickup and payment share one Update status
   button. Pickup and payment stay visible but disabled until the ticket is
-  finished. Once finished, a Hand over button marks the repair paid and picked
-  up in one step and disappears when both are recorded; the dropdowns stay for
-  corrections. Payment records a status, not an amount. Print sits after Edit
+  finished. A repair that is picked up and paid shows a Finished badge in the
+  ticket title and the repair list. Payment records a status, not an amount. Print sits after Edit
   details. Parts used comes first in the markup so phones reach the quick-add
   form before the log; on wide screens the two panels sit in equal columns with
   Work log on the left. Print label sits beside Print in the header. Files keeps
