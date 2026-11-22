@@ -44,5 +44,5 @@
       </form>
     </section>
   {% endfor %}
-  <p class="account-link"><a href="{{ request.url_for('repair_detail', repair_id=repair_id).path }}#payment-total">{{ _('Back to repair') }}</a></p>
+  <p class="account-link"><a href="{{ request.url_for('repair_detail', repair_id=repair_id).path }}">{{ _('Back to repair') }}</a></p>
 {% endblock %}

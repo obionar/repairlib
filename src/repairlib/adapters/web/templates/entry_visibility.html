@@ -14,5 +14,5 @@
     <textarea id="reason" name="reason" maxlength="1000" required>{{ reason }}</textarea>
     <button type="submit">{{ _('Restore work entry') if target == '0' else _('Delete work entry') }}</button>
   </form>
-  <p class="account-link"><a href="{{ request.url_for('repair_detail', repair_id=repair_id).path }}#log">{{ _('Back to repair') }}</a></p>
+  <p class="account-link"><a href="{{ request.url_for('repair_detail', repair_id=repair_id).path }}">{{ _('Back to repair') }}</a></p>
 {% endblock %}

@@ -10,24 +10,29 @@
     </span>
   </header>
     <div class="obi-panel-body rl-ticket-overview">
-      <div class="rl-device-photo" id="device-photo">
+      {% set can_photo = can_write and not repair.archived_at %}
+      {% set camera %}<svg class="rl-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>{% endset %}
+      <div class="rl-device-photo{% if photo_id %} rl-has-photo{% endif %}" id="device-photo">
         {% if photo_id %}
         {% set photo_src = request.url_for('attachment_content', repair_id=repair.id, attachment_id=photo_id).path ~ '?inline=1' %}
         <a href="#device-photo-zoom" class="rl-photo-frame"><img src="{{ photo_src }}" alt="{{ _('Device photo') }}"></a>
-        <a href="#device-photo" class="rl-zoom" id="device-photo-zoom" aria-label="{{ _('Close') }}"><img src="{{ photo_src }}" alt="{{ _('Device photo') }}" loading="lazy"></a>
+        <a href="#close" class="rl-zoom" id="device-photo-zoom" aria-label="{{ _('Close') }}"><img src="{{ photo_src }}" alt="{{ _('Device photo') }}" loading="lazy"></a>
+        {% elif can_photo %}
+        <label for="device-photo-file" class="rl-photo-frame rl-photo-empty">{{ camera }}<span>{{ _('Add device photo') }}</span></label>
         {% else %}
         <span class="rl-photo-frame rl-photo-empty">{{ _('No device photo') }}</span>
         {% endif %}
-        {% if can_write and not repair.archived_at %}
+        {% if can_photo %}
+        {# The picker lives in the frame: choosing a file uploads it (JS), or reveals the upload button (no JS). #}
         <form method="post" action="{{ request.url_for('repair_photo', repair_id=repair.id).path }}" enctype="multipart/form-data" class="rl-photo-form">
           <input type="hidden" name="csrf" value="{{ attachment_csrf }}">
           <input type="hidden" name="key" value="{{ photo_key }}">
-          <label for="device-photo-file">{{ _('Device photo') }}</label>
-          <input type="file" id="device-photo-file" name="file" accept="image/*" required{% if photo_error %} aria-invalid="true" aria-describedby="device-photo-error"{% endif %}>
-          {% if photo_error %}<span class="obi-error" id="device-photo-error">{{ _(photo_error) }}</span>{% endif %}
-          {{ ui.button('Upload') }}
+          {% if photo_id %}<label for="device-photo-file" class="rl-photo-change" title="{{ _('Change device photo') }}">{{ camera }}<span class="rl-sr-only">{{ _('Change device photo') }}</span></label>{% endif %}
+          <input type="file" id="device-photo-file" name="file" accept="image/*" required data-autosubmit class="rl-photo-input"{% if photo_error %} aria-invalid="true" aria-describedby="device-photo-error"{% endif %}>
+          <button type="submit" class="obi-button rl-photo-upload">{{ _('Upload') }}</button>
         </form>
         {% endif %}
+        {% if photo_error %}<span class="obi-error" id="device-photo-error">{{ _(photo_error) }}</span>{% endif %}
       </div>
       <dl class="rl-ticket-facts rl-device-facts" id="device-details">
         <div><dt>{{ _('Customer') }}:</dt><dd>{% if repair.customer_id and names.customer %}<a href="{{ request.url_for('customer_detail', customer_id=repair.customer_id).path }}">{{ names.customer }}</a>{% else %}<span class="obi-muted">{{ _('No customer linked') }}</span>{% endif %}</dd></div>
@@ -114,7 +119,7 @@
               {% if stage_conflict.draft_stage %}<dt>{{ _('Proposed status') }}</dt><dd>{{ stage_label(stage_conflict.draft_stage) }}</dd>{% endif %}
               {% if stage_conflict.draft_reason %}<dt>{{ _('Reason') }}</dt><dd>{{ stage_conflict.draft_reason }}</dd>{% endif %}
             </dl>
-            <p><a href="{{ request.url_for('repair_detail', repair_id=repair.id).path }}#status">{{ _('Back to repair') }}</a></p>
+            <p><a href="{{ request.url_for('repair_detail', repair_id=repair.id).path }}">{{ _('Back to repair') }}</a></p>
           </div>
     {% elif stage_matches %}
       {{ ui.toast('The repair already has that status.', 'info') }}

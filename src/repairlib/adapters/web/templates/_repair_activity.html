@@ -33,8 +33,8 @@
   {% endif %}
   {% if activity_newest or activity_older %}
     <nav class="obi-pager" aria-label="{{ _('Activity pages') }}">
-      {% if activity_newest %}<a href="{{ activity_newest }}#activity">{{ _('Newest activity') }}</a>{% endif %}
-      {% if activity_older %}<a href="{{ activity_older }}#activity">{{ _('Older activity') }}</a>{% endif %}
+      {% if activity_newest %}<a href="{{ activity_newest }}">{{ _('Newest activity') }}</a>{% endif %}
+      {% if activity_older %}<a href="{{ activity_older }}">{{ _('Older activity') }}</a>{% endif %}
     </nav>
   {% endif %}
 </div>

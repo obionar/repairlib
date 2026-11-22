@@ -285,7 +285,7 @@ class ConsumptionAdapterTests(TokenFixture, unittest.TestCase):
             self.assertEqual([rows(self, table) for table in tables], before)
             saved = client.post(form_url, data=form)
             self.assertEqual(saved.status_code, 303)
-            self.assertTrue(saved.headers["location"].endswith("#log"))
+            self.assertNotIn("#", saved.headers["location"])
             self.assertEqual(client.post(form_url, data=form).status_code, 303)
             ticket = client.get(f"/repairs/{repair_id}").text
             self.assertEqual(sum(form["work_note"] in body for (body,) in self.snapshot(

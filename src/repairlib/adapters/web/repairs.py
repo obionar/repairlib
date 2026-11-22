@@ -64,10 +64,11 @@ def cursor_value(form: dict[str, str], name: str) -> int | None:
     return value if 0 <= value < 1 << 63 else None
 
 
-def back(request, repair_id: int, anchor: str, form: dict[str, str], *, saved: str) -> RedirectResponse:
+def back(request, repair_id: int, form: dict[str, str], *, saved: str) -> RedirectResponse:
+    # No fragment: the ticket keeps its scroll position (ticket-scroll.js) instead of jumping to a panel.
     query = "&".join(part for part in (f"saved={saved}", cursor_query(form)) if part)
     location = request.url_for("repair_detail", repair_id=repair_id).path
-    return RedirectResponse(f"{location}?{query}#{anchor}", status_code=303)
+    return RedirectResponse(f"{location}?{query}", status_code=303)
 
 
 async def stage_form(request: Request):
@@ -210,8 +211,7 @@ def repair_routes(workspace: Path, templates, key: bytearray) -> APIRouter:
             if error.status in (409, 422):
                 return part_page(request, repair_id, item_id, before=before, q=q, form=form, error=error)
             return failure(request, error)
-        return RedirectResponse(request.url_for("repair_detail", repair_id=repair_id).path + "#log",
-                                status_code=303)
+        return RedirectResponse(request.url_for("repair_detail", repair_id=repair_id).path, status_code=303)
 
     def draft(request, *, fields=None, request_key=None, error=None, repair_id=None, revision=None,
               customer_receipt="", history_serial=None):
@@ -546,10 +546,8 @@ def repair_routes(workspace: Path, templates, key: bytearray) -> APIRouter:
                 return detail_page(request, repair_id, status=error.status,
                                    flag_error=error, flag_operation=flag)
             return failure(request, error)
-        anchor = "#pickup" if flag == "pickup" else "#status"
-        query = f"saved={flag}"
         return RedirectResponse(request.url_for("repair_detail", repair_id=repair_id).path
-                                + f"?{query}{anchor}", status_code=303)
+                                + f"?saved={flag}", status_code=303)
 
     @router.post("/{repair_id}/pickup")
     def repair_pickup(request: Request, repair_id: int,
@@ -609,7 +607,7 @@ def repair_routes(workspace: Path, templates, key: bytearray) -> APIRouter:
                     request, repair_id, status=error.status, attachment_key=request_key,
                     **{error_name: error}))
             return failure(request, error)
-        return back(request, repair_id, "status" if role else "files", fields, saved="attachment")
+        return back(request, repair_id, fields, saved="attachment")
 
     @router.get("/{repair_id}/attachments/{attachment_id}/content")
     def attachment_content(request: Request, repair_id: int, attachment_id: int, inline: bool = False):
@@ -633,7 +631,7 @@ def repair_routes(workspace: Path, templates, key: bytearray) -> APIRouter:
                                    metadata_draft={**form, "attachment_id": attachment_id,
                                                    "action": action, "error": error})
             return failure(request, error)
-        return back(request, repair_id, f"attachment-{attachment_id}", form, saved="attachment")
+        return back(request, repair_id, form, saved="attachment")
 
     @router.post("/{repair_id}/attachments/{attachment_id}/caption")
     def attachment_caption(request: Request, repair_id: int, attachment_id: int,
@@ -669,7 +667,7 @@ def repair_routes(workspace: Path, templates, key: bytearray) -> APIRouter:
             if error.status in (422, 409):
                 return detail_page(request, repair_id, status=error.status, attachment_error=error)
             return failure(request, error)
-        return back(request, repair_id, "files", form, saved="attachment")
+        return back(request, repair_id, form, saved="attachment")
 
     @router.post("/{repair_id}/attachments/{attachment_id}/purge")
     def attachment_purge(request: Request, repair_id: int, attachment_id: int,
@@ -685,7 +683,7 @@ def repair_routes(workspace: Path, templates, key: bytearray) -> APIRouter:
             if error.status in (422, 409):
                 return detail_page(request, repair_id, status=error.status, attachment_error=error)
             return failure(request, error)
-        return back(request, repair_id, "files", form, saved="attachment")
+        return back(request, repair_id, form, saved="attachment")
 
     @router.get("/{repair_id}/print")
     def repair_print(request: Request, repair_id: int):
@@ -811,7 +809,7 @@ def repair_routes(workspace: Path, templates, key: bytearray) -> APIRouter:
                     request, repair_id, status=error.status, entry_error=error, entry_fields=fields,
                     log_before=cursor_value(form, "log_before")))
             return failure(request, error)
-        return back(request, repair_id, "log", form, saved="entry")
+        return back(request, repair_id, form, saved="entry")
 
     def save_entry(request: Request, repair_id: int, form: dict[str, str]):
         credential = access(request).credential
@@ -827,7 +825,7 @@ def repair_routes(workspace: Path, templates, key: bytearray) -> APIRouter:
                 return detail_page(request, repair_id, status=error.status, entry_error=error,
                                    entry_fields=fields, log_before=cursor_value(form, "log_before"))
             return failure(request, error)
-        return back(request, repair_id, "log", form, saved="entry")
+        return back(request, repair_id, form, saved="entry")
 
     @router.get("/{repair_id}/entries/{entry_id}/edit")
     def entry_edit(request: Request, repair_id: int, entry_id: int):
@@ -864,7 +862,7 @@ def repair_routes(workspace: Path, templates, key: bytearray) -> APIRouter:
                               field_errors=error.fields or {}, kinds=sorted(repairs.ENTRY_KINDS),
                               csrf=csrf_token(key, purpose, credential))
             return failure(request, error)
-        return back(request, repair_id, "log", form, saved="entry_corrected")
+        return back(request, repair_id, form, saved="entry_corrected")
 
     @router.get("/{repair_id}/entries/{entry_id}/history")
     def entry_history(request: Request, repair_id: int, entry_id: int):
@@ -918,6 +916,6 @@ def repair_routes(workspace: Path, templates, key: bytearray) -> APIRouter:
                               conflict=error.status == 409,
                               csrf=csrf_token(key, purpose, credential))
             return failure(request, error)
-        return back(request, repair_id, "log", form, saved="entry_visibility")
+        return back(request, repair_id, form, saved="entry_visibility")
 
     return router

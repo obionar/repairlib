@@ -75,7 +75,10 @@ adapters/web/
 - Keep permission, CSRF, revision, idempotency-key and error markup exactly as the
   handlers expect. Styling never changes names, ids or routes.
 - Core forms work without JavaScript. The ticket's optional `ticket-scroll.js`
-  restores scroll after native status or quick-part submission without an anchor jump. If
+  keeps the scroll position after any form or pager on the ticket; ticket redirects and
+  back links carry no `#panel` fragment, so without JavaScript the page reloads at the top.
+  It also submits the device photo as soon as a file is chosen; without it, an Upload button
+  appears inside the photo frame once a file is picked. If
   editing the script, update both its template integrity hash and the CSP hash
   in `app.py`. No external fonts, icon packs or CSS frameworks.
 

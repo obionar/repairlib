@@ -54,5 +54,5 @@
       <button type="submit">{{ _('Restore charge') if charge.deleted else _('Remove charge') }}</button>
     </form>
   {% endif %}
-  <p class="account-link"><a href="{{ request.url_for('repair_detail', repair_id=repair_id).path }}#payment-total">{{ _('Back to repair') }}</a></p>
+  <p class="account-link"><a href="{{ request.url_for('repair_detail', repair_id=repair_id).path }}">{{ _('Back to repair') }}</a></p>
 {% endblock %}

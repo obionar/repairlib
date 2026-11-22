@@ -103,7 +103,7 @@ def charge_routes(workspace: Path, templates, key: bytearray) -> APIRouter:
                             error=error, status=error.status)
             return failure(request, error)
         return RedirectResponse(request.url_for("repair_detail", repair_id=repair_id).path
-                                + "?saved=charge#parts", status_code=303)
+                                + "?saved=charge", status_code=303)
 
     @router.get("/{charge_id}/edit")
     def charge_edit(request: Request, repair_id: int, charge_id: int):
@@ -140,7 +140,7 @@ def charge_routes(workspace: Path, templates, key: bytearray) -> APIRouter:
                             request_key=request_key, error=error, status=error.status)
             return failure(request, error)
         return RedirectResponse(request.url_for("repair_detail", repair_id=repair_id).path
-                                + "?saved=charge#parts", status_code=303)
+                                + "?saved=charge", status_code=303)
 
     @router.post("/{charge_id}/visibility")
     def charge_visibility(request: Request, repair_id: int, charge_id: int,
@@ -165,7 +165,7 @@ def charge_routes(workspace: Path, templates, key: bytearray) -> APIRouter:
                             visibility_key=form.get("key", ""))
             return failure(request, error)
         return RedirectResponse(request.url_for("repair_detail", repair_id=repair_id).path
-                                + "?saved=charge#parts", status_code=303)
+                                + "?saved=charge", status_code=303)
 
     def return_page(request, repair_id, charge_id, review, *, error=None, attempted=None, form=None):
         forms = {}
@@ -222,8 +222,7 @@ def charge_routes(workspace: Path, templates, key: bytearray) -> APIRouter:
                     return failure(request, missing)
                 return return_page(request, repair_id, charge_id, review, error=error, attempted=action, form=form)
             return failure(request, error)
-        return RedirectResponse(request.url_for("repair_detail", repair_id=repair_id).path + "#parts",
-                                status_code=303)
+        return RedirectResponse(request.url_for("repair_detail", repair_id=repair_id).path, status_code=303)
 
     @router.post("/{charge_id}/return-part")
     def return_part_submit(request: Request, repair_id: int, charge_id: int,

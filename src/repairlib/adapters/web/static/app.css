@@ -1372,17 +1372,38 @@ summary.obi-panel-bar:focus-visible { outline-color: var(--rl-surface); outline-
   font: inherit;
 }
 
-/* Ticket record: device photo, then the device facts; the reported issue and intake notes span below. */
-.rl-ticket-overview { display: grid; gap: 1rem 2rem; }
-@media (min-width: 48rem) { .rl-ticket-overview { grid-template-columns: 13rem minmax(0, 1fr); } }
-.rl-ticket-overview dl.rl-ticket-story { grid-column: 1 / -1; grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); }
-.rl-device-photo { display: grid; gap: .5rem; align-content: start; max-inline-size: 13rem; }
-.rl-photo-frame { display: grid; place-items: center; aspect-ratio: 4 / 3; overflow: hidden; border: 1px solid var(--rl-frame); border-radius: .5rem; background: var(--rl-canvas); }
+/* Ticket record: photo | device facts | reported issue and notes on wide screens; the
+   issue and notes drop below on medium screens; everything stacks on phones. */
+.rl-ticket-overview { display: grid; gap: 1rem 1.75rem; align-items: start; }
+@media (min-width: 40rem) {
+  .rl-ticket-overview { grid-template-columns: 11rem minmax(0, 1fr); }
+  .rl-ticket-overview dl.rl-ticket-story { grid-column: 1 / -1; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (min-width: 72rem) {
+  .rl-ticket-overview { grid-template-columns: 12rem minmax(14rem, 1fr) minmax(18rem, 1.3fr); }
+  .rl-ticket-overview dl.rl-ticket-story { grid-column: auto; grid-template-columns: minmax(0, 1fr); }
+}
+.rl-device-photo { position: relative; display: grid; gap: .375rem; align-content: start; }
+.rl-photo-frame { display: grid; place-items: center; aspect-ratio: 16 / 9; max-block-size: 12rem; overflow: hidden;
+  border: 1px solid var(--rl-frame); border-radius: .5rem; background: var(--rl-canvas); }
+@media (min-width: 40rem) { .rl-photo-frame { aspect-ratio: 4 / 3; } }
 .rl-photo-frame img { inline-size: 100%; block-size: 100%; object-fit: cover; }
-.rl-photo-empty { border-style: dashed; color: var(--rl-muted); font-size: .875rem; text-align: center; padding: .5rem; }
-.rl-photo-form { display: grid; gap: .375rem; font-size: .875rem; }
-.rl-photo-form input[type="file"] { inline-size: 100%; font-size: .8125rem; }
-.rl-photo-form button { min-height: 2.25rem; margin: 0; }
+.rl-photo-empty { align-content: center; gap: .25rem; padding: .5rem; border: 2px dashed var(--rl-frame);
+  color: var(--rl-muted); font-size: .875rem; text-align: center; }
+label.rl-photo-empty { cursor: pointer; }
+.rl-photo-empty .rl-icon { inline-size: 2rem; block-size: 2rem; }
+label.rl-photo-empty:hover { border-color: var(--rl-ink); color: var(--rl-ink); }
+/* The file input stays focusable for keyboards; its focus ring is drawn on the frame. */
+.rl-photo-input { position: absolute; inline-size: 1px; block-size: 1px; overflow: hidden; clip-path: inset(50%); }
+.rl-device-photo:has(.rl-photo-input:focus-visible) .rl-photo-frame { outline: 3px solid var(--rl-focus); outline-offset: 2px; }
+.rl-photo-form { position: absolute; inset-block-start: .375rem; inset-inline-end: .375rem; display: flex; gap: .375rem; margin: 0; }
+.rl-photo-change { display: grid; place-items: center; inline-size: 2.25rem; block-size: 2.25rem; border-radius: 50%;
+  background: rgb(0 0 0 / .6); color: #fff; cursor: pointer; }
+.rl-photo-change .rl-icon { inline-size: 1.25rem; block-size: 1.25rem; }
+.rl-photo-change:hover { background: rgb(0 0 0 / .8); }
+.rl-ui .rl-photo-upload { min-height: 2.25rem; margin: 0; padding-block: 0; font-size: .875rem; }
+/* No file chosen yet: nothing to upload. With JavaScript the choice submits by itself. */
+.rl-photo-form:has(.rl-photo-input:invalid) .rl-photo-upload { display: none; }
 /* Click a picture to zoom; the overlay is a link back, so this works without JavaScript. */
 .rl-zoom { display: none; }
 .rl-zoom:target { position: fixed; inset: 0; z-index: 50; display: grid; place-items: center; padding: 1rem; background: rgb(0 0 0 / .85); cursor: zoom-out; }

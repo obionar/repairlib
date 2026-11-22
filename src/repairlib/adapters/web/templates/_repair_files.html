@@ -9,7 +9,7 @@
           {% if metadata_draft %}
             {% for message in (metadata_draft.error.fields or {}).values() %}<p>{{ _(message) }}</p>{% endfor %}
             {% if metadata_draft.error.status == 409 %}
-              <p><a href="{{ request.url_for('repair_detail', repair_id=repair.id).path }}#files">{{ _('Review current files') }}</a></p>
+              <p><a href="{{ request.url_for('repair_detail', repair_id=repair.id).path }}">{{ _('Review current files') }}</a></p>
             {% endif %}
           {% endif %}
         </div>

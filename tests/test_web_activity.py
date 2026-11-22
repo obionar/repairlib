@@ -150,10 +150,10 @@ class WebActivityTests(TokenFixture, unittest.TestCase):
             self.assertIn('href="/customers/1"', panel(repair, "status"))
             self.assertIn("Created repair", panel(repair, "activity-heading"))
             first_activity = panel(client.get("/repairs/1?log_before=18"), "activity-heading")
-            older_link = re.search(r'href="(/repairs/1\?log_before=18&amp;activity_before=\d+#activity)"',
+            older_link = re.search(r'href="(/repairs/1\?log_before=18&amp;activity_before=\d+)"',
                                    first_activity)[1].replace("&amp;", "&")
             activity = panel(client.get(older_link), "activity-heading")
             self.assertRegex(activity, r'<details open>\s*<summary class="obi-panel-bar">')
-            self.assertIn('href="/repairs/1?log_before=18&amp;show_activity=true#activity"', activity)
+            self.assertIn('href="/repairs/1?log_before=18&amp;show_activity=true"', activity)
             newest = client.get("/repairs/1?log_before=18&show_activity=true")
             self.assertRegex(panel(newest, "activity-heading"), r'<details open>\s*<summary class="obi-panel-bar">')

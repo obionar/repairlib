@@ -212,7 +212,7 @@ class WebRepairWorkspaceTests(TokenFixture, unittest.TestCase):
                 "kind": "contact", "body": "Called the synthetic customer",
             })
             self.assertEqual(reply.status_code, 303)
-            self.assertEqual(reply.headers["location"], url + "?saved=entry#log")
+            self.assertEqual(reply.headers["location"], url + "?saved=entry")
             self.assertIn("Called the synthetic customer", panel(client.get(url), "log"))
             refused = client.post(f"{url}/entries", data={
                 "csrf": hidden(composer, "csrf"), "key": uuid4().hex,
@@ -480,10 +480,8 @@ class WorkspaceFeedbackTests(TokenFixture, unittest.TestCase):
                 page = client.get(path)
                 self.assertEqual(page.status_code, 200, path)
                 self.assertNotIn("#repair-charges", page.text)
-                link = re.search(rf'<a href="{re.escape(record)}#([a-z-]+)">Back to repair</a>',
-                                 page.text)
-                self.assertIsNotNone(link, path)
-                self.assertEqual(link.group(1), panel_name, path)
+                # Owner 2026-11-22: no fragment; the ticket keeps its scroll position instead.
+                self.assertIn(f'<a href="{record}">Back to repair</a>', page.text, path)
                 self.assertIn(f'aria-labelledby="{panel_name}"', record_page)
 
     def test_paged_counts_link_placeholder_and_localized_file_dates(self):

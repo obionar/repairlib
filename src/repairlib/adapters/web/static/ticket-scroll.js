@@ -6,11 +6,11 @@
       else event.preventDefault();
     });
   }
+  // Choosing a picture uploads it at once; without JavaScript the upload button appears instead.
+  for (const input of document.querySelectorAll('input[data-autosubmit]')) {
+    input.addEventListener('change', () => { if (input.files.length) input.form.requestSubmit(); });
+  }
   const statusForm = document.querySelector('#stage-form, #stage-review-form');
-  const forms = [statusForm, document.querySelector('#manual-part-form'), document.querySelector('#fees-form')].filter(Boolean);
-  if (!forms.length) return;
-  const key = `repairlib:ticket-view:${new URL(forms[0].action).pathname.replace(/\/(stage|consume-part)$/, '')}`;
-  const activity = document.querySelector('section[aria-labelledby="activity-heading"] > details');
   const button = document.querySelector('#ticket-controls > button');
   if (statusForm && button) {
     const controls = Array.from(statusForm.elements).filter(element => element.tagName === 'SELECT');
@@ -24,23 +24,31 @@
     }
     updateButton();
   }
+  // Every form or pager on the ticket returns to the same ticket: keep the reader where they were.
+  const ticket = location.pathname.match(/^\/repairs\/\d+/)?.[0];
+  if (!ticket) return;
+  const key = 'repairlib:ticket-view';
+  const activity = document.querySelector('section[aria-labelledby="activity-heading"] > details');
   try {
     const saved = JSON.parse(sessionStorage.getItem(key));
     sessionStorage.removeItem(key);
-    if (saved) {
+    if (saved && saved.ticket === ticket) {
       if (activity) activity.open = saved.activity;
-      if (!location.hash) window.scrollTo(0, saved.scroll);
+      window.scrollTo(0, saved.scroll);
     }
   } catch {
     // The native form still works with storage disabled.
   }
-  for (const form of forms) {
-    form.addEventListener('submit', () => {
-      try {
-        sessionStorage.setItem(key, JSON.stringify({scroll: window.scrollY, activity: !!activity?.open}));
-      } catch {
-        // Do not interrupt the form submission.
-      }
-    });
+  function remember() {
+    try {
+      sessionStorage.setItem(key, JSON.stringify({ticket, scroll: window.scrollY, activity: !!activity?.open}));
+    } catch {
+      // Do not interrupt the navigation.
+    }
   }
+  document.addEventListener('submit', event => { if (!event.defaultPrevented) remember(); });
+  document.addEventListener('click', event => {
+    const link = event.target.closest('a[href]');
+    if (link && link.pathname === ticket && !link.hash) remember();
+  });
 })();
