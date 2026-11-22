@@ -35,7 +35,7 @@
         <tr><th scope="row" colspan="3">{{ _('Parts') }}</th><td class="numeric">{{ view.charges.parts_subtotal_cents|cents }}</td></tr>
         <tr><th scope="row" colspan="3">{{ _('Labour') }}</th><td class="numeric">{{ view.charges.labor_subtotal_cents|cents }}</td></tr>
         {% if view.charges.discount_cents %}<tr><th scope="row" colspan="3">{{ _('Discount') }}</th><td class="numeric">{{ view.charges.discount_cents|cents }}</td></tr>{% endif %}
-        <tr><th scope="row" colspan="3">{{ _('Total (EUR)') }}</th><td class="numeric"><strong>{{ view.charges.total_cents|cents }}</strong></td></tr>
+        <tr><th scope="row" colspan="3">{{ _('Total (€)') }}</th><td class="numeric"><strong>{{ view.charges.total_cents|cents }}</strong></td></tr>
       </tfoot>
     </table>
     <p class="small">{{ _('Totals describe the work; this document is not a receipt or invoice.') }}</p>

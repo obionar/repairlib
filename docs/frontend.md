@@ -74,8 +74,8 @@ adapters/web/
   the content already starts with titled windows.
 - Keep permission, CSRF, revision, idempotency-key and error markup exactly as the
   handlers expect. Styling never changes names, ids or routes.
-- Core forms work without JavaScript. The ticket's optional `ticket-scroll.js`
-  keeps the scroll position after any form or pager on the ticket; ticket redirects and
+- Core forms work without JavaScript. The optional `page-scroll.js` (repair, inventory item and customer pages)
+  keeps the scroll position after any form or pager on the page; redirects and
   back links carry no `#panel` fragment, so without JavaScript the page reloads at the top.
   It also submits the device photo as soon as a file is chosen; without it, an Upload button
   appears inside the photo frame once a file is picked. If

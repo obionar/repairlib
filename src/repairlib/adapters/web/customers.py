@@ -106,19 +106,19 @@ def customer_routes(workspace: Path, templates, key: bytearray) -> APIRouter:
         except CustomerError as error:
             return failure(request, error)
 
-        def page_url(anchor, **cursors):
+        def page_url(**cursors):
             query = urlencode({name: value for name, value in cursors.items() if value})
-            return ("?" + query if query else request.url.path) + "#" + anchor
+            return "?" + query if query else request.url.path
 
         return render(request, "customer_detail.html", record=record, history=history, linked=linked,
                       contact_warnings=customers.contact_warnings(record),
                       possible_duplicate_id=notice.possible_duplicate_id if notice else None,
-                      older_history=page_url("customer-history", before=history.next_before,
+                      older_history=page_url(before=history.next_before,
                                              repairs_before=repairs_before) if history.next_before else "",
-                      newest_history=page_url("customer-history", repairs_before=repairs_before) if before else "",
-                      older_repairs=page_url("customer-repairs", before=before,
+                      newest_history=page_url(repairs_before=repairs_before) if before else "",
+                      older_repairs=page_url(before=before,
                                              repairs_before=linked.next_before) if linked.next_before else "",
-                      newest_repairs=page_url("customer-repairs", before=before) if repairs_before else "",
+                      newest_repairs=page_url(before=before) if repairs_before else "",
                       can_write=can_write, request_key=uuid4().hex,
                       csrf=form_token(request, key, f"customer.archive:{customer_id}"))
 

@@ -19,7 +19,7 @@
     <div><dt>{{ _('Archive status') }}:</dt> <dd>{% if record.archived_at %}{{ _('Archived customer') }} · {{ ui.local_time(record.archived_at) }}{% else %}{{ _('Active') }}{% endif %}</dd></div>
     <div class="rl-customer-notes"><dt>{{ _('Notes') }}:</dt> <dd class="customer-multiline">{{ record.notes or '—' }}</dd></div>
   </dl>
-  <p class="obi-record-meta"><a href="#customer-repairs">{{ _('Total repairs: {count}', count=linked.total) }}</a></p>
+  <p class="obi-record-meta">{{ _('Total repairs: {count}', count=linked.total) }}</p>
   {% if can_write %}
     {% if record.archived_at %}
     <form method="post" action="{{ request.url_for('customer_archive', customer_id=record.id).path }}">
@@ -76,4 +76,5 @@
     </div>
   {% endcall %}
   <p class="account-link"><a href="{{ request.url_for('customer_list').path }}{% if record.archived_at %}?include_archived=true{% endif %}">{{ _('Back to customers') }}</a></p>
+  <script src="{{ request.url_for('static', path='page-scroll.js').path }}" integrity="sha256-nXxv2OlRXNgIJv3NgCDVx7xNFzdR8eQsLp7edfLvlPY="></script>
 {% endblock %}

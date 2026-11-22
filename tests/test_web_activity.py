@@ -140,8 +140,8 @@ class WebActivityTests(TokenFixture, unittest.TestCase):
             for repair_id in (1, 2):
                 self.assertIn(f'href="/repairs/{repair_id}"', panel(older, "customer-repairs"))
             self.assertIn("Archived", panel(older, "customer-repairs"))
-            self.assertIn(f'?before={history_cursor}#customer-repairs', older.text)
-            self.assertIn('?repairs_before=3#customer-history', older.text)
+            self.assertIn(f'?before={history_cursor}', older.text)
+            self.assertIn('?repairs_before=3', older.text)
             self.assertEqual(client.get("/customers/99?repairs_before=3").status_code, 404)
 
             repair = client.get("/repairs/1")

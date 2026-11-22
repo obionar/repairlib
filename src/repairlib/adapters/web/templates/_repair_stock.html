@@ -19,7 +19,7 @@
             {% for item in part_results.items %}
               <li>
                 <div class="rl-part-name"><strong>{{ item.description }}</strong>
-                  <span class="obi-muted">{{ item.sku }} · {{ _('On hand') }} {{ item.on_hand_milli|milli }} {{ item.unit }} · {{ item.selling_price_cents|cents }} EUR</span></div>
+                  <span class="obi-muted">{{ item.sku }} · {{ _('On hand') }} {{ item.on_hand_milli|milli }} {{ item.unit }} · {{ item.selling_price_cents|cents }} €</span></div>
                 {% if item.on_hand_milli > 0 %}
                   <form method="post" action="{{ request.url_for('consume_part', repair_id=repair.id, item_id=item.id).path }}" class="rl-part-use">
                     <input type="hidden" name="csrf" value="{{ part_csrf[item.id] }}">
@@ -52,7 +52,7 @@
         <div class="rl-manual-part-grid">
           <div class="obi-field"><label for="manual-description">{{ _('Name') }}</label><input id="manual-description" name="description" maxlength="200" value="{{ manual.get('description', '') }}" required></div>
           <div class="obi-field"><label for="manual-quantity">{{ _('Quantity') }}</label><input id="manual-quantity" name="quantity" inputmode="decimal" value="{{ manual.get('quantity', '') }}" required></div>
-          <div class="obi-field"><label for="manual-unit-price">{{ _('Unit price (EUR)') }}</label><input id="manual-unit-price" name="unit_price" inputmode="decimal" value="{{ manual.get('unit_price', '') }}" required></div>
+          <div class="obi-field"><label for="manual-unit-price">{{ _('Unit price (€)') }}</label><input id="manual-unit-price" name="unit_price" inputmode="decimal" value="{{ manual.get('unit_price', '') }}" required></div>
         </div>
         {{ ui.button('Use part') }}
       </form>
@@ -63,7 +63,7 @@
     <div class="obi-panel-body rl-used-parts">
       <ul class="customer-list">
         {% for item in used_parts %}
-          <li>{{ item.description }} · ×{{ (item.consumed_quantity_milli or item.quantity_milli)|milli }} {{ item.unit }} · {{ item.unit_price_cents|cents }} EUR</li>
+          <li>{{ item.description }} · ×{{ (item.consumed_quantity_milli or item.quantity_milli)|milli }} {{ item.unit }} · {{ item.unit_price_cents|cents }} €</li>
         {% endfor %}
       </ul>
       {% set stocked = used_parts|selectattr('movement_id')|list %}

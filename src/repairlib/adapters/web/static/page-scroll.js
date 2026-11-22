@@ -24,15 +24,16 @@
     }
     updateButton();
   }
-  // Every form or pager on the ticket returns to the same ticket: keep the reader where they were.
-  const ticket = location.pathname.match(/^\/repairs\/\d+/)?.[0];
-  if (!ticket) return;
-  const key = 'repairlib:ticket-view';
+  // A form or pager that returns to the same page keeps the reader where they were; pages
+  // and redirects carry no #fragment. The page is the record path (/repairs/2, /inventory/5).
+  const pageOf = path => path.match(/^\/[a-z-]+(?:\/\d+)?/)?.[0] || '/';
+  const page = pageOf(location.pathname);
+  const key = 'repairlib:scroll';
   const activity = document.querySelector('section[aria-labelledby="activity-heading"] > details');
   try {
     const saved = JSON.parse(sessionStorage.getItem(key));
     sessionStorage.removeItem(key);
-    if (saved && saved.ticket === ticket) {
+    if (saved && saved.page === page) {
       if (activity) activity.open = saved.activity;
       window.scrollTo(0, saved.scroll);
     }
@@ -41,7 +42,7 @@
   }
   function remember() {
     try {
-      sessionStorage.setItem(key, JSON.stringify({ticket, scroll: window.scrollY, activity: !!activity?.open}));
+      sessionStorage.setItem(key, JSON.stringify({page, scroll: window.scrollY, activity: !!activity?.open}));
     } catch {
       // Do not interrupt the navigation.
     }
@@ -49,6 +50,6 @@
   document.addEventListener('submit', event => { if (!event.defaultPrevented) remember(); });
   document.addEventListener('click', event => {
     const link = event.target.closest('a[href]');
-    if (link && link.pathname === ticket && !link.hash) remember();
+    if (link && link.origin === location.origin && pageOf(link.pathname) === page && !link.hash) remember();
   });
 })();

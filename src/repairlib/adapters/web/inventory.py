@@ -180,7 +180,7 @@ def inventory_routes(workspace: Path, templates, key: bytearray) -> APIRouter:
             return failure(request, error)
         location = request.url_for("inventory_detail", item_id=item_id).path
         if action == "reverse" and before:
-            location += "?" + urlencode({"before": before}) + "#stock-movements"
+            location += "?" + urlencode({"before": before}) 
         return RedirectResponse(location, status_code=303)
 
     @router.post("/{item_id}/receive")

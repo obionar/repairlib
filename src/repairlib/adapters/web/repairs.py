@@ -65,7 +65,7 @@ def cursor_value(form: dict[str, str], name: str) -> int | None:
 
 
 def back(request, repair_id: int, form: dict[str, str], *, saved: str) -> RedirectResponse:
-    # No fragment: the ticket keeps its scroll position (ticket-scroll.js) instead of jumping to a panel.
+    # No fragment: the ticket keeps its scroll position (page-scroll.js) instead of jumping to a panel.
     query = "&".join(part for part in (f"saved={saved}", cursor_query(form)) if part)
     location = request.url_for("repair_detail", repair_id=repair_id).path
     return RedirectResponse(f"{location}?{query}", status_code=303)

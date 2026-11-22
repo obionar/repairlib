@@ -34,7 +34,7 @@
       <details class="obi-confirm"{% if field_errors.billed_quantity or field_errors.unit_price %} open{% endif %}>
         <summary>{{ _('More details') }}</summary>
       {% endif %}
-      {% for name, label in [('billed_quantity', _('Quantity billed')), ('unit_price', _('Unit price (EUR)'))] %}
+      {% for name, label in [('billed_quantity', _('Quantity billed')), ('unit_price', _('Unit price (€)'))] %}
         <label for="{{ name }}">{{ label }}</label>
         {% set invalid = field_errors.get(name) %}
         <input id="{{ name }}" name="{{ name }}" inputmode="decimal"{% if not part_work_log %} required{% endif %} value="{{ form.get(name, '') }}"{% if invalid %} aria-invalid="true" aria-describedby="{{ name }}-error"{% endif %}>

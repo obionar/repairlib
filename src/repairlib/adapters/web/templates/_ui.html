@@ -109,5 +109,5 @@
 {% endmacro %}
 
 {% macro discount_value(value) %}
-  {% if value.kind == 'none' %}{{ _('No discount') }}{% elif value.kind == 'percent' %}{{ value.value }}%{% elif value.value is number %}{{ value.value|cents }} EUR{% else %}{{ value.value }} EUR{% endif %}
+  {% if value.kind == 'none' %}{{ _('No discount') }}{% elif value.kind == 'percent' %}{{ value.value }}%{% elif value.value is number %}{{ value.value|cents }} €{% else %}{{ value.value }} €{% endif %}
 {% endmacro %}

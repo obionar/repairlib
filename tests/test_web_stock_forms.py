@@ -37,7 +37,7 @@ class WebStockFormsTests(TokenFixture, unittest.TestCase):
             page = client.get(detail).text
             used = page.split('aria-labelledby="stock-usage">', 1)[1].split('</section>', 1)[0]
             self.assertIn("1k resistor R0805", used)
-            self.assertIn("0.10 EUR", used)
+            self.assertIn("0.10 €", used)
             self.assertEqual(page.count('<p class="obi-entry-body">Part used: 1k resistor R0805 × 1 pcs</p>'), 1)
             self.assertEqual(self.snapshot("SELECT quantity_milli, unit_price_cents FROM repair_charges"), [(1000, 10)])
             self.assertEqual(self.snapshot("SELECT COUNT(*) FROM work_entries"), [(1,)])
@@ -97,7 +97,7 @@ class WebStockFormsTests(TokenFixture, unittest.TestCase):
             self.assertEqual(client.post(review_url, data=consumed).status_code, 303)
             ticket = client.get(f"/repairs/{repair['id']}").text
             used = ticket.split('aria-labelledby="stock-usage">', 1)[1].split('</section>', 1)[0]
-            self.assertIn("Φίλτρο · ×1.5 pcs · 3.25 EUR", used)
+            self.assertIn("Φίλτρο · ×1.5 pcs · 3.25 €", used)
             self.assertIn('<p class="obi-entry-body">Part used: Φίλτρο × 1.5 pcs</p>', ticket)
         with self.client() as restarted:
             self.assertEqual(restarted.get(f"{INVENTORY}/1", headers=auth).json()["on_hand_milli"], 2500)
@@ -140,7 +140,7 @@ class WebStockFormsTests(TokenFixture, unittest.TestCase):
             self.assertEqual(self.snapshot("SELECT on_hand_milli FROM inventory_items"), [(29000,)])
             response = client.post(route, data=review | {"reason": draft["reason"]})
             self.assertEqual(response.status_code, 303)
-            self.assertEqual(response.headers["location"], older_page + "#stock-movements")
+            self.assertEqual(response.headers["location"], older_page)
             self.assertEqual(client.post(route, data=review | {"reason": draft["reason"]}).status_code, 303)
             self.assertEqual(self.snapshot("SELECT reverses_id, quantity_milli, reason FROM inventory_movements "
                                            "WHERE kind='reversal'"), [(movement_id, -1000, draft["reason"])])

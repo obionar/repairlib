@@ -29,7 +29,7 @@
         {% elif stock_values.reason %}
           <p>{{ _('Draft reason') }}: {{ stock_values.reason }}</p>
         {% endif %}
-        <p><a href="{{ detail }}{% if before %}?before={{ before }}{% endif %}#stock-movements">{{ _('Back to movements') }}</a></p>
+        <p><a href="{{ detail }}{% if before %}?before={{ before }}{% endif %}">{{ _('Back to movements') }}</a></p>
       </div>
     {% endcall %}
   {% endif %}
@@ -45,8 +45,8 @@
       <dt>{{ label }}</dt><dd class="customer-multiline">{{ item[field] }}</dd>
     {% endfor %}
     <dt>{{ _('Low-stock threshold') }}</dt><dd>{{ item.low_stock_milli|milli }} {{ item.unit }}</dd>
-    {% if can_write %}<dt>{{ _('Purchase cost') }}</dt><dd>{{ '—' if item.purchase_cost_cents is none else item.purchase_cost_cents|cents }} EUR</dd>{% endif %}
-    <dt>{{ _('Selling price') }}</dt><dd>{{ item.selling_price_cents|cents }} EUR</dd>
+    {% if can_write %}<dt>{{ _('Purchase cost') }}</dt><dd>{{ '—' if item.purchase_cost_cents is none else item.purchase_cost_cents|cents }} €</dd>{% endif %}
+    <dt>{{ _('Selling price') }}</dt><dd>{{ item.selling_price_cents|cents }} €</dd>
   </dl>
   {% set active_stock = can_write and not item.archived_at %}
   {% if active_stock %}
@@ -108,8 +108,8 @@
         </tbody>
       </table>
     </div>
-    {% if movements.next_before %}<p><a href="?before={{ movements.next_before }}#stock-movements">{{ _('Older movements') }}</a></p>{% endif %}
-    {% if before %}<p><a href="{{ detail }}#stock-movements">{{ _('Newest movements') }}</a></p>{% endif %}
+    {% if movements.next_before %}<p><a href="?before={{ movements.next_before }}">{{ _('Older movements') }}</a></p>{% endif %}
+    {% if before %}<p><a href="{{ detail }}">{{ _('Newest movements') }}</a></p>{% endif %}
   {% else %}
     <p>{{ _('No stock movements yet.') }}</p>
   {% endif %}
@@ -126,4 +126,5 @@
     </form>
   {% endif %}
   <p class="account-link"><a href="{{ request.url_for('inventory_list').path }}{% if item.archived_at %}?include_archived=true{% endif %}">{{ _('Back to inventory') }}</a></p>
+  <script src="{{ request.url_for('static', path='page-scroll.js').path }}" integrity="sha256-nXxv2OlRXNgIJv3NgCDVx7xNFzdR8eQsLp7edfLvlPY="></script>
 {% endblock %}

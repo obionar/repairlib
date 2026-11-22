@@ -24,7 +24,7 @@
                                       ('package', _('Package')), ('specifications', _('Specifications')),
                                       ('bin', _('Bin')), ('unit', _('Unit')), ('low_stock', _('Low-stock threshold')),
                                       ('purchase_cost', _('Purchase cost')),
-                                      ('selling_price', _('Selling price (EUR)'))] %}
+                                      ('selling_price', _('Selling price (€)'))] %}
                 <label class="rl-sr-only" for="{{ field }}">{{ label }}</label>
                 {% set invalid = field_errors.get(field) %}
                 {% if field == 'specifications' %}
@@ -88,8 +88,8 @@
                 <th scope="col">{{ _('Bin') }}</th>
                 <th scope="col" class="obi-number">{{ _('On hand') }}</th>
                 <th scope="col" class="obi-number">{{ _('Low-stock threshold') }}</th>
-                <th scope="col" class="obi-number">{{ _('Selling price (EUR)') }}</th>
-                {% if can_write %}<th scope="col" class="obi-number">{{ _('Purchase cost (EUR)') }}</th>{% endif %}
+                <th scope="col" class="obi-number">{{ _('Selling price (€)') }}</th>
+                {% if can_write %}<th scope="col" class="obi-number">{{ _('Purchase cost (€)') }}</th>{% endif %}
               </tr></thead>
               <tbody>
                 {% for item in page.items %}

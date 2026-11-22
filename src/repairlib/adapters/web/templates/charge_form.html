@@ -26,8 +26,8 @@
       ('description', _('Description'), 200, none, true),
       ('quantity', _('Quantity billed') if charge and charge.movement_id else _('Quantity (up to 3 decimals)'), none, 'decimal', true),
       ('unit', _('Unit (default pcs for parts, h for labour)'), 16, none, false),
-      ('unit_price', _('Unit price (EUR)'), none, 'decimal', true),
-      ('unit_cost', _('Unit cost (EUR, optional, hidden from viewers)'), none, 'decimal', false),
+      ('unit_price', _('Unit price (€)'), none, 'decimal', true),
+      ('unit_cost', _('Unit cost (€, optional, hidden from viewers)'), none, 'decimal', false),
     ] %}
       <label for="{{ name }}">{{ label }}</label>
       <input id="{{ name }}" name="{{ name }}" value="{{ details.get(name, '') }}"{% if maxlength %} maxlength="{{ maxlength }}"{% endif %}{% if inputmode %} inputmode="{{ inputmode }}"{% endif %}{% if required %} required{% endif %}{% if charge and charge.movement_id and name in ('description', 'unit', 'unit_cost') %} readonly{% endif %}{% if field_errors.get(name) %} aria-invalid="true" aria-describedby="{{ name }}-error"{% endif %}>
