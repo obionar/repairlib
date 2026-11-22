@@ -1,0 +1,2049 @@
+{
+ "catalog": [
+  [
+   "MYTH-FLUX-WHISK",
+   "Flux whisker assembly",
+   "Temporal",
+   4200,
+   12
+  ],
+  [
+   "MYTH-UNI-RIBBON",
+   "Unicorn-hair ribbon cable",
+   "Connectors",
+   1850,
+   15
+  ],
+  [
+   "MYTH-GNOME-HINGE",
+   "Gnome-proof hinge pair",
+   "Chassis",
+   2600,
+   10
+  ],
+  [
+   "MYTH-MOON-CAP",
+   "Moonlight capacitor 3 µF (harvest at full moon)",
+   "Power",
+   950,
+   25
+  ],
+  [
+   "MYTH-GRUMBLE",
+   "Grumble suppressor module",
+   "Audio",
+   3100,
+   8
+  ],
+  [
+   "MYTH-PHOENIX-FUSE",
+   "Phoenix-feather fuse (self-replacing, mostly)",
+   "Power",
+   700,
+   30
+  ],
+  [
+   "MYTH-DRAGON-PASTE",
+   "Dragon-grade thermal paste 1 g",
+   "Consumables",
+   450,
+   40
+  ],
+  [
+   "MYTH-KRAKEN-SEAL",
+   "Kraken-proof gasket kit",
+   "Seals",
+   2900,
+   6
+  ],
+  [
+   "MYTH-GREMLIN-TRAP",
+   "Gremlin trap, single use",
+   "Consumables",
+   300,
+   40
+  ],
+  [
+   "MYTH-SOCK-ADAPT",
+   "Universal sock-drawer portal adapter",
+   "Connectors",
+   5400,
+   1
+  ],
+  [
+   "MYTH-OPINION-FLT",
+   "Opinion filter for talking appliances",
+   "Firmware",
+   1999,
+   9
+  ],
+  [
+   "MYTH-SPARE-SOUL",
+   "Refurbished ghost containment cell",
+   "Exorcism",
+   8800,
+   2
+  ]
+ ],
+ "customers": [
+  {
+   "name": "Bartholomew Wobblesworth",
+   "phone": "+357 555 0110",
+   "email": "customer01@example.test",
+   "address": "1 Imaginary Lane, Nowhere-on-Sea",
+   "notes": "Synthetic demo record. Owns a lot of kitchen gadgets and names every one. Please use their names.",
+   "repairs": [
+    {
+     "device_type": "Toaster",
+     "brand": "Grumblecorp",
+     "model": "Crumbmaster 3000",
+     "serial": "MYTH-0001",
+     "display_device": "Grumblecorp Crumbmaster 3000",
+     "reported_issue": "Only toasts bread it personally approves of. Rejected a perfectly good sourdough.",
+     "notes": "Named 'Gerald'. Owner requests we speak gently.",
+     "stage": "new",
+     "technician": "technician",
+     "warranty_until": "2027-01-15"
+    },
+    {
+     "device_type": "Kettle",
+     "brand": "Brewtopia",
+     "model": "Whistle Infinity",
+     "serial": "MYTH-0002",
+     "display_device": "Brewtopia Whistle Infinity",
+     "reported_issue": "Whistles the national anthem of a country that does not exist.",
+     "notes": "Comes with its own tiny flag.",
+     "stage": "waiting_parts",
+     "technician": "technician",
+     "work": [
+      {
+       "kind": "note",
+       "body": "On the bench. Approached with caution."
+      },
+      {
+       "kind": "work",
+       "body": "Whistle reed tuned to an imaginary scale; retuned to a plain C."
+      },
+      {
+       "kind": "contact",
+       "body": "Called the customer: part ordered from the far side of the moon."
+      }
+     ],
+     "parts": [
+      {
+       "sku": "MYTH-UNI-RIBBON",
+       "quantity": 1,
+       "billed": 1
+      }
+     ],
+     "labor": [
+      {
+       "description": "Arcane diagnosis",
+       "quantity": 1,
+       "unit_price_cents": 3000
+      }
+     ],
+     "fee_cents": 1500
+    },
+    {
+     "device_type": "Smart fridge",
+     "brand": "ChillWizard",
+     "model": "Frostbyte XL",
+     "serial": "MYTH-0003",
+     "display_device": "ChillWizard Frostbyte XL",
+     "reported_issue": "Orders 40 kg of pickles every night at 03:00.",
+     "notes": "Owner has run out of space for pickles.",
+     "stage": "repaired",
+     "work": [
+      {
+       "kind": "note",
+       "body": "On the bench. Approached with caution."
+      },
+      {
+       "kind": "work",
+       "body": "Shopping AI looping on a single pickle preference. Wiped and reminded it of vegetables."
+      },
+      {
+       "kind": "test",
+       "body": "24-hour soak test. No supernatural events recorded."
+      }
+     ],
+     "labor": [
+      {
+       "description": "Arcane diagnosis",
+       "quantity": 1,
+       "unit_price_cents": 3500
+      },
+      {
+       "description": "Gentle persuasion",
+       "quantity": 1.5,
+       "unit_price_cents": 3000,
+       "notes": "Required singing."
+      }
+     ],
+     "fee_cents": 1500,
+     "paid": false,
+     "picked_up": true
+    },
+    {
+     "device_type": "Blender",
+     "brand": "Whirlwind",
+     "model": "Vortex of Doom",
+     "serial": "MYTH-0004",
+     "display_device": "Whirlwind Vortex of Doom",
+     "reported_issue": "Blends in reverse. Smoothies come out as whole fruit.",
+     "notes": "Delivered with a very confused banana.",
+     "stage": "new",
+     "technician": "technician"
+    }
+   ]
+  },
+  {
+   "name": "Dame Penelope Fizzlewick",
+   "phone": "+357 555 0111",
+   "email": "customer02@example.test",
+   "address": "2 Imaginary Lane, Nowhere-on-Sea",
+   "notes": "Synthetic demo record. Pays in exact change, wrapped in tiny ribbons.",
+   "repairs": [
+    {
+     "device_type": "Umbrella",
+     "brand": "Drizzlenot",
+     "model": "Cloudshield Pro",
+     "serial": "MYTH-0005",
+     "display_device": "Drizzlenot Cloudshield Pro",
+     "reported_issue": "Opens indoors on its own, then rains a little.",
+     "notes": "Arrived damp. Left a small puddle on the counter.",
+     "stage": "waiting_parts",
+     "technician": "technician",
+     "work": [
+      {
+       "kind": "note",
+       "body": "On the bench. Approached with caution."
+      },
+      {
+       "kind": "work",
+       "body": "Internal micro-cloud generator stuck on 'drizzle'."
+      },
+      {
+       "kind": "contact",
+       "body": "Called the customer: part ordered from the far side of the moon."
+      }
+     ],
+     "labor": [
+      {
+       "description": "Arcane diagnosis",
+       "quantity": 1,
+       "unit_price_cents": 4500
+      }
+     ],
+     "fee_cents": 1500
+    },
+    {
+     "device_type": "Teapot",
+     "brand": "Steepwell",
+     "model": "Oolong Oracle",
+     "serial": "MYTH-0006",
+     "display_device": "Steepwell Oolong Oracle",
+     "reported_issue": "Predicts the future, but only bad weather.",
+     "notes": "Owner wants it to predict lottery numbers instead.",
+     "stage": "repaired",
+     "work": [
+      {
+       "kind": "note",
+       "body": "On the bench. Approached with caution."
+      },
+      {
+       "kind": "work",
+       "body": "Forecast chip has a single hard-coded output: 'rain'."
+      },
+      {
+       "kind": "test",
+       "body": "24-hour soak test. No supernatural events recorded."
+      }
+     ],
+     "parts": [
+      {
+       "sku": "MYTH-UNI-RIBBON",
+       "quantity": 1,
+       "billed": 1
+      }
+     ],
+     "labor": [
+      {
+       "description": "Arcane diagnosis",
+       "quantity": 1,
+       "unit_price_cents": 2500
+      }
+     ],
+     "fee_cents": 1500,
+     "paid": true,
+     "picked_up": false,
+     "discount": {
+      "kind": "amount",
+      "value": 500
+     }
+    },
+    {
+     "device_type": "Wristwatch",
+     "brand": "Tempus Fudge",
+     "model": "Chrono-Wibble",
+     "serial": "MYTH-0007",
+     "display_device": "Tempus Fudge Chrono-Wibble",
+     "reported_issue": "Runs on time, but in a different time zone each hour.",
+     "notes": "Owner missed three dentist appointments.",
+     "stage": "new",
+     "technician": "technician"
+    }
+   ]
+  },
+  {
+   "name": "Sir Reginald Crumpet III",
+   "phone": "+357 555 0112",
+   "email": "customer03@example.test",
+   "address": "3 Imaginary Lane, Nowhere-on-Sea",
+   "notes": "Synthetic demo record. Insists on being called 'the Third'. Calls every Tuesday for news.",
+   "repairs": [
+    {
+     "device_type": "Doorbell",
+     "brand": "Dingdongery",
+     "model": "Herald Mk II",
+     "serial": "MYTH-0008",
+     "display_device": "Dingdongery Herald Mk II",
+     "reported_issue": "Announces visitors before they arrive. Sometimes years before.",
+     "notes": "Owner keeps opening the door to nobody.",
+     "stage": "waiting_parts",
+     "technician": "technician",
+     "warranty_until": "2027-08-15",
+     "work": [
+      {
+       "kind": "note",
+       "body": "On the bench. Approached with caution."
+      },
+      {
+       "kind": "work",
+       "body": "Precognition module drifting. Swapped the flux whisker."
+      },
+      {
+       "kind": "contact",
+       "body": "Called the customer: part ordered from the far side of the moon."
+      }
+     ],
+     "parts": [
+      {
+       "sku": "MYTH-FLUX-WHISK",
+       "quantity": 1,
+       "billed": 1
+      }
+     ],
+     "labor": [
+      {
+       "description": "Arcane diagnosis",
+       "quantity": 1,
+       "unit_price_cents": 3500
+      }
+     ],
+     "fee_cents": 1500
+    },
+    {
+     "device_type": "Hairdryer",
+     "brand": "Breezelord",
+     "model": "Tornado Royale",
+     "serial": "MYTH-0009",
+     "display_device": "Breezelord Tornado Royale",
+     "reported_issue": "Produces only compliments, no air.",
+     "notes": "Owner admits the compliments are nice.",
+     "stage": "repaired",
+     "work": [
+      {
+       "kind": "note",
+       "body": "On the bench. Approached with caution."
+      },
+      {
+       "kind": "work",
+       "body": "Fan replaced by a speaker at the factory. Classic."
+      },
+      {
+       "kind": "test",
+       "body": "24-hour soak test. No supernatural events recorded."
+      }
+     ],
+     "labor": [
+      {
+       "description": "Arcane diagnosis",
+       "quantity": 1,
+       "unit_price_cents": 4000
+      },
+      {
+       "description": "Gentle persuasion",
+       "quantity": 1.5,
+       "unit_price_cents": 3000,
+       "notes": "Required singing."
+      }
+     ],
+     "fee_cents": 1500,
+     "paid": true,
+     "picked_up": true,
+     "discount": {
+      "kind": "percent",
+      "value": 10
+     }
+    },
+    {
+     "device_type": "Vacuum robot",
+     "brand": "Dustgoblin",
+     "model": "Hoovarius",
+     "serial": "MYTH-0010",
+     "display_device": "Dustgoblin Hoovarius",
+     "reported_issue": "Refuses to clean under the sofa; claims something lives there.",
+     "notes": "Something may live there.",
+     "stage": "new",
+     "technician": "technician"
+    }
+   ]
+  },
+  {
+   "name": "Ottoline Snarfblat",
+   "phone": "+357 555 0113",
+   "email": "customer04@example.test",
+   "address": "4 Imaginary Lane, Nowhere-on-Sea",
+   "notes": "Synthetic demo record. Brings biscuits. The biscuits are excellent.",
+   "repairs": [
+    {
+     "device_type": "Lawnmower",
+     "brand": "Grassassin",
+     "model": "Turf Tamer 9",
+     "serial": "MYTH-0011",
+     "display_device": "Grassassin Turf Tamer 9",
+     "reported_issue": "Mows crop circles into the lawn. Neighbours are asking questions.",
+     "notes": "Photographed by two local newspapers.",
+     "stage": "waiting_parts",
+     "technician": "technician",
+     "work": [
+      {
+       "kind": "note",
+       "body": "On the bench. Approached with caution."
+      },
+      {
+       "kind": "work",
+       "body": "Pattern generator stuck on 'mysterious'. Set to 'stripes'."
+      },
+      {
+       "kind": "contact",
+       "body": "Called the customer: part ordered from the far side of the moon."
+      }
+     ],
+     "labor": [
+      {
+       "description": "Arcane diagnosis",
+       "quantity": 1,
+       "unit_price_cents": 2500
+      }
+     ],
+     "fee_cents": 1500
+    },
+    {
+     "device_type": "Accordion",
+     "brand": "Squeezeworth",
+     "model": "Polka Phantom",
+     "serial": "MYTH-0012",
+     "display_device": "Squeezeworth Polka Phantom",
+     "reported_issue": "Plays haunted waltzes at 03:00 with nobody touching it.",
+     "notes": "Owner has not slept since Tuesday.",
+     "stage": "repaired",
+     "work": [
+      {
+       "kind": "note",
+       "body": "On the bench. Approached with caution."
+      },
+      {
+       "kind": "work",
+       "body": "Found a ghost in the bellows. Fitted a containment cell."
+      },
+      {
+       "kind": "test",
+       "body": "24-hour soak test. No supernatural events recorded."
+      }
+     ],
+     "parts": [
+      {
+       "sku": "MYTH-SPARE-SOUL",
+       "quantity": 1,
+       "billed": 1
+      }
+     ],
+     "labor": [
+      {
+       "description": "Arcane diagnosis",
+       "quantity": 1,
+       "unit_price_cents": 3000
+      }
+     ],
+     "fee_cents": 1500,
+     "paid": false,
+     "picked_up": false
+    }
+   ]
+  },
+  {
+   "name": "Gideon Thunderpants",
+   "phone": "+357 555 0114",
+   "email": "customer05@example.test",
+   "address": "5 Imaginary Lane, Nowhere-on-Sea",
+   "notes": "Synthetic demo record. Loud. Kind. Drops things from great heights.",
+   "repairs": [
+    {
+     "device_type": "Telescope",
+     "brand": "Starpeek",
+     "model": "Nebulon 200",
+     "serial": "MYTH-0013",
+     "display_device": "Starpeek Nebulon 200",
+     "reported_issue": "Shows only the neighbour's cat, no matter where you point it.",
+     "notes": "The cat looks very pleased with itself.",
+     "stage": "new",
+     "technician": "technician"
+    },
+    {
+     "device_type": "Phone",
+     "brand": "Fonetastic",
+     "model": "Babblebrick 12",
+     "serial": "MYTH-0014",
+     "display_device": "Fonetastic Babblebrick 12",
+     "reported_issue": "Autocorrects every message to pirate speak.",
+     "notes": "Owner's boss received 'Arr, the report be late'.",
+     "stage": "waiting_parts",
+     "technician": "technician",
+     "work": [
+      {
+       "kind": "note",
+       "body": "On the bench. Approached with caution."
+      },
+      {
+       "kind": "work",
+       "body": "Language pack 'Pirate (Caribbean)' set as system default."
+      },
+      {
+       "kind": "contact",
+       "body": "Called the customer: part ordered from the far side of the moon."
+      }
+     ],
+     "parts": [
+      {
+       "sku": "MYTH-UNI-RIBBON",
+       "quantity": 1,
+       "billed": 1
+      }
+     ],
+     "labor": [
+      {
+       "description": "Arcane diagnosis",
+       "quantity": 1,
+       "unit_price_cents": 4000
+      }
+     ],
+     "fee_cents": 1500
+    }
+   ]
+  },
+  {
+   "name": "Marigold Puddlejump",
+   "phone": "+357 555 0115",
+   "email": "customer06@example.test",
+   "address": "6 Imaginary Lane, Nowhere-on-Sea",
+   "notes": "Synthetic demo record. Lives on a houseboat; everything arrives slightly damp.",
+   "repairs": [
+    {
+     "device_type": "Laptop",
+     "brand": "Byteberry",
+     "model": "Snoozebook Air",
+     "serial": "MYTH-0015",
+     "display_device": "Byteberry Snoozebook Air",
+     "reported_issue": "Falls asleep during meetings. Snores audibly.",
+     "notes": "Owner was asked to leave a board meeting.",
+     "stage": "repaired",
+     "warranty_until": "2027-03-15",
+     "work": [
+      {
+       "kind": "note",
+       "body": "On the bench. Approached with caution."
+      },
+      {
+       "kind": "work",
+       "body": "Sleep timer set to 'when bored'. Grumble suppressor fitted."
+      },
+      {
+       "kind": "test",
+       "body": "24-hour soak test. No supernatural events recorded."
+      }
+     ],
+     "parts": [
+      {
+       "sku": "MYTH-GRUMBLE",
+       "quantity": 1,
+       "billed": 1
+      }
+     ],
+     "labor": [
+      {
+       "description": "Arcane diagnosis",
+       "quantity": 1,
+       "unit_price_cents": 4500
+      },
+      {
+       "description": "Gentle persuasion",
+       "quantity": 1.5,
+       "unit_price_cents": 3000,
+       "notes": "Required singing."
+      }
+     ],
+     "fee_cents": 1500,
+     "paid": false,
+     "picked_up": true
+    },
+    {
+     "device_type": "Tablet",
+     "brand": "Slatewise",
+     "model": "Scribblepad 7",
+     "serial": "MYTH-0016",
+     "display_device": "Slatewise Scribblepad 7",
+     "reported_issue": "Draws moustaches on every photo it opens.",
+     "notes": "Owner's wedding album affected.",
+     "stage": "new",
+     "technician": "technician"
+    },
+    {
+     "device_type": "Music box",
+     "brand": "Tinkletone",
+     "model": "Lullaby 1890",
+     "serial": "MYTH-0017",
+     "display_device": "Tinkletone Lullaby 1890",
+     "reported_issue": "Plays heavy metal when opened.",
+     "notes": "Inherited from a great-aunt who 'liked it loud'.",
+     "stage": "lab_test",
+     "technician": "technician",
+     "work": [
+      {
+       "kind": "note",
+       "body": "On the bench. Approached with caution."
+      },
+      {
+       "kind": "work",
+       "body": "Comb replaced at some point with a guitar pickup."
+      },
+      {
+       "kind": "test",
+       "body": "24-hour soak test. No supernatural events recorded."
+      }
+     ],
+     "labor": [
+      {
+       "description": "Arcane diagnosis",
+       "quantity": 1,
+       "unit_price_cents": 3000
+      }
+     ],
+     "fee_cents": 1500
+    }
+   ]
+  },
+  {
+   "name": "Professor Ignatius Sprocket",
+   "phone": "+357 555 0116",
+   "email": "customer07@example.test",
+   "address": "7 Imaginary Lane, Nowhere-on-Sea",
+   "notes": "Synthetic demo record. Self-described inventor. Do not let them near the bench.",
+   "repairs": [
+    {
+     "device_type": "Snow globe",
+     "brand": "Blizzardine",
+     "model": "Winter Forever",
+     "serial": "MYTH-0018",
+     "display_device": "Blizzardine Winter Forever",
+     "reported_issue": "Real snow, real cold. The shelf has frostbite.",
+     "notes": "Wrapped in three scarves at intake.",
+     "stage": "repaired",
+     "work": [
+      {
+       "kind": "note",
+       "body": "On the bench. Approached with caution."
+      },
+      {
+       "kind": "work",
+       "body": "Climate core too ambitious. Fitted a moonlight capacitor."
+      },
+      {
+       "kind": "test",
+       "body": "24-hour soak test. No supernatural events recorded."
+      }
+     ],
+     "parts": [
+      {
+       "sku": "MYTH-MOON-CAP",
+       "quantity": 1,
+       "billed": 1
+      },
+      {
+       "sku": "MYTH-UNI-RIBBON",
+       "quantity": 1,
+       "billed": 1
+      }
+     ],
+     "labor": [
+      {
+       "description": "Arcane diagnosis",
+       "quantity": 1,
+       "unit_price_cents": 3500
+      }
+     ],
+     "fee_cents": 1500,
+     "paid": true,
+     "picked_up": false,
+     "discount": {
+      "kind": "amount",
+      "value": 500
+     }
+    },
+    {
+     "device_type": "Coffee machine",
+     "brand": "Grindstone",
+     "model": "Espressonaut",
+     "serial": "MYTH-0019",
+     "display_device": "Grindstone Espressonaut",
+     "reported_issue": "Makes excellent coffee but insults your posture.",
+     "notes": "Owner's posture has improved, feelings have not.",
+     "stage": "new",
+     "technician": "technician"
+    }
+   ]
+  },
+  {
+   "name": "Wanda Wigglesbottom",
+   "phone": "+357 555 0117",
+   "email": "customer08@example.test",
+   "address": "8 Imaginary Lane, Nowhere-on-Sea",
+   "notes": "Synthetic demo record. Allergic to beige. Prefers a call, never email.",
+   "repairs": [
+    {
+     "device_type": "Bicycle",
+     "brand": "Wheelwright",
+     "model": "Pedalmancer",
+     "serial": "MYTH-0020",
+     "display_device": "Wheelwright Pedalmancer",
+     "reported_issue": "Pedals itself backwards when you are not looking.",
+     "notes": "Found three streets away from where it was parked.",
+     "stage": "lab_test",
+     "technician": "technician",
+     "work": [
+      {
+       "kind": "note",
+       "body": "On the bench. Approached with caution."
+      },
+      {
+       "kind": "work",
+       "body": "Self-pedal servo misreads 'not looking' as 'go home'."
+      },
+      {
+       "kind": "test",
+       "body": "24-hour soak test. No supernatural events recorded."
+      }
+     ],
+     "labor": [
+      {
+       "description": "Arcane diagnosis",
+       "quantity": 1,
+       "unit_price_cents": 4500
+      }
+     ],
+     "fee_cents": 1500
+    }
+   ]
+  },
+  {
+   "name": "Barnaby Fluffernutter",
+   "phone": "+357 555 0118",
+   "email": "customer09@example.test",
+   "address": "9 Imaginary Lane, Nowhere-on-Sea",
+   "notes": "Synthetic demo record. Has three cats, all of them suspects.",
+   "repairs": [
+    {
+     "device_type": "Lamp",
+     "brand": "Glowworm",
+     "model": "Moodlight Deluxe",
+     "serial": "MYTH-0021",
+     "display_device": "Glowworm Moodlight Deluxe",
+     "reported_issue": "Only lights up when someone tells a joke.",
+     "notes": "Owner has had to become very funny.",
+     "stage": "repaired",
+     "work": [
+      {
+       "kind": "note",
+       "body": "On the bench. Approached with caution."
+      },
+      {
+       "kind": "work",
+       "body": "Laughter sensor works perfectly; switch does not. Replaced the fuse."
+      },
+      {
+       "kind": "test",
+       "body": "24-hour soak test. No supernatural events recorded."
+      }
+     ],
+     "parts": [
+      {
+       "sku": "MYTH-PHOENIX-FUSE",
+       "quantity": 1,
+       "billed": 1
+      }
+     ],
+     "labor": [
+      {
+       "description": "Arcane diagnosis",
+       "quantity": 1,
+       "unit_price_cents": 2500
+      },
+      {
+       "description": "Gentle persuasion",
+       "quantity": 1.5,
+       "unit_price_cents": 3000,
+       "notes": "Required singing."
+      }
+     ],
+     "fee_cents": 1500,
+     "paid": true,
+     "picked_up": true
+    },
+    {
+     "device_type": "Radio",
+     "brand": "Wavelength",
+     "model": "Retro Whisper",
+     "serial": "MYTH-0022",
+     "display_device": "Wavelength Retro Whisper",
+     "reported_issue": "Receives only tomorrow's news.",
+     "notes": "Owner won a bet and now feels guilty.",
+     "stage": "new",
+     "technician": "technician",
+     "warranty_until": "2027-10-15"
+    },
+    {
+     "device_type": "Mirror",
+     "brand": "Reflecta",
+     "model": "Fairest 5",
+     "serial": "MYTH-0023",
+     "display_device": "Reflecta Fairest 5",
+     "reported_issue": "Answers questions honestly. Too honestly.",
+     "notes": "Owner no longer asks it anything.",
+     "stage": "lab_test",
+     "technician": "technician",
+     "work": [
+      {
+       "kind": "note",
+       "body": "On the bench. Approached with caution."
+      },
+      {
+       "kind": "work",
+       "body": "Honesty dial at 11. Set to 'tactful'."
+      },
+      {
+       "kind": "test",
+       "body": "24-hour soak test. No supernatural events recorded."
+      }
+     ],
+     "labor": [
+      {
+       "description": "Arcane diagnosis",
+       "quantity": 1,
+       "unit_price_cents": 3500
+      }
+     ],
+     "fee_cents": 1500
+    }
+   ]
+  },
+  {
+   "name": "Lady Esmeralda Gloop",
+   "phone": "+357 555 0119",
+   "email": "customer10@example.test",
+   "address": "10 Imaginary Lane, Nowhere-on-Sea",
+   "notes": "Synthetic demo record. Collects haunted electronics. On purpose.",
+   "repairs": [
+    {
+     "device_type": "Sock drawer",
+     "brand": "Pairfect",
+     "model": "Never-Lose",
+     "serial": "MYTH-0024",
+     "display_device": "Pairfect Never-Lose",
+     "reported_issue": "Eats exactly one sock of every pair.",
+     "notes": "Owner suspects a portal.",
+     "stage": "repaired",
+     "work": [
+      {
+       "kind": "note",
+       "body": "On the bench. Approached with caution."
+      },
+      {
+       "kind": "work",
+       "body": "Confirmed: a portal. Fitted a sock-drawer portal adapter."
+      },
+      {
+       "kind": "test",
+       "body": "24-hour soak test. No supernatural events recorded."
+      }
+     ],
+     "parts": [
+      {
+       "sku": "MYTH-SOCK-ADAPT",
+       "quantity": 1,
+       "billed": 1
+      }
+     ],
+     "labor": [
+      {
+       "description": "Arcane diagnosis",
+       "quantity": 1,
+       "unit_price_cents": 4000
+      }
+     ],
+     "fee_cents": 1500,
+     "paid": false,
+     "picked_up": false
+    },
+    {
+     "device_type": "Game console",
+     "brand": "Joypixel",
+     "model": "Megafun 64",
+     "serial": "MYTH-0025",
+     "display_device": "Joypixel Megafun 64",
+     "reported_issue": "Always lets the cat win.",
+     "notes": "Cat now undefeated in 212 matches.",
+     "stage": "in_progress",
+     "technician": "technician",
+     "work": [
+      {
+       "kind": "note",
+       "body": "On the bench. Approached with caution."
+      },
+      {
+       "kind": "work",
+       "body": "Difficulty set to 'feline'. Some fur in the controller port."
+      }
+     ],
+     "parts": [
+      {
+       "sku": "MYTH-DRAGON-PASTE",
+       "quantity": 1,
+       "billed": 1
+      }
+     ],
+     "labor": [
+      {
+       "description": "Arcane diagnosis",
+       "quantity": 1,
+       "unit_price_cents": 4500
+      }
+     ],
+     "fee_cents": 1500
+    }
+   ]
+  },
+  {
+   "name": "Horatio Bumblesnatch",
+   "phone": "+357 555 0120",
+   "email": "customer11@example.test",
+   "address": "11 Imaginary Lane, Nowhere-on-Sea",
+   "notes": "Synthetic demo record. Always in a hurry; leaves the car running.",
+   "repairs": [
+    {
+     "device_type": "Calculator",
+     "brand": "Numerix",
+     "model": "Sum-Thing",
+     "serial": "MYTH-0026",
+     "display_device": "Numerix Sum-Thing",
+     "reported_issue": "Rounds every answer to 42.",
+     "notes": "Owner's tax return was surprisingly simple.",
+     "stage": "lab_test",
+     "technician": "technician",
+     "work": [
+      {
+       "kind": "note",
+       "body": "On the bench. Approached with caution."
+      },
+      {
+       "kind": "work",
+       "body": "Rounding table replaced by a single constant."
+      },
+      {
+       "kind": "test",
+       "body": "24-hour soak test. No supernatural events recorded."
+      }
+     ],
+     "parts": [
+      {
+       "sku": "MYTH-UNI-RIBBON",
+       "quantity": 1,
+       "billed": 1
+      }
+     ],
+     "labor": [
+      {
+       "description": "Arcane diagnosis",
+       "quantity": 1,
+       "unit_price_cents": 2500
+      }
+     ],
+     "fee_cents": 1500
+    },
+    {
+     "device_type": "Garden gnome",
+     "brand": "Gnomely",
+     "model": "Sentinel",
+     "serial": "MYTH-0027",
+     "display_device": "Gnomely Sentinel",
+     "reported_issue": "Moves at night. Rearranges the patio furniture.",
+     "notes": "Arrived in a different pose than in the photo.",
+     "stage": "repaired",
+     "work": [
+      {
+       "kind": "note",
+       "body": "On the bench. Approached with caution."
+      },
+      {
+       "kind": "work",
+       "body": "Night-mode motor active. Fitted gnome-proof hinges to the patio set."
+      },
+      {
+       "kind": "test",
+       "body": "24-hour soak test. No supernatural events recorded."
+      }
+     ],
+     "parts": [
+      {
+       "sku": "MYTH-GNOME-HINGE",
+       "quantity": 1,
+       "billed": 1
+      }
+     ],
+     "labor": [
+      {
+       "description": "Arcane diagnosis",
+       "quantity": 1,
+       "unit_price_cents": 3000
+      },
+      {
+       "description": "Gentle persuasion",
+       "quantity": 1.5,
+       "unit_price_cents": 3000,
+       "notes": "Required singing."
+      }
+     ],
+     "fee_cents": 1500,
+     "paid": false,
+     "picked_up": true
+    },
+    {
+     "device_type": "Printer",
+     "brand": "Inkblot",
+     "model": "Paperjam Supreme",
+     "serial": "MYTH-0028",
+     "display_device": "Inkblot Paperjam Supreme",
+     "reported_issue": "Prints everything in Comic Sans. Even photos.",
+     "notes": "Owner's CV was rejected seven times.",
+     "stage": "in_progress",
+     "technician": "technician",
+     "work": [
+      {
+       "kind": "note",
+       "body": "On the bench. Approached with caution."
+      },
+      {
+       "kind": "work",
+       "body": "Font override burned into firmware. Reflashed."
+      }
+     ],
+     "parts": [
+      {
+       "sku": "MYTH-DRAGON-PASTE",
+       "quantity": 1,
+       "billed": 1
+      }
+     ],
+     "labor": [
+      {
+       "description": "Arcane diagnosis",
+       "quantity": 1,
+       "unit_price_cents": 3500
+      }
+     ],
+     "fee_cents": 1500
+    },
+    {
+     "device_type": "Microwave",
+     "brand": "Zapzilla",
+     "model": "Nuke-o-Matic",
+     "serial": "MYTH-0029",
+     "display_device": "Zapzilla Nuke-o-Matic",
+     "reported_issue": "Heats food to exactly the wrong temperature.",
+     "notes": "Soup is somehow both frozen and boiling.",
+     "stage": "lab_test",
+     "technician": "technician",
+     "warranty_until": "2027-05-15",
+     "work": [
+      {
+       "kind": "note",
+       "body": "On the bench. Approached with caution."
+      },
+      {
+       "kind": "work",
+       "body": "Magnetron fine. Thermostat inverted. Replaced moonlight capacitor."
+      },
+      {
+       "kind": "test",
+       "body": "24-hour soak test. No supernatural events recorded."
+      }
+     ],
+     "parts": [
+      {
+       "sku": "MYTH-MOON-CAP",
+       "quantity": 1,
+       "billed": 1
+      }
+     ],
+     "labor": [
+      {
+       "description": "Arcane diagnosis",
+       "quantity": 1,
+       "unit_price_cents": 4000
+      }
+     ],
+     "fee_cents": 1500
+    }
+   ]
+  },
+  {
+   "name": "Clementine Noodleworth",
+   "phone": "+357 555 0121",
+   "email": "customer12@example.test",
+   "address": "12 Imaginary Lane, Nowhere-on-Sea",
+   "notes": "Synthetic demo record. Speaks only in questions? Answers are fine?",
+   "repairs": [
+    {
+     "device_type": "Headphones",
+     "brand": "Earwig",
+     "model": "Bassquake",
+     "serial": "MYTH-0030",
+     "display_device": "Earwig Bassquake",
+     "reported_issue": "Plays your thoughts out loud to everyone nearby.",
+     "notes": "Owner wants this fixed urgently. Very urgently.",
+     "stage": "repaired",
+     "work": [
+      {
+       "kind": "note",
+       "body": "On the bench. Approached with caution."
+      },
+      {
+       "kind": "work",
+       "body": "Mic routing loops to the speaker. Fitted a grumble suppressor."
+      },
+      {
+       "kind": "test",
+       "body": "24-hour soak test. No supernatural events recorded."
+      }
+     ],
+     "parts": [
+      {
+       "sku": "MYTH-GRUMBLE",
+       "quantity": 1,
+       "billed": 1
+      },
+      {
+       "sku": "MYTH-UNI-RIBBON",
+       "quantity": 1,
+       "billed": 1
+      }
+     ],
+     "labor": [
+      {
+       "description": "Arcane diagnosis",
+       "quantity": 1,
+       "unit_price_cents": 4500
+      }
+     ],
+     "fee_cents": 1500,
+     "paid": true,
+     "picked_up": false,
+     "discount": {
+      "kind": "amount",
+      "value": 500
+     }
+    },
+    {
+     "device_type": "Aquarium",
+     "brand": "Fishbowl Ltd.",
+     "model": "Deep Blue Thought",
+     "serial": "MYTH-0031",
+     "display_device": "Fishbowl Ltd. Deep Blue Thought",
+     "reported_issue": "The fish have unionised and demand better lighting.",
+     "notes": "Arrived with a small petition taped to the glass.",
+     "stage": "in_progress",
+     "technician": "technician",
+     "work": [
+      {
+       "kind": "note",
+       "body": "On the bench. Approached with caution."
+      },
+      {
+       "kind": "work",
+       "body": "Lighting controller dead. Replaced and filed the petition."
+      }
+     ],
+     "parts": [
+      {
+       "sku": "MYTH-DRAGON-PASTE",
+       "quantity": 1,
+       "billed": 1
+      }
+     ],
+     "labor": [
+      {
+       "description": "Arcane diagnosis",
+       "quantity": 1,
+       "unit_price_cents": 2500
+      }
+     ],
+     "fee_cents": 1500
+    }
+   ]
+  },
+  {
+   "name": "Fergus McDoodle",
+   "phone": "+357 555 0122",
+   "email": "customer13@example.test",
+   "address": "13 Imaginary Lane, Nowhere-on-Sea",
+   "notes": "Synthetic demo record. Bagpipe tutor. Every device he owns has heard too much.",
+   "repairs": [
+    {
+     "device_type": "Electric piano",
+     "brand": "Keysmith",
+     "model": "Grand Illusion",
+     "serial": "MYTH-0032",
+     "display_device": "Keysmith Grand Illusion",
+     "reported_issue": "Every song turns into a sea shanty by the second verse.",
+     "notes": "Owner's recital went viral for the wrong reasons.",
+     "stage": "lab_test",
+     "technician": "technician",
+     "work": [
+      {
+       "kind": "note",
+       "body": "On the bench. Approached with caution."
+      },
+      {
+       "kind": "work",
+       "body": "Style autoselect stuck on 'shanty'. Kraken-proof seal on the pedal."
+      },
+      {
+       "kind": "test",
+       "body": "24-hour soak test. No supernatural events recorded."
+      }
+     ],
+     "parts": [
+      {
+       "sku": "MYTH-KRAKEN-SEAL",
+       "quantity": 1,
+       "billed": 1
+      }
+     ],
+     "labor": [
+      {
+       "description": "Arcane diagnosis",
+       "quantity": 1,
+       "unit_price_cents": 3000
+      }
+     ],
+     "fee_cents": 1500
+    },
+    {
+     "device_type": "Thermostat",
+     "brand": "Climatic",
+     "model": "Feelz 3",
+     "serial": "MYTH-0033",
+     "display_device": "Climatic Feelz 3",
+     "reported_issue": "Sets the temperature based on its mood.",
+     "notes": "It is currently sulking at 14 °C.",
+     "stage": "repaired",
+     "work": [
+      {
+       "kind": "note",
+       "body": "On the bench. Approached with caution."
+      },
+      {
+       "kind": "work",
+       "body": "Mood sensor oversensitive. Fitted an opinion filter."
+      },
+      {
+       "kind": "test",
+       "body": "24-hour soak test. No supernatural events recorded."
+      }
+     ],
+     "parts": [
+      {
+       "sku": "MYTH-OPINION-FLT",
+       "quantity": 1,
+       "billed": 1
+      }
+     ],
+     "labor": [
+      {
+       "description": "Arcane diagnosis",
+       "quantity": 1,
+       "unit_price_cents": 3500
+      },
+      {
+       "description": "Gentle persuasion",
+       "quantity": 1.5,
+       "unit_price_cents": 3000,
+       "notes": "Required singing."
+      }
+     ],
+     "fee_cents": 1500,
+     "paid": true,
+     "picked_up": true,
+     "discount": {
+      "kind": "percent",
+      "value": 10
+     }
+    },
+    {
+     "device_type": "Kitchen scale",
+     "brand": "Weighwise",
+     "model": "Truth Teller",
+     "serial": "MYTH-0034",
+     "display_device": "Weighwise Truth Teller",
+     "reported_issue": "Adds 2 kg whenever you look at it.",
+     "notes": "Owner hid it in a cupboard.",
+     "stage": "in_progress",
+     "technician": "technician",
+     "work": [
+      {
+       "kind": "note",
+       "body": "On the bench. Approached with caution."
+      },
+      {
+       "kind": "work",
+       "body": "Load cell offset set by a prankster. Recalibrated."
+      }
+     ],
+     "parts": [
+      {
+       "sku": "MYTH-DRAGON-PASTE",
+       "quantity": 1,
+       "billed": 1
+      },
+      {
+       "sku": "MYTH-UNI-RIBBON",
+       "quantity": 1,
+       "billed": 1
+      }
+     ],
+     "labor": [
+      {
+       "description": "Arcane diagnosis",
+       "quantity": 1,
+       "unit_price_cents": 4000
+      }
+     ],
+     "fee_cents": 1500
+    }
+   ]
+  },
+  {
+   "name": "Agatha Spindleshanks",
+   "phone": "+357 555 0123",
+   "email": "customer14@example.test",
+   "address": "14 Imaginary Lane, Nowhere-on-Sea",
+   "notes": "Synthetic demo record. Night owl. Picks up after 19:00 only.",
+   "repairs": [
+    {
+     "device_type": "Alarm clock",
+     "brand": "Wakey Inc.",
+     "model": "Rooster 2.0",
+     "serial": "MYTH-0035",
+     "display_device": "Wakey Inc. Rooster 2.0",
+     "reported_issue": "Crows like a rooster, then lectures you about sleep hygiene.",
+     "notes": "Owner hasn't snoozed in a month. Not by choice.",
+     "stage": "customer_test",
+     "technician": "technician",
+     "work": [
+      {
+       "kind": "note",
+       "body": "On the bench. Approached with caution."
+      },
+      {
+       "kind": "work",
+       "body": "Wellness firmware add-on removed."
+      },
+      {
+       "kind": "test",
+       "body": "24-hour soak test. No supernatural events recorded."
+      },
+      {
+       "kind": "contact",
+       "body": "Customer is trying it at home. Asked them to report any new prophecies."
+      }
+     ],
+     "labor": [
+      {
+       "description": "Arcane diagnosis",
+       "quantity": 1,
+       "unit_price_cents": 4500
+      },
+      {
+       "description": "Gentle persuasion",
+       "quantity": 1.5,
+       "unit_price_cents": 3000,
+       "notes": "Required singing."
+      }
+     ],
+     "fee_cents": 1500
+    },
+    {
+     "device_type": "Sewing machine",
+     "brand": "Stitchcraft",
+     "model": "Hemlock 11",
+     "serial": "MYTH-0036",
+     "display_device": "Stitchcraft Hemlock 11",
+     "reported_issue": "Sews everything to everything else.",
+     "notes": "Delivered sewn to its own cover.",
+     "stage": "no_repair",
+     "warranty_until": "2027-12-15",
+     "work": [
+      {
+       "kind": "note",
+       "body": "On the bench. Approached with caution."
+      },
+      {
+       "kind": "work",
+       "body": "Beyond economical repair: feed dogs feral. Replaced a gremlin-chewed belt."
+      },
+      {
+       "kind": "contact",
+       "body": "Customer informed. They took it well, the device did not."
+      }
+     ],
+     "labor": [
+      {
+       "description": "Arcane diagnosis",
+       "quantity": 1,
+       "unit_price_cents": 2500
+      }
+     ],
+     "fee_cents": 1500,
+     "paid": false,
+     "picked_up": false
+    }
+   ]
+  },
+  {
+   "name": "Mortimer Pickleberry",
+   "phone": "+357 555 0124",
+   "email": "customer15@example.test",
+   "address": "15 Imaginary Lane, Nowhere-on-Sea",
+   "notes": "Synthetic demo record. Wants a written estimate for everything, including the estimate.",
+   "repairs": [
+    {
+     "device_type": "Walkie-talkie",
+     "brand": "Chatterbox",
+     "model": "Over & Out",
+     "serial": "MYTH-0037",
+     "display_device": "Chatterbox Over & Out",
+     "reported_issue": "Only connects to a walkie-talkie in 1987.",
+     "notes": "The person in 1987 is very nice.",
+     "stage": "in_progress",
+     "technician": "technician",
+     "work": [
+      {
+       "kind": "note",
+       "body": "On the bench. Approached with caution."
+      },
+      {
+       "kind": "work",
+       "body": "Flux whisker in the antenna. Kept the 1987 frequency on a label for the owner."
+      }
+     ],
+     "parts": [
+      {
+       "sku": "MYTH-FLUX-WHISK",
+       "quantity": 1,
+       "billed": 1
+      }
+     ],
+     "labor": [
+      {
+       "description": "Arcane diagnosis",
+       "quantity": 1,
+       "unit_price_cents": 3000
+      }
+     ],
+     "fee_cents": 1500
+    }
+   ]
+  },
+  {
+   "name": "Tabitha Moonbeam",
+   "phone": "+357 555 0125",
+   "email": "customer16@example.test",
+   "address": "16 Imaginary Lane, Nowhere-on-Sea",
+   "notes": "Synthetic demo record. Astrologer. Will not collect during Mercury retrograde.",
+   "repairs": [
+    {
+     "device_type": "E-reader",
+     "brand": "Pagewise",
+     "model": "Bookworm Lite",
+     "serial": "MYTH-0038",
+     "display_device": "Pagewise Bookworm Lite",
+     "reported_issue": "Changes the ending of every novel to a wedding.",
+     "notes": "Owner was halfway through a murder mystery.",
+     "stage": "customer_test",
+     "technician": "technician",
+     "work": [
+      {
+       "kind": "note",
+       "body": "On the bench. Approached with caution."
+      },
+      {
+       "kind": "work",
+       "body": "Recommendation engine overreached. Reset to stock."
+      },
+      {
+       "kind": "test",
+       "body": "24-hour soak test. No supernatural events recorded."
+      },
+      {
+       "kind": "contact",
+       "body": "Customer is trying it at home. Asked them to report any new prophecies."
+      }
+     ],
+     "parts": [
+      {
+       "sku": "MYTH-UNI-RIBBON",
+       "quantity": 1,
+       "billed": 1
+      }
+     ],
+     "labor": [
+      {
+       "description": "Arcane diagnosis",
+       "quantity": 1,
+       "unit_price_cents": 3500
+      }
+     ],
+     "fee_cents": 1500
+    },
+    {
+     "device_type": "Drone",
+     "brand": "Skyward",
+     "model": "Buzzard X",
+     "serial": "MYTH-0039",
+     "display_device": "Skyward Buzzard X",
+     "reported_issue": "Follows pigeons instead of its owner.",
+     "notes": "Spotted in the park leading a flock.",
+     "stage": "no_repair",
+     "work": [
+      {
+       "kind": "note",
+       "body": "On the bench. Approached with caution."
+      },
+      {
+       "kind": "work",
+       "body": "Beyond economical repair: target lock trained on pigeons. Retrained on the owner's hat."
+      },
+      {
+       "kind": "contact",
+       "body": "Customer informed. They took it well, the device did not."
+      }
+     ],
+     "labor": [
+      {
+       "description": "Arcane diagnosis",
+       "quantity": 1,
+       "unit_price_cents": 4000
+      }
+     ],
+     "fee_cents": 1500,
+     "paid": false,
+     "picked_up": true
+    },
+    {
+     "device_type": "Fan",
+     "brand": "Coolbreeze",
+     "model": "Gale Force 1",
+     "serial": "MYTH-0040",
+     "display_device": "Coolbreeze Gale Force 1",
+     "reported_issue": "Blows only towards whoever is speaking.",
+     "notes": "Meetings have become very windy.",
+     "stage": "in_progress",
+     "technician": "technician",
+     "work": [
+      {
+       "kind": "note",
+       "body": "On the bench. Approached with caution."
+      },
+      {
+       "kind": "work",
+       "body": "Voice-tracking left on from a demo mode."
+      }
+     ],
+     "parts": [
+      {
+       "sku": "MYTH-DRAGON-PASTE",
+       "quantity": 1,
+       "billed": 1
+      }
+     ],
+     "labor": [
+      {
+       "description": "Arcane diagnosis",
+       "quantity": 1,
+       "unit_price_cents": 4500
+      }
+     ],
+     "fee_cents": 1500
+    }
+   ]
+  },
+  {
+   "name": "Cornelius Wafflestomp",
+   "phone": "+357 555 0126",
+   "email": "customer17@example.test",
+   "address": "17 Imaginary Lane, Nowhere-on-Sea",
+   "notes": "Synthetic demo record. Retired sea captain. Calls the counter 'the bridge'.",
+   "repairs": [
+    {
+     "device_type": "Τοστιέρα",
+     "brand": "Τοστάκιας",
+     "model": "Γκριλ 2000",
+     "serial": "MYTH-0041",
+     "display_device": "Τοστάκιας Γκριλ 2000",
+     "reported_issue": "Ψήνει μόνο τυρί, αρνείται το ψωμί.",
+     "notes": "Ο πελάτης φέρνει δικό του ψωμί για δοκιμή.",
+     "stage": "customer_test",
+     "technician": "technician",
+     "work": [
+      {
+       "kind": "note",
+       "body": "On the bench. Approached with caution."
+      },
+      {
+       "kind": "work",
+       "body": "Ο αισθητήρας ψωμιού ήταν καμένος. Αλλάχτηκε η ασφάλεια."
+      },
+      {
+       "kind": "test",
+       "body": "24-hour soak test. No supernatural events recorded."
+      },
+      {
+       "kind": "contact",
+       "body": "Customer is trying it at home. Asked them to report any new prophecies."
+      }
+     ],
+     "parts": [
+      {
+       "sku": "MYTH-PHOENIX-FUSE",
+       "quantity": 1,
+       "billed": 1
+      }
+     ],
+     "labor": [
+      {
+       "description": "Arcane diagnosis",
+       "quantity": 1,
+       "unit_price_cents": 2500
+      },
+      {
+       "description": "Gentle persuasion",
+       "quantity": 1.5,
+       "unit_price_cents": 3000,
+       "notes": "Required singing."
+      }
+     ],
+     "fee_cents": 1500
+    },
+    {
+     "device_type": "Ραδιόφωνο",
+     "brand": "Μελωδία",
+     "model": "Νοσταλγία 60",
+     "serial": "MYTH-0042",
+     "display_device": "Μελωδία Νοσταλγία 60",
+     "reported_issue": "Παίζει μόνο ρεμπέτικα, όποιο σταθμό κι αν βάλεις.",
+     "notes": "Ο πελάτης δεν παραπονιέται ιδιαίτερα.",
+     "stage": "no_repair",
+     "work": [
+      {
+       "kind": "note",
+       "body": "On the bench. Approached with caution."
+      },
+      {
+       "kind": "work",
+       "body": "Beyond economical repair: ο επιλογέας σταθμών κόλλησε. Καθαρίστηκε και λιπάνθηκε."
+      },
+      {
+       "kind": "contact",
+       "body": "Customer informed. They took it well, the device did not."
+      }
+     ],
+     "labor": [
+      {
+       "description": "Arcane diagnosis",
+       "quantity": 1,
+       "unit_price_cents": 3000
+      }
+     ],
+     "fee_cents": 1500,
+     "paid": true,
+     "picked_up": false,
+     "discount": {
+      "kind": "amount",
+      "value": 500
+     }
+    }
+   ]
+  },
+  {
+   "name": "Θεοφάνης Τοστιέρης",
+   "phone": "+357 555 0127",
+   "email": "customer18@example.test",
+   "address": "Οδός Φαντασίας 18, Λευκωσία",
+   "notes": "Synthetic demo record. Πελάτης δοκιμής με ελληνικό κείμενο. Φέρνει πάντα τοστιέρες.",
+   "repairs": [
+    {
+     "device_type": "Ηλεκτρική σκούπα",
+     "brand": "Σκουπάκης",
+     "model": "Τυφώνας 5",
+     "serial": "MYTH-0043",
+     "display_device": "Σκουπάκης Τυφώνας 5",
+     "reported_issue": "Ρουφάει μόνο κέρματα και κλειδιά.",
+     "notes": "Επιστράφηκαν στον πελάτη 7,40 € σε κέρματα.",
+     "stage": "in_progress",
+     "technician": "technician",
+     "warranty_until": "2027-07-15",
+     "work": [
+      {
+       "kind": "note",
+       "body": "Πήραμε τη συσκευή στον πάγκο."
+      },
+      {
+       "kind": "work",
+       "body": "Το φίλτρο είχε μαγνήτη από προηγούμενη επισκευή."
+      }
+     ],
+     "parts": [
+      {
+       "sku": "MYTH-DRAGON-PASTE",
+       "quantity": 1,
+       "billed": 1
+      }
+     ],
+     "labor": [
+      {
+       "description": "Διάγνωση",
+       "quantity": 1,
+       "unit_price_cents": 3500
+      }
+     ],
+     "fee_cents": 1500
+    },
+    {
+     "device_type": "Μπαταρία",
+     "brand": "Ενέργεια ΑΕ",
+     "model": "Αιώνια 9V",
+     "serial": "MYTH-0044",
+     "display_device": "Ενέργεια ΑΕ Αιώνια 9V",
+     "reported_issue": "Τελειώνει κάθε Κυριακή στις 11:00, ακριβώς.",
+     "notes": "Η πελάτισσα έχει σημειώσει την ώρα έξι φορές.",
+     "stage": "customer_test",
+     "technician": "technician",
+     "work": [
+      {
+       "kind": "note",
+       "body": "Πήραμε τη συσκευή στον πάγκο."
+      },
+      {
+       "kind": "work",
+       "body": "Ο ενσωματωμένος χρονοδιακόπτης ήταν ρυθμισμένος για Κυριακή."
+      },
+      {
+       "kind": "test",
+       "body": "Δοκιμή 24 ωρών χωρίς παράξενα φαινόμενα."
+      },
+      {
+       "kind": "contact",
+       "body": "Ο πελάτης δοκιμάζει τη συσκευή στο σπίτι."
+      }
+     ],
+     "labor": [
+      {
+       "description": "Διάγνωση",
+       "quantity": 1,
+       "unit_price_cents": 4000
+      }
+     ],
+     "fee_cents": 1500
+    },
+    {
+     "device_type": "Φακός",
+     "brand": "Φωτεινός",
+     "model": "Φάρος Μίνι",
+     "serial": "MYTH-0045",
+     "display_device": "Φωτεινός Φάρος Μίνι",
+     "reported_issue": "Φωτίζει μόνο όταν είναι ήδη μέρα.",
+     "notes": "Δοκιμάστηκε μπροστά στον πελάτη, στο φως.",
+     "stage": "no_repair",
+     "work": [
+      {
+       "kind": "note",
+       "body": "Πήραμε τη συσκευή στον πάγκο."
+      },
+      {
+       "kind": "work",
+       "body": "Δεν επισκευάζεται οικονομικά. Ο φωτοαισθητήρας είχε ανάποδη λογική. Αλλάχτηκε."
+      },
+      {
+       "kind": "contact",
+       "body": "Ο πελάτης ενημερώθηκε."
+      }
+     ],
+     "labor": [
+      {
+       "description": "Διάγνωση",
+       "quantity": 1,
+       "unit_price_cents": 4500
+      }
+     ],
+     "fee_cents": 1500,
+     "paid": true,
+     "picked_up": true
+    }
+   ]
+  },
+  {
+   "name": "Καλλιόπη Μπαταρίδου",
+   "phone": "+357 555 0128",
+   "email": "customer19@example.test",
+   "address": "Οδός Φαντασίας 19, Λευκωσία",
+   "notes": "Synthetic demo record. Πελάτισσα δοκιμής. Οι μπαταρίες της τελειώνουν πάντα Κυριακή.",
+   "repairs": [
+    {
+     "device_type": "Trumpet",
+     "brand": "Brassy",
+     "model": "Fanfare 9000",
+     "serial": "MYTH-0046",
+     "display_device": "Brassy Fanfare 9000",
+     "reported_issue": "Plays the wrong song at every wedding. Specifically, funeral marches.",
+     "notes": "Owner is a wedding musician. Bookings are down.",
+     "stage": "in_progress",
+     "technician": "technician",
+     "work": [
+      {
+       "kind": "note",
+       "body": "Πήραμε τη συσκευή στον πάγκο."
+      },
+      {
+       "kind": "work",
+       "body": "Valve memory wired to a sad-songs bank. Rewired."
+      }
+     ],
+     "parts": [
+      {
+       "sku": "MYTH-DRAGON-PASTE",
+       "quantity": 1,
+       "billed": 1
+      },
+      {
+       "sku": "MYTH-UNI-RIBBON",
+       "quantity": 1,
+       "billed": 1
+      }
+     ],
+     "labor": [
+      {
+       "description": "Διάγνωση",
+       "quantity": 1,
+       "unit_price_cents": 2500
+      }
+     ],
+     "fee_cents": 1500
+    },
+    {
+     "device_type": "Crystal ball",
+     "brand": "Seers & Co.",
+     "model": "Clairvoyant HD",
+     "serial": "MYTH-0047",
+     "display_device": "Seers & Co. Clairvoyant HD",
+     "reported_issue": "Shows only reruns of a cooking show.",
+     "notes": "Owner did learn a good lasagne recipe.",
+     "stage": "customer_test",
+     "technician": "technician",
+     "work": [
+      {
+       "kind": "note",
+       "body": "Πήραμε τη συσκευή στον πάγκο."
+      },
+      {
+       "kind": "work",
+       "body": "Receiver tuned to a cable channel. Retuned to the beyond."
+      },
+      {
+       "kind": "test",
+       "body": "Δοκιμή 24 ωρών χωρίς παράξενα φαινόμενα."
+      },
+      {
+       "kind": "contact",
+       "body": "Ο πελάτης δοκιμάζει τη συσκευή στο σπίτι."
+      }
+     ],
+     "labor": [
+      {
+       "description": "Διάγνωση",
+       "quantity": 1,
+       "unit_price_cents": 3000
+      },
+      {
+       "description": "Επισκευή",
+       "quantity": 1.5,
+       "unit_price_cents": 3000,
+       "notes": "Ήπια."
+      }
+     ],
+     "fee_cents": 1500
+    }
+   ]
+  },
+  {
+   "name": "Rupert Gigglesworth-Smythe",
+   "phone": "+357 555 0129",
+   "email": "customer20@example.test",
+   "address": "20 Imaginary Lane, Nowhere-on-Sea",
+   "notes": "Synthetic demo record. Laughs at every quote. Pays anyway.",
+   "repairs": [
+    {
+     "device_type": "Rocking chair",
+     "brand": "Creakmore",
+     "model": "Grandma's Revenge",
+     "serial": "MYTH-0048",
+     "display_device": "Creakmore Grandma's Revenge",
+     "reported_issue": "Rocks on its own and judges your life choices.",
+     "notes": "Delivered rocking. Still rocking.",
+     "stage": "no_repair",
+     "work": [
+      {
+       "kind": "note",
+       "body": "On the bench. Approached with caution."
+      },
+      {
+       "kind": "work",
+       "body": "Beyond economical repair: possessed. Fitted a refurbished ghost containment cell."
+      },
+      {
+       "kind": "contact",
+       "body": "Customer informed. They took it well, the device did not."
+      }
+     ],
+     "labor": [
+      {
+       "description": "Arcane diagnosis",
+       "quantity": 1,
+       "unit_price_cents": 3500
+      }
+     ],
+     "fee_cents": 1500,
+     "paid": false,
+     "picked_up": false
+    },
+    {
+     "device_type": "Barbecue",
+     "brand": "Grillgantua",
+     "model": "Smokestack",
+     "serial": "MYTH-0049",
+     "display_device": "Grillgantua Smokestack",
+     "reported_issue": "Only cooks vegetables; spits out sausages.",
+     "notes": "Owner is not a vegetarian.",
+     "stage": "waiting_parts",
+     "technician": "technician",
+     "work": [
+      {
+       "kind": "note",
+       "body": "On the bench. Approached with caution."
+      },
+      {
+       "kind": "work",
+       "body": "Meat sensor flipped by a firmware 'health update'."
+      },
+      {
+       "kind": "contact",
+       "body": "Called the customer: part ordered from the far side of the moon."
+      }
+     ],
+     "parts": [
+      {
+       "sku": "MYTH-DRAGON-PASTE",
+       "quantity": 1,
+       "billed": 1
+      }
+     ],
+     "labor": [
+      {
+       "description": "Arcane diagnosis",
+       "quantity": 1,
+       "unit_price_cents": 4000
+      }
+     ],
+     "fee_cents": 1500
+    },
+    {
+     "device_type": "Cuckoo clock",
+     "brand": "Black Forest Gadgets",
+     "model": "Kuku Pro",
+     "serial": "MYTH-0050",
+     "display_device": "Black Forest Gadgets Kuku Pro",
+     "reported_issue": "The cuckoo comes out to give stock market tips.",
+     "notes": "Owner made 3% last week and is torn.",
+     "stage": "repaired",
+     "technician": "technician",
+     "warranty_until": "2027-02-15",
+     "work": [
+      {
+       "kind": "note",
+       "body": "On the bench. Approached with caution."
+      },
+      {
+       "kind": "work",
+       "body": "Cuckoo firmware mixed with a finance app. Replaced the board."
+      },
+      {
+       "kind": "test",
+       "body": "24-hour soak test. No supernatural events recorded."
+      }
+     ],
+     "parts": [
+      {
+       "sku": "MYTH-UNI-RIBBON",
+       "quantity": 1,
+       "billed": 1
+      }
+     ],
+     "labor": [
+      {
+       "description": "Arcane diagnosis",
+       "quantity": 1,
+       "unit_price_cents": 4500
+      }
+     ],
+     "fee_cents": 1500,
+     "paid": true,
+     "picked_up": false,
+     "discount": {
+      "kind": "amount",
+      "value": 500
+     }
+    }
+   ]
+  }
+ ]
+}

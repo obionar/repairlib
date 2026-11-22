@@ -57,16 +57,20 @@ def milli(value) -> int:
 
 
 def seed(workspace, dataset):
+    # A dataset is a customer list (stocked from CATALOG) or {"catalog": [...], "customers": [...]}.
+    catalog = CATALOG
+    if isinstance(dataset, dict):
+        catalog, dataset = [tuple(row) for row in dataset["catalog"]], dataset["customers"]
     if workspace_status(workspace) != "initialized":
         raise SystemExit("Initialize the workspace with repairlib setup first.")
     try:
         with maintenance_lock(workspace, exclusive=True, create=False):
-            seed_stopped(workspace, dataset)
+            seed_stopped(workspace, dataset, catalog)
     except WorkspaceError as error:
         raise SystemExit(str(error)) from error
 
 
-def seed_stopped(workspace, dataset):
+def seed_stopped(workspace, dataset, catalog=CATALOG):
     report = workspace_counts(database_path(workspace), stopped=True)
     if report["customers"] or report["repairs"]:
         raise SystemExit("Refusing to seed: use an initialized workspace with no customers or repairs.")
@@ -77,7 +81,7 @@ def seed_stopped(workspace, dataset):
                             UserInput(TECHNICIAN[0], "technician", TECHNICIAN[1]), key="seed-technician")
 
     items = {}
-    for sku, description, category, price, units in CATALOG:
+    for sku, description, category, price, units in catalog:
         item = local.call(inventory.create_item, workspace, access,
                           ItemInput(sku, description, category=category, selling_price_cents=price,
                                     low_stock_milli=1000), key=f"seed-item-{sku}")
@@ -99,7 +103,7 @@ def seed_stopped(workspace, dataset):
     actual = result["customers"], result["repairs"]
     if actual != expected:
         raise SystemExit(f"Seed counts {actual} did not match expected {expected}.")
-    print(f"Seeded {actual[0]} fictional customers, {actual[1]} repairs, {len(CATALOG)} catalog parts "
+    print(f"Seeded {actual[0]} fictional customers, {actual[1]} repairs, {len(catalog)} catalog parts "
           f"and {charges_made} charges.")
 
 

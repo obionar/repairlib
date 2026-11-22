@@ -75,6 +75,29 @@ or attachment storage content prevent reset. Reset preserves accounts, passwords
 sessions, API tokens, shop settings, and prior audit history. It reseeds the
 customers and records one maintenance event in the same transaction.
 
+### Disposable demo with a full workshop
+
+For development and testing, `scripts/seed_demo.py` fills an empty, initialized workspace
+through the shared domain operations. The `demo-mythical.json` dataset holds 20 silly
+customers, among them two in Greek, and 50 impossible devices with mythical issues. It covers
+every stage and every payment and pickup combination. It also has a catalog of mythical parts,
+two of them nearly out of stock. Copy and paste this block. Throw the directory away when you
+are done:
+
+```sh
+demo="$(mktemp -d)/workspace"
+printf 'demo-owner-passphrase\n' | bin/repairlib setup --workspace "$demo" \
+  --shop "The Mythical Fix-It Emporium" --username owner --timezone Europe/Nicosia
+python3 scripts/seed_demo.py --workspace "$demo" --dataset scripts/demo-mythical.json
+bin/repairlib dev --workspace "$demo" --port 8010
+```
+
+Open <http://127.0.0.1:8010> and sign in as `owner` with `demo-owner-passphrase`. The seed also
+creates the user `technician` with `demo-technician-passphrase`. Both passwords are public, so
+use them only for throwaway demos. Without `--dataset`, the script seeds the smaller, realistic
+presentation set (`scripts/demo-seed.json`). The seeder refuses a workspace that already has
+customers or repairs, and a running server.
+
 ### Add records to an existing test instance
 
 Sign in as an administrator or technician. Create a clearly labeled fictional
