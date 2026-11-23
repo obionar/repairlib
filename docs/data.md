@@ -9,11 +9,7 @@
 | Recover the whole workspace, including credentials | [Offline backup](#take-and-verify-an-offline-workspace-backup) and [restore](#restore-a-full-workspace-backup) |
 | Move an existing development workspace to the current schema | [Explicit migration](#upgrade-a-development-workspace) |
 
-Examples use the [local CLI](integrations.md#use-the-cli-on-the-shop-machine) on the shop machine, which works on the workspace directly as the built-in `cli` administrator. They write `repairlib …`; from a source checkout define it once. Add `--workspace PATH` to choose another workspace.
-
-```sh
-repairlib() { PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python3 -m repairlib "$@"; }
-```
+Examples use the [local CLI](integrations.md#use-the-cli-on-the-shop-machine) as the built-in `cli` administrator. `repairlib` means `bin/repairlib` from the checkout (or the `repairlib` link). Add `--workspace PATH` for another workspace.
 
 ## Export, preview and import a portable shop archive
 

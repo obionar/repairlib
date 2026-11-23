@@ -274,13 +274,10 @@ On an error page, note the request ID it shows; the service log has the matching
 
 - **One machine, one workspace.** Keep `data/` (or `repairlib-data/`) on local disk, not a network
   share. SQLite needs real file locking.
-- **Back up off the machine.** `bin/repairlib backup create --output <path outside data/>` and
-  copy the archive elsewhere. Rehearse a restore before you depend on it:
-  [data and recovery](data.md).
+- **Back up off the machine** and rehearse a restore: [data and recovery](data.md).
 - **Other devices on a closed shop LAN** (phones, tablets): add `--lan` to every `service`
   command (`bin/repairlib service install --port 8000 --lan`, and the same for `status`,
   `restart`, `remove`). The app then listens on all interfaces over plain HTTP; open
   `http://<machine-ip>:8000`. Use it only on a private network you trust. Without `--lan`
   it listens on loopback only.
-- **Checks after any change:** `bin/repairlib doctor` and `bin/repairlib status`.
 - **Raspberry Pi and other ARM boards:** `aarch64` works with any variant. Use a 64-bit OS.

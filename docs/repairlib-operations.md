@@ -5,16 +5,8 @@
 This is the one file an agent needs before operating RepairLib: the pre-write check, the
 repair workflow as ordered commands, how to read a refusal, and what never to touch.
 
-Scope: **RepairLib only.** RepairFlow is a different product with its own CLI, paths and
-rules; the RepairFlow skill does not apply to this repository.
-
-Examples use the installed `repairlib` launcher. From a source checkout, run the same
-arguments as `PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python3 -m repairlib …`.
-Every `--help` page is authoritative; this page is a summary, not a replacement.
-
-`repairlib links` creates `~/.local/bin/repairlib` and `~/.agents/skills/repairlib` as
-symlinks into the checkout, so the launcher and the agent skill work from any directory.
-The installer does the same unless given `--no-link`.
+`repairlib` is the launcher (`bin/repairlib`, linked by `repairlib links`). Every `--help`
+page is authoritative; this page is a summary.
 
 ## Before you write
 
@@ -202,8 +194,7 @@ Common refusals and what to do:
   a GUI, and do not edit files under the workspace by hand. Every write must go through the
   CLI, the API or the browser so revisions, receipts and audit history stay correct.
 - **No database or backup surgery.** Backups, restores and migrations belong to
-  `repairlib backup`, `repairlib migrate` and the [data guide](data.md); see
-  [installation and operations](operations.md) for those procedures.
+  `repairlib backup`, `repairlib migrate` and the [data guide](data.md).
 - **No service control.** Do not run `repairlib service install|start|stop|restart|remove`,
   `systemctl`, `rc-service` or `rc-update`. Starting and stopping the shop's service is the
   operator's decision, not an agent's.

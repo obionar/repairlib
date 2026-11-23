@@ -1,59 +1,21 @@
 # RepairLib
 
-RepairLib is a single-workshop application for tracking customers, repairs, work
-entries, parts, labor, payment status, attachments, and inventory. Staff use the browser
-UI. Remote integrations use the authenticated JSON API; the CLI and stdio MCP bridge work on the local workspace. The app
-also provides CSV intake, portable shop archives, and offline backup and restore.
-Use disposable workspaces while evaluating the development build.
-
-## Get started
-
-1. Check the host with `python3 scripts/preflight.py` and follow the [deployment guide](docs/deployment.md)
-   (system packages, `.venv` or Podman).
-2. [Initialize a disposable workspace](docs/operations.md#initialize-a-workspace-in-the-browser)
-   and sign in. To start with three fictional customers, [seed an isolated demo](docs/operations.md#initialize-an-isolated-synthetic-demo).
-3. Use the [workshop guide](docs/workshop.md#daily-workflow) to run a repair from intake through pickup.
-
-## Guides
-
-| Task | Guide |
-|---|---|
-| Prepare a host and choose system packages, `.venv` or a Podman container | [Deployment](docs/deployment.md) |
-| Install on Alpine/OpenRC or Linux/systemd, set up a workspace, rehearse updates | [Installation and operations](docs/operations.md) |
-| Run the workshop, manage staff and stock, print or attach files | [Workshop workflows](docs/workshop.md) |
-| Use the local CLI, set passwords, discover the versioned API or connect a stdio MCP host | [CLI, API and MCP](docs/integrations.md) |
-| Import CSVs, transfer shop records, back up, restore or migrate | [Data transfer and recovery](docs/data.md) |
-| Change templates, styles or page structure | [Web frontend map](docs/frontend.md) |
-| Operate RepairLib safely as an agent | [RepairLib operations for agents](docs/repairlib-operations.md) |
-| Report a bug or contribute a change | [Contributing](CONTRIBUTING.md) |
+A repair-shop app for one workshop: customers, repairs, work log, parts and labour, payment
+status, attachments and stock. Staff use the browser. Integrations use the JSON API; the CLI
+and the stdio MCP bridge work on the local workspace.
 
 ## Requirements
 
-Linux on `x86_64` or `aarch64` with Python 3.13 or newer. There are three ways to deploy, all
-tested on Debian 13, Arch and Alpine 3.24:
-[system packages](docs/deployment.md#1-system-packages) (the default, no pip),
-[a `.venv` with pip](docs/deployment.md#2-venv-with-pip), or
-[a rootless Podman container](docs/deployment.md#3-podman-container).
-The [deployment guide](docs/deployment.md) covers each one, with first steps for a fresh machine.
-
-Check the host first. The check lists everything missing and prints copy-paste fix commands for
-your distribution:
+Linux (`x86_64` or `aarch64`) with Python 3.13+. Check the host first; it prints copy-paste
+fixes for anything missing:
 
 ```sh
 python3 scripts/preflight.py                # or --mode venv, --mode podman
 ```
 
-Run source commands from the checkout root with
-`PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python3 -m repairlib ...`.
-The MCP bridge is part of RepairLib itself (standard library only).
-
-For a versioned install outside the source checkout, see
-[Linux install](docs/operations.md#linux-install).
+System packages, a `.venv` or a Podman container: see the [deployment guide](docs/deployment.md).
 
 ## Quick start
-
-Once `python3 scripts/preflight.py` says `Ready`, copy-paste these four lines. Change only the
-shop name; the admin password is typed at the prompt and the timezone is read from this machine.
 
 ```sh
 git clone https://github.com/obionar/repairlib.git "$HOME/repairlib"
@@ -62,80 +24,46 @@ bin/repairlib setup --shop "My Shop" --username owner
 bin/repairlib service install && bin/repairlib service start
 ```
 
-Open <http://127.0.0.1:8000> and sign in as `owner`. `bin/repairlib` runs this checkout with its
-workspace in `./data` and listens on port 8000, so no paths or environment variables are needed;
-`REPAIRLIB_WORKSPACE` overrides the workspace for any command. `bin/repairlib links` links the
-launcher into `~/.local/bin/repairlib` and this repository's agent skill into
-`~/.agents/skills/repairlib`, so `repairlib` runs from anywhere and any agent (pi, OpenCode, …)
-finds the skill; both links resolve back to this checkout.
+Open <http://127.0.0.1:8000> and sign in as `owner`. The workspace is `./data`
+(`REPAIRLIB_WORKSPACE` overrides it). Keep it Git-ignored and backed up: `git clean -xdf`
+deletes it. `bin/repairlib links` puts `repairlib` on your `PATH` and links the agent skill.
+Update with `bin/repairlib update`. Staff devices on a closed LAN: add `--lan`
+([deployment tips](docs/deployment.md#tips)).
 
-Update later with `bin/repairlib update`: it refuses a dirty checkout, fast-forwards the branch and
-restarts the service. To move to another machine, copy the checkout with its `data/` and
-`data-backups/` directories, or clone again and copy those two directories, then reinstall the
-service. A workspace inside the checkout must stay Git-ignored: `git checkout` and `git clean -xdf`
-can overwrite or delete shop records, so keep a backup first. The
-[installer](docs/operations.md#linux-install) adds a versioned installation with atomic staged
-updates and rollback.
+Try it first: [disposable workspace](docs/operations.md#initialize-a-workspace-in-the-browser)
+or [synthetic demo](docs/operations.md#initialize-an-isolated-synthetic-demo).
+
+## Guides
+
+| Task | Guide |
+|---|---|
+| Prepare a host, daily runbook | [Deployment](docs/deployment.md) |
+| Services, updates, versioned install, diagnostics | [Operations](docs/operations.md) |
+| Daily workshop, staff, stock, printing, files | [Workshop](docs/workshop.md) |
+| CLI, API, MCP | [Integrations](docs/integrations.md) |
+| CSV import, transfer, backup, restore, migrate | [Data and recovery](docs/data.md) |
+| Templates and styles | [Frontend map](docs/frontend.md) |
+| Operating RepairLib as an agent | [Agent operations](docs/repairlib-operations.md) |
+| Contributing | [CONTRIBUTING](CONTRIBUTING.md) |
 
 ## Check
 
-From the project root:
-
 ```sh
-python3 scripts/check.py
+python3 scripts/check.py           # full suite, one module per CPU; run before committing
+python3 scripts/check.py --fast    # smoke suite
+python3 scripts/check.py --full    # adds the slow installer tests
+python3 scripts/check.py --distro debian   # committed HEAD in a clean container (or alpine)
 ```
 
-The standard-library runner discovers tests under `tests/` and exits nonzero if
-any fail. Test workspaces are disposable. The runner disables bytecode writes.
-Use `python3 scripts/check.py --fast` for the local smoke suite; run the full
-command before committing. It runs one test module per CPU (about two minutes on
-six cores); `--jobs 1` runs serially. The slow installer integration tests run
-only with `--full`; use it when changing the installer or before a release.
-With Git and Podman, `python3 scripts/check.py --distro debian` (or `alpine`)
-checks committed `HEAD` in a disposable clone using that distribution's stock
-packages. It does not mount the original checkout or test uncommitted changes.
-Use the host check for edits, or commit them on a local verification branch to
-check that exact revision in the container.
+Tests use throwaway workspaces. Importing `repairlib` or building the app never creates or
+migrates a database.
 
-## Development server
+## Layout
 
-For an uninitialized development listener, choose a fresh path outside the
-source tree:
-
-```sh
-repairlib_workspace="$(mktemp -d)/workspace"
-PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python3 -m repairlib dev \
-  --workspace "$repairlib_workspace"
-```
-
-The server binds `127.0.0.1:8000` by default. Check the listener and workspace readiness:
-
-```sh
-curl http://127.0.0.1:8000/health
-# {"status":"ok","state":"uninitialized","ready":false,"workspace_exists":false}
-```
-
-The health response reports `ready: true` after an initialized workspace has
-started in sign-in mode.
-
-## Project map
-
-- `src/repairlib/app.py` — side-effect-free FastAPI factory and health route.
-- `src/repairlib/config.py` — explicit/default workspace path resolution.
-- `src/repairlib/doctor.py` — read-only diagnostics.
-- `src/repairlib/__main__.py` — local lifecycle and CLI command entry point.
-- `src/repairlib/adapters/web/` — shared base template, setup, sign-in, dashboard, and business forms.
-- `src/repairlib/adapters/api/` — versioned business, identity, archive, and CSV endpoints.
-- `src/repairlib/adapters/mcp.py` — stdio MCP tools over the local workspace, as the `mcp` user.
-- `src/repairlib/client/` — local workspace operations shared by the CLI and MCP bridge.
-- `src/repairlib/domain/` — shared workflow, access, billing, stock, and file operations.
-- `src/repairlib/lifecycle/` — workspace locking, offline recovery, Linux service management, and update worker.
-- `src/repairlib/storage/` — SQLite schema, compatibility checks, and database snapshots.
-- `scripts/check.py` — the single check entry point.
-- `tests/` — workflow, adapter, recovery, installation, and architecture checks.
-
-Importing `repairlib` or building the app never creates or migrates a database.
+`src/repairlib/`: `adapters/` (web, api, mcp) and `cli/` call `domain/` (rules, transactions,
+audit), which calls `storage/` (the only SQL). `client/` runs domain operations locally for the
+CLI and MCP; `lifecycle/` handles locking, backup, services and updates.
 
 ## License
 
-RepairLib is licensed under the [MIT License](LICENSE).
+[MIT](LICENSE).

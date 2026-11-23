@@ -28,7 +28,7 @@ vulnerabilities privately to the maintainers, not in a public issue.
    change leaked into a public surface.
 4. In the pull request, explain why the change is needed and which checks ran.
 
-See the [project map](README.md#project-map) for where to start. If multiple
+See the [layout](README.md#layout) for where to start. If multiple
 agents or shells might edit the same checkout, use separate clones or run the
 editing shell in the foreground under `python3 -B scripts/writer_lock.py -- "$SHELL"`
 on Unix. This protects source edits, not a running workshop workspace.

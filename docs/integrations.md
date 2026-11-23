@@ -11,22 +11,13 @@ Task-specific CLI and API examples are in [Workshop workflows](workshop.md) and 
 The CLI and MCP bridge run on the machine that holds the workspace and work on it directly. They need no token or profile: anyone who can open the workspace folder can already read its database, so shell access is the credential. Every change is still recorded in the audit history, attributed to the built-in user `cli` (or `mcp`) with the same source name.
 
 ```sh
-repairlib() { PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python3 -m repairlib "$@"; }   # from a source checkout
 repairlib dashboard --workspace "$repairlib_workspace"
 repairlib repairs list --workspace "$repairlib_workspace" --json
 ```
 
 Without `--workspace` the commands use the default state directory, the same one `setup` and `dev` use. Both built-in users act as shop administrators, cannot sign in to the web app, are hidden from user administration, and their names cannot be used for new accounts. Each is created on first use and that creation is audited.
 
-To set anyone's password from the shell at any time, including while the app runs:
-
-```sh
-repairlib passwd --workspace "$repairlib_workspace" --username owner
-```
-
-`passwd` reads the new password from a hidden prompt or one line on stdin, never from an argument, signs that user out everywhere and revokes their API tokens. `recover-password` is an alias.
-
-CLI exit codes: 0 success, 1 local file error, 2 command-line usage, 3 workspace not ready or busy, 5 refused permission, 6 missing record, 7 conflict, 8 invalid fields.
+`repairlib passwd --username NAME` sets any password, even while the app runs ([users](workshop.md#manage-users-and-recover-an-administrator-password)). Exit codes: [reading a refusal](repairlib-operations.md#reading-a-refusal).
 
 ## HTTP API
 

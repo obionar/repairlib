@@ -4,11 +4,7 @@
 
 [Dashboard](#dashboard) · [Repair intake and entries](#manage-repairs-and-work-entries) · [Attachments](#attach-files-to-repairs) · [Printing](#print-repair-summaries-and-labels) · [Inventory](#manage-the-inventory-catalog) · [Users and settings](#manage-users-and-recover-an-administrator-password)
 
-CLI examples run on the shop machine against the default workspace; add `--workspace PATH` for another. See the [local CLI](integrations.md#use-the-cli-on-the-shop-machine). They write `repairlib …`; from a source checkout define it once:
-
-```sh
-repairlib() { PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python3 -m repairlib "$@"; }
-```
+CLI examples use the [local CLI](integrations.md#use-the-cli-on-the-shop-machine): `repairlib` means `bin/repairlib` (or the `repairlib` link). Add `--workspace PATH` for another workspace.
 
 ## Conventions for writes
 
@@ -22,7 +18,7 @@ repairlib() { PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python3 -m repairlib "$@"
 
 1. Create or find the customer, then record the device and reported issue in **Repairs**.
 2. Open the job from the dashboard or Repairs register. Review its repair status and assignment.
-3. Update the repair status, add or correct work entries, record charges or stocked parts, and link files as needed.
+3. Update the repair status, add work entries, record parts in **Parts used**, set fees in **Payment**, and attach files.
 4. Open **Awaiting pickup** for completed work. Print the summary or label, record pickup, and check the job leaves the queue.
 
 ## Dashboard
@@ -77,7 +73,7 @@ repairlib repairs list --queue pickup --stage repaired --json
 
 ## Use a catalog part on a repair
 
-On an unarchived repair, **Parts and labor → Use catalog part**. Search by SKU, description, manufacturer or part number (search survives paging and part review). Enter quantity taken from stock, quantity billed and billed unit price (default: catalog selling price; zero supplies it free). The stock deduction and charge are recorded together, keeping description, unit, cost and billed price from the time of use. Viewers see quantities, price and totals, not unit cost.
+On an unarchived repair, search the catalog in **Parts used** (or **Browse catalog**) and open a part. Search by SKU, description, manufacturer or part number (search survives paging and part review). Enter quantity taken from stock, quantity billed and billed unit price (default: catalog selling price; zero supplies it free). The stock deduction and charge are recorded together, keeping description, unit, cost and billed price from the time of use. Viewers see quantities, price and totals, not unit cost.
 
 ```sh
 repairlib repairs consume-part 1 2 --repair-revision 1 --item-revision 4 \
@@ -90,7 +86,7 @@ API: `POST /api/v1/repairs/{repair_id}/consume-part` with integer `item_id`, `re
 
 ### Correct billing or return a catalog part
 
-Open the catalog charge from **Parts and labor**. Editing billed quantity, price or notes, or removing/restoring the charge, changes billing only; the original description, unit, cost and consumed quantity stay attached. CLI: `edit-charge`, `delete-charge`, `restore-charge`; an archived item can still have billing corrected on an active repair.
+Open the part's charge from **Parts used**. Editing billed quantity, price or notes, or removing/restoring the charge, changes billing only; the original description, unit, cost and consumed quantity stay attached. CLI: `edit-charge`, `delete-charge`, `restore-charge`; an archived item can still have billing corrected on an active repair.
 
 - **Review physical return** shows the remaining quantity; **Return physical part** returns all or part against that charge's original consumption (not above what remains) and leaves billing unchanged. The ledger shows the positive return with the original movement number.
 - **Intake mistake: remove charge and return part** removes the charge and returns its remaining quantity in one transaction. Both return actions need a reason and an active item and repair.
@@ -108,7 +104,7 @@ API on `/api/v1/repairs/{repair_id}/charges/{charge_id}`: `GET …/return-part` 
 
 ## Record parts, labor and totals
 
-**Parts and labor** lists catalog and free-text charges, parts and labor subtotals, a repair discount and the EUR total. Totals record work value, not payments. Prices have up to two decimals, quantities up to three; each line is rounded half-up to the cent, the subtotal sums rounded lines, percentage discounts are whole points rounded half-up, and a discount never exceeds the subtotal. Corrections and removals need a reason and keep audited before/after values. Free-text charges never change stock.
+**Parts used** lists catalog and free-text parts; **Payment** shows fees, discount and the EUR total (`repairs charges ID` lists every charge). Totals record work value, not payments. Prices have up to two decimals, quantities up to three; each line is rounded half-up to the cent, the subtotal sums rounded lines, percentage discounts are whole points rounded half-up, and a discount never exceeds the subtotal. Corrections and removals need a reason and keep audited before/after values. Free-text charges never change stock.
 
 ```sh
 repairlib repairs add-charge 1 --kind part --description "Charging port" \
@@ -153,7 +149,7 @@ recorded originals are missing or changed. Run `doctor` to investigate unfamilia
 
 ## Print repair summaries and labels
 
-The repair page links **Print summary** and **Print label**; use the browser's Print or save as PDF (no JavaScript needed; viewers can too). The summary shows shop, customer and phone, device, issue, repair status, active charges and totals, and up to 200 recent non-deleted entries in chronological order (marked as an excerpt if more exist). It omits unit costs and uses the shop timezone. The 62 × 29 mm label shows repair number, customer, device, serial and intake date.
+The repair page links **Print** and **Print label**; use the browser's Print or save as PDF (no JavaScript needed; viewers can too). The summary shows shop, customer and phone, device, issue, repair status, active charges and totals, and up to 200 recent non-deleted entries in chronological order (marked as an excerpt if more exist). It omits unit costs and uses the shop timezone. The 62 × 29 mm label shows repair number, customer, device, serial and intake date.
 
 Direct P15 printing is off by default. An admin opens **Shop settings → Label printer**, chooses **P15** and sends a test label. It is available when the server finds the fixed `p15` executable on its PATH; the operator supplies and configures that CLI (paper size, printer). Admins and technicians then use **Send to P15** on the label page (sticker: repair number and customer name).
 
