@@ -118,7 +118,7 @@ class MCPReadTests(MCPFixture, unittest.TestCase):
                              if tool.annotations.read_only_hint}
                     self.assertEqual(set(tools), set(cases) | {
                         "list_customers", "read_attachment_content", "charge_summary",
-                        "part_return_status", "list_inventory", "list_users", "device_history",
+                        "part_return_status", "list_inventory", "list_users", "device_history", "repair_brief",
                     })
                     for tool in tools.values():
                         self.assertTrue(tool.description)

@@ -532,6 +532,18 @@ class ChargeSummary(ChargeTotals):
     items: list[Charge]
 
 
+@dataclass(frozen=True)
+class RepairBrief:
+    """One read for an agent: the repair, who it is for, what can happen next and the money so far."""
+    repair: Repair
+    customer: str
+    customer_phone: str
+    technician: str
+    next_stages: list[str]
+    recent_entries: list[WorkEntry]
+    charges: ChargeSummary
+
+
 CHARGE_CONSUMPTION_FIELDS = {"inventory_item_id", "movement_id", "consumed_quantity_milli"}
 SUMMARY_CONSUMPTION_FIELDS = {"items": {"__all__": CHARGE_CONSUMPTION_FIELDS}}
 

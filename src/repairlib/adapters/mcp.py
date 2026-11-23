@@ -184,6 +184,9 @@ def repairlib_server(ctx: Local) -> "Server":
              customer_id=(Id | None, None), queue=(Literal["", "open", "pickup"], ""))
     register("get_repair", "Read a repair by ID, including its revision, stage and lifecycle state.",
              local.show_repair, **REPAIR)
+    register("repair_brief", "Start here for one repair: the repair with its revision, customer name and phone, "
+             "technician, allowed next stages, the 10 newest work entries and charge totals in EUR cents.",
+             local.repair_brief, **REPAIR)
     register("repair_activity", "Page through who changed a repair and its entries, charges and files.",
              local.repair_activity, **REPAIR, **PAGE)
     register("device_history", "List this shop's repairs of one device serial, oldest first.",

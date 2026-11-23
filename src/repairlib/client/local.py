@@ -20,6 +20,7 @@ from repairlib.contracts import (
     Attachment, AttachmentPage, Charge, ChargeSummary, CsvApply, CsvPreview, CustomerHistoryPage,
     CustomerPage, CustomerResponse, Dashboard, DeviceRepair, InventoryItem, InventoryPage, LabelOptions, MovementPage,
     PartReturnResult, PartReturnStatus, PortableImport, PortablePreview, PrintReceipt, PrinterSettings, Repair,
+    RepairBrief,
     RepairActivityPage, RepairPage, ShopSettings, StockChange, StockReconciliation, User, UserPage, WorkEntry,
     WorkEntryPage, WorkEntryRevision,
     CHARGE_CONSUMPTION_FIELDS, PORTABLE_MAX_BYTES, AttachmentCaption, AttachmentDetach, AttachmentLink, AttachmentPurge,
@@ -386,6 +387,15 @@ def charge_summary(ctx, repair_id, *, include_consumption=False) -> ChargeSummar
     if include_consumption:
         return summary
     return replace(summary, items=[without_consumption(item) for item in summary.items])
+
+
+def repair_brief(ctx, repair_id) -> RepairBrief:
+    """Separate reads, so the revisions may differ by one write; every later write still checks its own."""
+    repair, names = repair_with_names(ctx, repair_id)
+    return RepairBrief(repair=repair, customer=names["customer"], customer_phone=names["customer_phone"],
+                       technician=names["technician"], next_stages=repairs.stage_options(repair.stage),
+                       recent_entries=list_work_entries(ctx, repair_id, limit=10, before=None).items,
+                       charges=charge_summary(ctx, repair_id))
 
 
 def ticket_fees(ctx, repair_id) -> dict:

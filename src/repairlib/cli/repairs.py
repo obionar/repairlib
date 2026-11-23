@@ -55,6 +55,8 @@ def register_repair_commands(commands) -> None:
     create.add_argument("--warranty-repair-id", type=int, help="earlier repair of this shop that this one returns")
     show = actions.add_parser("show", help="show a repair and current revision")
     show.add_argument("id", type=int)
+    brief = actions.add_parser("brief", help="show a repair with customer, next stages, newest entries and totals")
+    brief.add_argument("id", type=int)
     label = actions.add_parser("label-options", help="show the reviewed label and printer revisions")
     label.add_argument("id", type=int)
     send = actions.add_parser("print-label", help="send one reviewed repair label to P15")
@@ -238,7 +240,7 @@ def register_repair_commands(commands) -> None:
     purge.add_argument("attachment_id", type=int)
     add_revision(purge)
     purge.add_argument("--key", required=True)
-    for command in (listing, create, show, label, send, edit, stage, entries, activity, add, correct, device, history,
+    for command in (listing, create, show, brief, label, send, edit, stage, entries, activity, add, correct, device, history,
                     files, attach, download, detach, caption, charge_list, add_charge, consume, edit_charge, discount,
                     fees, purge,
                     return_status, *returns, *flag_commands, *visibility_commands, *charge_visibility, *link_commands):
@@ -343,6 +345,11 @@ def _create(ctx, args):
 @executes("show")
 def _show(ctx, args):
     return local.repair_with_names(ctx, args.id)[0]
+
+
+@executes("brief")
+def _brief(ctx, args):
+    return local.repair_brief(ctx, args.id)
 
 
 @executes("label-options")
@@ -672,6 +679,14 @@ def _show_attachment(result, args, ctx):
 @renders("edit-entry", "delete-entry", "restore-entry")
 def _show_entry(result, args, ctx):
     print(f"Work entry {result.id}, revision {result.revision}, deleted={result.deleted}.")
+
+
+@renders("brief")
+def _show_brief(result, args, ctx):
+    _show_repair(result.repair, args, ctx)
+    print(f"Next stages\t{', '.join(result.next_stages)}")
+    for entry in result.recent_entries:
+        print(f"Entry {entry.id}\t{entry.created_at}\t{entry.kind}\t{display_name(entry.body)}")
 
 
 @renders("show")
