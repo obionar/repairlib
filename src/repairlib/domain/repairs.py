@@ -220,14 +220,6 @@ def read_repair(workspace: Path, access: RepairAccess, repair_id: int, *, custom
         return record, names, can_write
 
 
-def warranty_links(workspace: Path, access: RepairAccess, record: Repair):
-    """Return the cited earlier repair and the repairs citing this one, each in one shop-scoped query."""
-    with authorized(workspace, access, resource="repairs") as (db, principal, _, _):
-        origin = (repairs.find(db, principal.shop_id, record.warranty_repair_id)
-                  if record.warranty_repair_id else None)
-        return origin, repairs.warranty_returns(db, principal.shop_id, record.id)
-
-
 def repair_activity(workspace: Path, access: RepairAccess, repair_id: int, *,
                     before: int | None = None, limit: int = 25) -> RepairActivityPage:
     with authorized(workspace, access, resource="repairs") as (db, principal, _, _):

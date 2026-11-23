@@ -368,12 +368,6 @@ button.rl-nav-link {
   background: #f0f5fa;
 }
 
-.obi-ui .obi-error {
-  color: #82251c;
-  font-size: .875rem;
-  font-weight: 600;
-}
-
 /* Stage chips are tinted by meaning so a register can be scanned by colour and text. */
 .obi-status {
   display: inline-block;
@@ -576,7 +570,6 @@ button.rl-nav-link {
 }
 
 .obi-muted { color: var(--rl-muted); }
-.obi-unassigned { white-space: nowrap; }
 .obi-id { font-family: ui-monospace, monospace; }
 
 .obi-row-flags {
@@ -785,33 +778,6 @@ details[open] > summary.obi-panel-bar::before { transform: rotate(90deg); }
 summary.obi-panel-bar:focus-visible { outline-color: var(--rl-surface); outline-offset: -4px; }
 
 /* UI-4 repair workspace */
-.obi-record {
-  margin-block-end: 1rem;
-}
-
-.obi-record-kicker {
-  margin: 0;
-  color: var(--rl-muted);
-  font-size: .875rem;
-  font-weight: 700;
-  letter-spacing: .04em;
-  text-transform: uppercase;
-}
-
-.obi-record-flags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: .375rem;
-  margin: .25rem 0 .5rem;
-}
-
-.obi-record-contact {
-  display: flex;
-  flex-wrap: wrap;
-  gap: .25rem 1.25rem;
-  margin: 0;
-}
-
 .obi-record-meta {
   display: flex;
   flex-wrap: wrap;
@@ -1057,10 +1023,6 @@ summary.obi-panel-bar:focus-visible { outline-color: var(--rl-surface); outline-
   .rl-repair-work-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; }
 }
 
-.rl-chip-strip {
-  display: flex; gap: .4rem; overflow-x: auto; margin-block-end: .75rem;
-  padding-block-end: .15rem; scrollbar-width: thin;
-}
 .rl-chip {
   flex: none; border: 1px solid var(--rl-frame); border-radius: 999px;
   padding: .3rem .7rem; font-size: .8125rem; text-decoration: none;
@@ -1246,26 +1208,8 @@ summary.obi-panel-bar:focus-visible { outline-color: var(--rl-surface); outline-
 .obi-window a:not(.obi-button):hover { background-color: rgb(127 127 127 / 12%); }
 .obi-window :is(input, textarea)::placeholder { color: var(--rl-muted); opacity: 1; }
 
-.token-list,
 .obi-window .account-link {
   margin-top: 1.5rem;
-}
-
-.token-list ul {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
-
-.token-list li {
-  display: grid;
-  gap: 0.25rem;
-  border-top: 1px solid var(--rl-frame);
-  padding: 0.75rem 0;
-}
-
-.token-list a {
-  justify-self: start;
 }
 
 .obi-window textarea {
@@ -1322,17 +1266,6 @@ summary.obi-panel-bar:focus-visible { outline-color: var(--rl-surface); outline-
   margin: 0;
 }
 
-.attachment-caption {
-  overflow-wrap: anywhere;
-}
-
-.attachment-preview {
-  display: block;
-  max-width: min(100%, 24rem);
-  max-height: 16rem;
-  height: auto;
-  border: 1px solid currentColor;
-}
 
 .table-scroll {
   max-width: 100%;

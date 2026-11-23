@@ -180,17 +180,8 @@ def set_password(ctx, username, password) -> User:
     return run(ctx, users.set_password, username, password)
 
 
-def show_settings(ctx) -> ShopSettings:
-    return run(ctx, settings.read_settings)
-
-
 def show_settings_page(ctx) -> tuple[ShopSettings, int]:
     return run(ctx, settings.read_settings_page)
-
-
-def edit_settings(ctx, details, key, diagnosis_fee_cents=None) -> ShopSettings:
-    return run(ctx, settings.update_settings, parse(SettingsPatch, details), key=key,
-               diagnosis_fee_cents=diagnosis_fee_cents)
 
 
 def edit_settings_page(ctx, details, key, diagnosis_fee_cents=None) -> tuple[ShopSettings, int | None]:

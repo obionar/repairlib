@@ -30,10 +30,6 @@ def files_root(workspace: Path) -> Path:
     return workspace / ACTIVE / FILES
 
 
-def shop_directory(workspace: Path, shop_id: int) -> Path:
-    return files_root(workspace) / f"shop-{shop_id}"
-
-
 def blob_parts(shop_id: int, storage_name: str) -> tuple[str, ...]:
     """Directory components below files/, then the blob name; refuses anything else."""
     if not STORAGE_NAME.fullmatch(storage_name):

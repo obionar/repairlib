@@ -113,15 +113,6 @@ def customer_options(db, shop_id: int, linked_id: int | None, selected: int | No
     ).fetchall()
 
 
-def technician_options(db, shop_id: int, assigned: int | None, selected: int | None):
-    return db.execute(
-        """SELECT id, username, (role = 'technician' AND active = 1) AS eligible FROM users
-           WHERE shop_id = ? AND ((role = 'technician' AND active = 1) OR id = ?)
-           ORDER BY CASE WHEN id IN (?, ?) THEN 0 ELSE 1 END, username, id LIMIT 100""",
-        (shop_id, assigned, assigned, selected),
-    ).fetchall()
-
-
 def list_filter_technicians(db, shop_id: int) -> list[tuple[int, str]]:
     return db.execute(
         """SELECT u.id, u.username FROM users AS u
