@@ -10,12 +10,50 @@ RepairLib is not RepairFlow. Use `repairlib` or the checkout's `bin/repairlib`.
 Pass `--workspace "$WS"` on every workspace command; use an explicit absolute path.
 If the path is unknown, ask. Tests use a fresh synthetic `demo`, never a live shop.
 
+## Shop tasks (no reference needed)
+
+Answer from plain text lists (one line per repair: `ID  type  device  stage`); add `--json`
+only when you need a field the line lacks. `--query` matches device, serial, issue or
+customer name. Never guess an ID: find it first.
+
+| Ask | Command |
+|---|---|
+| pending / open jobs | `repairlib repairs list --workspace "$WS" --queue open` |
+| one stage | `... repairs list --workspace "$WS" --stage waiting_parts` (stages: new, in_progress, waiting_parts, lab_test, customer_test, repaired, no_repair) |
+| finished, not paid | `... repairs list --workspace "$WS" --queue pickup --no-paid` |
+| ready to collect | `... repairs list --workspace "$WS" --queue pickup --no-picked-up` |
+| find "the Dell", "Maria's phone" | `... repairs list --workspace "$WS" --query Dell` |
+| everything about one repair, resume work | `... repairs brief ID --workspace "$WS" --json` (revision, customer, next stages, 10 newest entries, totals) |
+
+To continue earlier work ("let's continue with that Dell"): find it with `--query`, then
+`repairs brief ID --json`; the newest entries say where the diagnosis stopped. If the query
+returns several open repairs, ask which one.
+
+Writes: run `repairlib profile check --workspace "$WS"` once first. Take `R` = `repair.revision` from a brief read just before, use a new descriptive
+`--key` per change, and re-read the brief before the next revisioned write.
+
+| Do | Command |
+|---|---|
+| change status | `... repairs stage ID --workspace "$WS" --revision R --stage STAGE --key K` (only stages in the brief's `next_stages`) |
+| add a note | `... repairs add-entry ID --workspace "$WS" --body "TEXT" --kind note --key K` (no revision) |
+| record payment | `... repairs payment ID --workspace "$WS" --revision R --key K` (repaired or no_repair only) |
+| record pickup | `... repairs pickup ID --workspace "$WS" --revision R --key K` |
+| device photo | `... repairs attach ID "/path/file name.jpg" --workspace "$WS" --photo --key K` (quote paths) |
+| photo with a note | `... repairs add-entry ID --workspace "$WS" --body "TEXT" --file "/path/f.jpg" --key K` |
+
+If a command answers `busy` ("maintenance is in progress"), wait 2 seconds and run the same
+command once more; if it fails again, stop and tell the user. Do not investigate locks or files.
+
+Repair tips from the web: read the brief, search with the exact model and symptom, prefer
+threads marked solved (iFixit, Badcaps, Reddit r/mobilerepair, manufacturer forums), cite
+2-3 links, and save a short summary with `add-entry --kind note` only when asked.
+
 ## Operate
 
-1. Read only the relevant reference below. Use `<command> --help` for unfamiliar
+1. For other tasks read only the relevant reference below. Use `<command> --help` for unfamiliar
    flags, `--version` for build questions, and `catalog` only when discovering tools.
    If session context and the checkout disagree, read the current files and trust the CLI.
-2. Before the first write, run `repairlib profile check --workspace "$WS"` and stop
+2. Before the first write of a session, run `repairlib profile check --workspace "$WS"` and stop
    if it reports blockers. Use returned IDs, not examples or assumed IDs.
 3. Write with the reviewed revision and a unique `--key` where required. Retry an
    uncertain result with the **same key and payload**; use `--key auto` only for a new
