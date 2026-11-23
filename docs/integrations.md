@@ -40,7 +40,7 @@ Without `--workspace` the commands use the default state directory, the same one
 
 ## HTTP API
 
-The HTTP API is for programs on other machines. Sign in to the web app, open **API tokens** in Account, and create a named token with your current password. Read-only tokens are available to every role; admins and technicians can also choose read and write, within their role's permissions. Revoke a token from Account with your current password.
+The HTTP API is for programs on other machines. Sign in to the web app, open **API tokens** in Account, and create a named token with your current password. Read-only tokens are available to every role; admins and technicians can also choose read and write, within their role's permissions. Choose who the token is for: **A person or script**, or **An agent**. An agent token is attributed as an agent, receives [minimized customer data](#customer-privacy-for-ai-agents) and can be limited further: read only, repairs and customers, or inventory. Revoke a token from Account with your current password.
 
 `GET /api/v1/identity` (bearer authentication) returns shop, user, role, scope and token name; the schema is at `/api/v1/openapi.json`.
 
@@ -64,7 +64,7 @@ Configure a local stdio server in your MCP host, substituting the absolute paths
 }
 ```
 
-For a private installation use the absolute installed launcher as `command`, start `args` with `mcp` and omit `env`. Omit `--workspace` and its value for the default state directory. The host exchanges MCP messages with the bridge on stdin and stdout.
+For a private installation use the absolute installed launcher as `command`, start `args` with `mcp` and omit `env`. Add `"--tools", "shop"` to `args` for a small model: it serves only the nine daily tools (`dashboard`, `list_repairs` with compact rows, `repair_brief`, `list_customers`, `change_repair_stage`, `create_work_entry`, `mark_repair_paid`, `mark_repair_picked_up`, `upload_attachment`) and refuses the rest. Omit `--workspace` and its value for the default state directory. The host exchanges MCP messages with the bridge on stdin and stdout.
 
 Use `list_customers` or `list_repairs` to find record IDs, then the detail and history tools to read revisions, charges and attachment metadata. The bridge also exposes dashboard queues and counts, inventory, stock movements and stock reconciliation. `read_attachment_content` returns verified original bytes as base64 for files up to 64 KiB and refuses larger files (use `repairs download`).
 
@@ -81,7 +81,7 @@ Paginated tools take an optional `limit` (1–100) and a `before` cursor; pass t
 | Repair charges and discount | `create_charge`, `correct_charge`, `delete_charge`, `restore_charge`, `set_discount` |
 | Repair attachments | `upload_attachment`, `edit_attachment_caption`, `link_attachment`, `unlink_attachment`, `detach_attachment`, `restore_attachment`, `purge_attachment` |
 
-Every mutation needs a caller-supplied `key` of 1–128 ASCII letters, digits, underscores or hyphens. Changes to an existing record also need its reviewed `revision`. Repair edits replace all intake fields, including the customer and technician links: supply every field and use null for an unassigned link. Work-entry correction, deletion and restoration need a reason and keep previous revisions, and reopening a completed repair needs a reason.
+Every mutation needs a caller-supplied `key` of 1–128 ASCII letters, digits, underscores or hyphens. Changes to an existing record also need its reviewed `revision`. Repair edits replace all intake fields, including the customer and technician links: supply every field and use null for an unassigned link. Work-entry correction, deletion and restoration need a reason and keep previous revisions, and reopening a completed repair needs a reason. `change_repair_stage` takes an optional `note`: the stage change and the work-log note are saved together in one transaction under the one key, or not at all.
 
 Catalog edits replace all catalog fields (use null to clear the purchase cost). Stock quantities are integer milli-units and prices integer EUR cents. Read the repair and inventory item before `consume_part`, then supply their revisions and separate consumed and billed quantities. `part_return_status` gives the reviewed revisions and the quantity still returnable; `return_part` puts stock back and lowers the billed quantity by the same amount at the charge price (removing a line billed to zero). `correct_intake_mistake` also needs the reviewed charge revision, returns all remaining consumption and hides the charge.
 

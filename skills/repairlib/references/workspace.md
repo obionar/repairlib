@@ -12,8 +12,8 @@ Every command here is run by the operator (or with the operator's explicit autho
 | `demo reset --confirm` | while stopped, reseed the synthetic customers of a pristine demo; accounts and credentials are preserved. |
 | `dev [--host 127.0.0.1] [--port 8000] [--browser-setup]` | run the loopback development server; `--browser-setup` prints a one-time setup link on an interactive terminal. |
 | `status [--json]` | workspace state, schema vs expected, disk free, counts, and update phase when launched through the installer. Exit 1 when the workspace is initialized but not ready. |
-| `doctor` | read-only diagnosis: schema compatibility, disk, SQLite integrity/foreign keys, retained attachments, staging/orphans. Exit 3 for an unhealthy workspace. |
-| `profile check [--json]` | pre-write facts an agent needs: path, state, schema, local identity/role, server. Exit 1 for any blocker — do not write until it exits 0. |
+| `doctor` | read-only diagnosis: schema compatibility, disk, SQLite integrity/foreign keys, retained attachments, staging/orphans. Exit 1 for an unhealthy workspace or pending recovery. |
+| `profile check [--json]` | path, state, schema, local identity/role, server. Exit 1 for any blocker. Run it when a write refuses with a workspace or permission error, and before setup or maintenance work. |
 | `migrate [--backup ARTIFACT]` | upgrade an initialized workspace explicitly. A verified backup of the current schema may be required with `--backup`; use `backup create` first on real data. |
 | `cleanup` | while stopped, remove stale upload staging, expired sessions and old request receipts. |
 | `reconcile-files [--json]` | while stopped, remove never-committed uploads and verify attachment bytes; damaged files are reported and exit 2. |

@@ -180,7 +180,7 @@ python3 -I -B "$repairlib_source/scripts/install.py" --reopen-update \
 bin/repairlib status --json     # path, schema, readiness, record counts
 bin/repairlib doctor            # app stopped: schema, SQLite integrity and FKs, stock ledger, files
 bin/repairlib cleanup           # app stopped: old upload parts, expired sessions, receipts > 90 days
-bin/repairlib profile check     # read-only pre-write check for agents
+bin/repairlib profile check     # read-only workspace, identity and schema check
 ```
 
 - `doctor` copies the database to `TMPDIR` for its checks and changes nothing. Exit 0 means

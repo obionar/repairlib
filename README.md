@@ -40,7 +40,7 @@ or [synthetic demo](docs/operations.md#initialize-an-isolated-synthetic-demo).
 | Prepare a host, daily runbook | [Deployment](docs/deployment.md) |
 | Services, updates, versioned install, diagnostics | [Operations](docs/operations.md) |
 | Daily workshop, staff, stock, printing, files | [Workshop](docs/workshop.md) |
-| CLI, API, MCP | [Integrations](docs/integrations.md) |
+| CLI, API, MCP, customer privacy for AI agents | [Integrations](docs/integrations.md) |
 | CSV import, transfer, backup, restore, migrate | [Data and recovery](docs/data.md) |
 | Templates and styles | [Frontend map](docs/frontend.md) |
 | Operating RepairLib as an agent | [Agent operations](docs/repairlib-operations.md) |
@@ -51,6 +51,7 @@ or [synthetic demo](docs/operations.md#initialize-an-isolated-synthetic-demo).
 ```sh
 python3 scripts/check.py           # full suite, one module per CPU; run before committing
 python3 scripts/check.py --fast    # smoke suite
+python3 scripts/check.py --module test_search.py   # one test module
 python3 scripts/check.py --full    # adds the slow installer tests
 python3 scripts/check.py --distro debian   # committed HEAD in a clean container (or alpine)
 ```

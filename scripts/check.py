@@ -108,7 +108,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--jobs", type=int, default=os.cpu_count() or 1,
                         help="run up to N test modules in parallel (default: one per CPU)")
     parser.add_argument("--full", action="store_true", help="also run the slow installer integration tests")
-    parser.add_argument("--module", help=argparse.SUPPRESS)
+    parser.add_argument("--module", help="run one test module, for example test_search.py")
     parser.add_argument("--distro", choices=("debian", "alpine"),
                         help="check committed HEAD with that distribution's stock packages in Podman")
     args = parser.parse_args(argv)

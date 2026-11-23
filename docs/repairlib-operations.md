@@ -2,30 +2,37 @@
 
 [RepairLib README](../README.md)
 
-This is the one file an agent needs before operating RepairLib: the pre-write check, the
-repair workflow as ordered commands, how to read a refusal, and what never to touch.
+This is the one file an agent needs before operating RepairLib: where it works, the repair
+workflow as ordered commands, how to read a refusal, and what never to touch. Daily shop tasks
+(lists, stage changes, payment, pickup, photos) have short recipes in the bundled skill
+(`skills/repairlib/SKILL.md`, linked by `repairlib links`).
 
 `repairlib` is the launcher (`bin/repairlib`, linked by `repairlib links`). Every `--help`
 page is authoritative; this page is a summary.
 
-## Before you write
+## Where you work
 
-Run the read-only check first and read every blocker and field it prints:
+The workspace is `--workspace PATH`, else `REPAIRLIB_WORKSPACE`, else the default state
+directory, which on a shop machine is the live workspace. A shop's agent gets
+`REPAIRLIB_WORKSPACE` and `REPAIRLIB_AGENT=1` from its host configuration; the second keeps
+customer names and contacts out of lists sent to the model
+([customer privacy](integrations.md#customer-privacy-for-ai-agents)). A test agent always passes
+`--workspace` to a synthetic workspace of its own.
+
+Writes check the workspace, revision and permissions themselves and refuse without side
+effects. When a command refuses with a workspace or permission error, or before setup and
+maintenance work, run the read-only check and read every blocker it prints:
 
 ```sh
 repairlib profile check --workspace "$repairlib_workspace"
 ```
 
 It prints workspace path, state, schema version (with expected), the local identity
-(`cli`), role and configured server. Exit 1 means at least one
-blocker; do not write until it exits 0.
+(`cli`), role and configured server. Exit 1 means at least one blocker.
 
-Use a separate synthetic demo workspace for each agent. Stop any running server
-before resetting the demo. Never open a shop's real state directory, import real
+Use a separate synthetic demo workspace for each test agent. Stop any running server
+before resetting the demo. Never open a shop's real state directory for testing, import real
 CSVs, or copy a production database into the checkout or a test.
-
-Also always pass `--workspace` explicitly. Without it the CLI silently uses the default
-state directory, which on a real machine is the shop's live workspace.
 
 ### Get a workspace to test against
 
@@ -56,9 +63,9 @@ same key and the same payload to replay the stored result, or pass `--key auto` 
 fresh one. When supported, `--json` prints machine-readable results and structured operation errors.
 Set the `*_id` variables from the records the CLI returns; seeded demos already contain customers.
 
-1. Read the revision before any change; `repairs show`, `customers show` and
-   `inventory show` print it. Set `repair_revision` or `item_revision` from the corresponding
-   read and refresh it before the next mutation.
+1. Read the revision before any change: `repairs list` lines end with `rN`, and
+   `repairs show`, `customers show` and `inventory show` print it. A write prints the new
+   revision; use it for the next write on that record.
 
 2. Create the customer and keep the returned `id` as `customer_id`:
 
@@ -151,7 +158,7 @@ Exit codes are part of the CLI contract:
 With `--json`, a structured operation error looks like this on stdout:
 
 ```json
-{"error": {"code": "stale_revision", "message": "The record changed after you reviewed it. Read it again and retry with the new revision.", "fields": {}}}
+{"error": {"code": "stale_revision", "message": "The repair changed. Review the latest version.", "fields": {}}}
 ```
 
 Without `--json` the same message is printed as `prefix: message` on stderr. `code` is the
@@ -175,8 +182,9 @@ Common refusals and what to do:
   readable, and pickup can still be recorded or cleared.
 - Deleted work entry or charge (7, `deleted`): restore it with `restore-entry` or
   `restore-charge` (both need `--reason`) before editing.
-- `busy` (3, "The workspace is busy. Retry with the same key."): another process holds the
-  database. Stop the competing writer; do not retry in a loop.
+- `busy` (3, "The workspace is busy. Retry with the same key."): the CLI already waited up to
+  3 seconds, so maintenance (an update, backup or migration) holds the database. Stop and tell
+  the operator; do not retry in a loop or investigate locks and processes.
 - Print receipt not acknowledged (7): the label may already have reached paper. Check the
   printer before reusing the key; the same key and revisions return the stored receipt
   without printing again.
