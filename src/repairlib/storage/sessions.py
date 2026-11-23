@@ -13,6 +13,7 @@ SQLITE_SYNCHRONOUS = "FULL"
 SQLITE_BUSY_TIMEOUT_MS = 5000
 # A shared shop PC must not keep an abandoned sign-in usable.
 SESSION_IDLE_SECONDS = 60 * 60
+TOUCH_SECONDS = 60  # idle expiry is hourly; minute precision avoids a disk write per request
 
 
 @dataclass(frozen=True)
@@ -122,8 +123,14 @@ def local_principal(db: sqlite3.Connection, username: str) -> Principal | None:
 def session_principal(path: Path, token_hash: str, now: int) -> Principal | None:
     """Resolve a session and record the activity that keeps it from idling out."""
     with closing(connect(path, "rw")) as db, db:
-        db.execute("BEGIN IMMEDIATE")
         credential = session_credential(db, token_hash, now)
+        if credential is None:
+            return None
+        seen = db.execute("SELECT last_seen_at FROM sessions WHERE token_hash = ?", (token_hash,)).fetchone()
+        if seen and seen[0] > now - TOUCH_SECONDS:
+            return credential.principal  # recent enough: a read must not take the write lock
+        db.execute("BEGIN IMMEDIATE")
+        credential = session_credential(db, token_hash, now)  # recheck under the lock
         if credential is None:
             return None
         db.execute("UPDATE sessions SET last_seen_at = ? WHERE token_hash = ?", (now, token_hash))

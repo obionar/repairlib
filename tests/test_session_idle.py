@@ -39,6 +39,14 @@ class SessionIdleTests(TokenFixture, unittest.TestCase):
             self.age_session(IDLE_SECONDS - 60)
             self.assertEqual(client.get("/repairs").status_code, 200)
 
+    def test_recent_activity_is_not_rewritten_on_every_request(self):
+        with self.client() as client:
+            self.sign_in(client)
+            self.age_session(30)
+            before = self.snapshot("SELECT last_seen_at FROM sessions")
+            self.assertEqual(client.get("/repairs").status_code, 200)
+            self.assertEqual(self.snapshot("SELECT last_seen_at FROM sessions"), before)
+
     def test_cleanup_prunes_expired_sessions_and_old_receipts(self):
         now = int(time.time())
         with closing(sqlite3.connect(self.db)) as db, db:
