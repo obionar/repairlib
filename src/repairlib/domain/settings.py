@@ -10,7 +10,7 @@ from repairlib.contracts import SettingsPatch, ShopSettings
 from repairlib.domain.customers import authorized as shop_authorized
 from repairlib.domain.users import MAX_ID, UserAccess, UserError, authorized, validate_key
 from repairlib.paths import database_path
-from repairlib.storage import settings
+from repairlib.storage import audit, settings
 
 SettingsAccess = UserAccess
 SettingsError = UserError
@@ -151,6 +151,6 @@ def update_settings_page(workspace: Path, access: SettingsAccess, patch: Setting
             current_fee = changes["diagnosis_fee_cents"]["after"]
             settings.set_diagnosis_fee(db, principal.shop_id, current_fee)
         settings.save_result(db, principal.shop_id, principal.user_id, key, fingerprint, updated, current_fee)
-        settings.audit(db, principal.shop_id, principal.user_id, principal.username,
-                       access.source, token_label, changes)
+        audit.record(db, principal, access.source, token_label, "settings.update", "shop_settings",
+                     principal.shop_id, changes)
         return updated, current_fee

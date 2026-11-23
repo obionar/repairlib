@@ -17,7 +17,7 @@ from repairlib.domain.replay import replay as replay_receipt
 from repairlib.domain.users import authorized as admin_authorized, validate_key
 from repairlib.domain.repairs import RepairAccess, RepairError, find_repair
 from repairlib.paths import database_path
-from repairlib.storage import printer, repairs, settings
+from repairlib.storage import audit, printer, repairs, settings
 
 
 @dataclass(frozen=True)
@@ -130,7 +130,7 @@ def configure_printer(workspace: Path, access: RepairAccess, change: PrinterChan
         printer.configure(db, shop_id, change.driver, revision)
         result = PrinterSettings(change.driver, revision + 1, p15_binary() is not None)
         printer.reserve(db, principal, operation, key, fingerprint, None, result)
-        repairs.audit(db, principal, access.source, token_label, operation, "shop_settings", shop_id,
+        audit.record(db, principal, access.source, token_label, operation, "shop_settings", shop_id,
                       {"driver": {"before": driver, "after": change.driver}})
         return result
 
@@ -188,7 +188,7 @@ def print_p15(workspace: Path, access: RepairAccess, *, printer_revision: int, k
         # Commit an uncertain result before launching. A duplicate, even after
         # worker loss, can only read the receipt. No DB lock spans the driver call.
         printer.reserve(db, principal, operation, key, fingerprint, repair_id, UNCERTAIN)
-        repairs.audit(db, principal, access.source, token_label, operation + ".requested",
+        audit.record(db, principal, access.source, token_label, operation + ".requested",
                       entity_type, entity_id, {"driver": "p15", "outcome": UNCERTAIN.outcome})
 
     try:

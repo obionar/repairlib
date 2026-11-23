@@ -88,7 +88,7 @@ class StockTests(unittest.TestCase):
         self.refused("unauthenticated", lambda: stock.receive_stock(ws, self.other, item_id, 1, revision=2, key="v"))
         self.refused("unit_locked", lambda: inventory.edit_item(
             ws, self.owner, item_id, ItemInput(sku="FUSE", description="Fuse", unit="m"), revision=2, key="u"))
-        with patch("repairlib.storage.repairs.audit", side_effect=sqlite3.IntegrityError("Synthetic failure")):
+        with patch("repairlib.storage.audit.record", side_effect=sqlite3.IntegrityError("Synthetic failure")):
             with self.assertRaises(sqlite3.IntegrityError):
                 stock.adjust_stock(ws, self.tech, item_id, -1000, "Damaged", revision=2, key="fail")
         self.assertEqual(self.state(), before)

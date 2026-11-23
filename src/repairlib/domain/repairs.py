@@ -13,7 +13,7 @@ from repairlib.contracts import (
 from repairlib.domain.customers import MAX_ID, CustomerAccess, CustomerError, authorized, search_pattern
 from repairlib.domain.replay import replay as replay_receipt
 from repairlib.search import phone_search_pattern
-from repairlib.storage import repairs
+from repairlib.storage import audit, repairs
 
 RepairAccess = CustomerAccess
 RepairError = CustomerError
@@ -146,7 +146,7 @@ def create_repair(workspace: Path, access: RepairAccess, details: RepairInput, *
         created = repairs.insert(db, principal.shop_id, values)
         repairs.save_result(db, principal.shop_id, principal.user_id, operation, key,
                             fingerprint, created.id, created)
-        repairs.audit(db, principal, access.source, token_label, operation, "repair", created.id,
+        audit.record(db, principal, access.source, token_label, operation, "repair", created.id,
                       {"fields": list(fields), "stage": "new"})
         return created
 
@@ -283,7 +283,7 @@ def update_repair(workspace: Path, access: RepairAccess, repair_id: int, patch: 
             raise RepairError(409, "stale_revision", "The repair changed. Review the latest version.")
         repairs.save_result(db, principal.shop_id, principal.user_id, operation, key,
                             fingerprint, repair_id, updated)
-        repairs.audit(db, principal, access.source, token_label, operation, "repair", repair_id, changes)
+        audit.record(db, principal, access.source, token_label, operation, "repair", repair_id, changes)
         return updated
 
 
@@ -353,7 +353,7 @@ def change_ticket_status(workspace: Path, access: RepairAccess, repair_id: int,
             changes = {"stage": {"before": current.stage, "after": stage}}
             if reason:
                 changes["reopen_reason"] = reason
-            repairs.audit(db, principal, access.source, token_label, "repair.stage", "repair",
+            audit.record(db, principal, access.source, token_label, "repair.stage", "repair",
                           repair_id, changes)
         if pickup is not None:
             timestamp = datetime.now(UTC).isoformat(timespec="milliseconds").replace("+00:00", "Z")
@@ -361,13 +361,13 @@ def change_ticket_status(workspace: Path, access: RepairAccess, repair_id: int,
                                           "picked_up_at", pickup, timestamp)
             if updated is None:
                 raise RepairError(409, "stale_revision", "The repair changed. Review the latest version.")
-            repairs.audit(db, principal, access.source, token_label, "repair.pickup", "repair",
+            audit.record(db, principal, access.source, token_label, "repair.pickup", "repair",
                           repair_id, {"pickup": {"before": was_picked_up, "after": pickup}})
         if payment is not None:
             updated = repairs.update_payment(db, principal.shop_id, repair_id, updated.revision, payment)
             if updated is None:
                 raise RepairError(409, "stale_revision", "The repair changed. Review the latest version.")
-            repairs.audit(db, principal, access.source, token_label, "repair.payment", "repair",
+            audit.record(db, principal, access.source, token_label, "repair.payment", "repair",
                           repair_id, {"payment": {"before": prior_payment, "after": payment}})
         repairs.save_result(db, principal.shop_id, principal.user_id, "repair.update", key,
                             fingerprint, repair_id, updated)
@@ -400,7 +400,7 @@ def change_repair_flag(workspace: Path, access: RepairAccess, repair_id: int,
             raise RepairError(409, "stale_revision", "The repair changed. Review the latest version.")
         repairs.save_result(db, principal.shop_id, principal.user_id, "repair.update", key,
                             fingerprint, repair_id, updated)
-        repairs.audit(db, principal, access.source, token_label, f"repair.{flag}", "repair",
+        audit.record(db, principal, access.source, token_label, f"repair.{flag}", "repair",
                       repair_id, {flag: {"before": enabled, "after": change.enabled}})
         return updated
 
@@ -455,7 +455,7 @@ def create_work_entry(workspace: Path, access: RepairAccess, repair_id: int,
         created = repairs.insert_entry(db, principal, repair_id, kind, body)
         repairs.save_result(db, principal.shop_id, principal.user_id, operation, key,
                             fingerprint, repair_id, created)
-        repairs.audit(db, principal, access.source, token_label, operation, "work_entry", created.id,
+        audit.record(db, principal, access.source, token_label, operation, "work_entry", created.id,
                       {"repair_id": repair_id, "kind": kind})
         return created
 
@@ -501,7 +501,7 @@ def correct_work_entry(workspace: Path, access: RepairAccess, repair_id: int, en
             raise RepairError(409, "stale_revision", "The work entry changed. Review its history.")
         repairs.save_result(db, principal.shop_id, principal.user_id, "work_entry.create", key,
                             fingerprint, repair_id, updated)
-        repairs.audit(db, principal, access.source, token_label, "work_entry.correct",
+        audit.record(db, principal, access.source, token_label, "work_entry.correct",
                       "work_entry", entry_id, {"repair_id": repair_id, "reason": reason})
         return updated
 
@@ -531,7 +531,7 @@ def change_entry_visibility(workspace: Path, access: RepairAccess, repair_id: in
         repairs.save_result(db, principal.shop_id, principal.user_id, "work_entry.create", key,
                             fingerprint, repair_id, updated)
         operation = "work_entry.delete" if change.deleted else "work_entry.restore"
-        repairs.audit(db, principal, access.source, token_label, operation, "work_entry", entry_id,
+        audit.record(db, principal, access.source, token_label, operation, "work_entry", entry_id,
                       {"repair_id": repair_id, "reason": reason})
         return updated
 

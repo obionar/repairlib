@@ -127,7 +127,7 @@ class InventoryTests(unittest.TestCase):
         self.assertEqual((updated.revision, updated.selling_price_cents, updated.bin), (2, 51, "B2"))
         refused("stale_revision", lambda: edit(1, key="stale"))
         refused("conflict", lambda: edit(2))
-        with patch("repairlib.storage.repairs.audit", side_effect=sqlite3.IntegrityError("Synthetic failure")):
+        with patch("repairlib.storage.audit.record", side_effect=sqlite3.IntegrityError("Synthetic failure")):
             with self.assertRaises(sqlite3.IntegrityError):
                 archive(2)
         self.assertEqual(read(first.id), updated)
@@ -179,7 +179,7 @@ class InventoryTests(unittest.TestCase):
         def restore():
             return inventory.restore_item(self.workspace, access, item.id, revision=4, key="archive")
 
-        with patch.object(inventory.repairs, "audit", side_effect=RuntimeError("Synthetic audit failure")):
+        with patch.object(inventory.audit, "record", side_effect=RuntimeError("Synthetic audit failure")):
             with self.assertRaisesRegex(RuntimeError, "Synthetic audit failure"):
                 restore()
         self.assertEqual(inventory.read_item(self.workspace, access, item.id), archived)

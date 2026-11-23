@@ -7,7 +7,7 @@ from repairlib.contracts import CsvAction, CsvAppliedRow, CsvIssue, CustomerInpu
 from repairlib.domain.csv_intake import Intake
 from repairlib.domain.customers import CustomerError, FIELD_LIMITS, normalize_fields
 from repairlib.search import fold
-from repairlib.storage import customers
+from repairlib.storage import audit, customers
 
 PHONE_SEPARATORS = re.compile(r"[\s().-]+")
 
@@ -59,8 +59,8 @@ def publish(db, principal, source, token_label, actions):
     rows = []
     for action in actions:
         customer = customers.insert(db, principal.shop_id, CustomerInput(**action.fields))
-        customers.audit(db, principal.shop_id, principal.user_id, principal.username, source, token_label,
-                        "customer.create", customer.id, {"fields": list(action.fields)})
+        audit.record(db, principal, source, token_label, "customer.create", "customer", customer.id,
+                     {"fields": list(action.fields)})
         rows.append(CsvAppliedRow(action.row, customer.id, customer.revision))
     return rows
 

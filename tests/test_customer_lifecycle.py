@@ -353,7 +353,7 @@ class CustomerLifecycleTests(TokenFixture, TestCase):
             path = f"/customers/{customer['id']}"
             form = self.archive_post_data(client, customer)
 
-            with patch("repairlib.storage.customers.audit", side_effect=sqlite3.IntegrityError("Synthetic failure")):
+            with patch("repairlib.storage.audit.record", side_effect=sqlite3.IntegrityError("Synthetic failure")):
                 self.assertEqual(client.post(path + "/archive", data=form).status_code, 500)
             self.assertEqual(self.snapshot("SELECT revision, archived_at FROM customers"), [(1, None)])
             self.assertEqual(self.snapshot("SELECT COUNT(*) FROM customer_requests"), [(1,)])

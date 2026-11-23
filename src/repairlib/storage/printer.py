@@ -4,9 +4,8 @@ from dataclasses import asdict
 import json
 import sqlite3
 
-from repairlib.storage.repairs import audit
 from repairlib.storage.dry_run import transaction
-from repairlib.storage import request_ledger
+from repairlib.storage import audit, request_ledger
 
 
 def configuration(db, shop_id: int):
@@ -36,7 +35,7 @@ def complete(path, principal, source, token_label, operation, key, entity_type, 
                 WHERE shop_id = ? AND actor_id = ? AND operation = ? AND request_key = ?
                 """, (json.dumps(asdict(receipt)), principal.shop_id, principal.user_id,
                       operation, key))
-            audit(db, principal, source, token_label, operation, entity_type, entity_id,
+            audit.record(db, principal, source, token_label, operation, entity_type, entity_id,
                   {"driver": "p15", "outcome": receipt.outcome})
     except (sqlite3.Error, OSError):
         return False

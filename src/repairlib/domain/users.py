@@ -11,7 +11,7 @@ from repairlib.domain.customers import (
 from repairlib.domain.passwords import hash_with_salt, hasher
 from repairlib.domain.replay import KEY_FORMAT, replay as replay_receipt
 from repairlib.paths import database_path
-from repairlib.storage import dry_run, users
+from repairlib.storage import audit, dry_run, users
 
 MAX_ID = (1 << 63) - 1
 ROLES = {"admin", "technician", "viewer"}
@@ -100,8 +100,8 @@ def create_user(workspace: Path, access: UserAccess, details: UserInput, *, key:
         except users.UsernameConflict as error:
             raise UserError(409, "conflict", str(error), {"username": str(error)}) from None
         users.save_result(db, principal.shop_id, principal.user_id, operation, key, fingerprint, created)
-        users.audit(db, principal.shop_id, principal.user_id, principal.username, access.source,
-                    token_label, operation, created.id,
+        audit.record(db, principal, access.source, token_label, operation, "user", created.id,
+                    
                     {"username": username, "role": role, "active": True})
         return created
 
@@ -182,8 +182,8 @@ def update_user(workspace: Path, access: UserAccess, user_id: int, patch: UserPa
         if updated is None:
             raise UserError(409, "stale_revision", "The user changed. Review the latest version.")
         users.save_result(db, principal.shop_id, principal.user_id, operation, key, fingerprint, updated)
-        users.audit(db, principal.shop_id, principal.user_id, principal.username, access.source,
-                    token_label, operation, user_id, changes)
+        audit.record(db, principal, access.source, token_label, operation, "user", user_id,
+                     changes)
         return updated
 
 
@@ -210,6 +210,6 @@ def set_password(workspace: Path, access: UserAccess, username: str, password: s
         updated = users.set_password(db, principal.shop_id, current.id, current.revision, password_hash)
         if updated is None:
             raise UserError(409, "stale_revision", "The user changed. Try again.")
-        users.audit(db, principal.shop_id, principal.user_id, principal.username, access.source,
-                    token_label, "user.password", current.id, {"password": {"changed": True}})
+        audit.record(db, principal, access.source, token_label, "user.password", "user", current.id,
+                     {"password": {"changed": True}})
         return updated

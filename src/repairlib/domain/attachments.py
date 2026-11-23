@@ -2,7 +2,6 @@
 
 from dataclasses import asdict
 from datetime import UTC, datetime, timedelta
-from hashlib import sha256
 import os
 from pathlib import Path
 import shutil
@@ -25,6 +24,7 @@ from repairlib.lifecycle.workspace import (
 )
 from repairlib.paths import check_database_files
 from repairlib.storage import attachments, blobs, repairs, settings
+from repairlib.storage import audit as audit_log
 
 # Hard ceiling; each shop's bounded settings (default 256 MiB upload, 8 MiB inline
 # preview) choose the effective limits below it.
@@ -158,7 +158,7 @@ def commit_upload(workspace: Path, access: RepairAccess, repair_id: int, upload:
                                   "This workspace holds the most files a backup can carry. Purge detached files first.")
             if entry is not None:
                 composed = repairs.insert_entry(db, principal, repair_id, kind, body)
-                repairs.audit(db, principal, access.source, token_label, "work_entry.create", "work_entry",
+                audit_log.record(db, principal, access.source, token_label, "work_entry.create", "work_entry",
                               composed.id, {"repair_id": repair_id, "kind": kind})
                 entry_id = composed.id
             _, inline_limit = settings.attachment_limits(db, principal.shop_id)
@@ -192,7 +192,7 @@ def replay_attachment(db, principal, operation: str, key: str, payload: dict):
 
 
 def audit(db, principal, source, token_label, operation, attachment_id, changes):
-    repairs.audit(db, principal, source, token_label, operation, "attachment", attachment_id, changes)
+    audit_log.record(db, principal, source, token_label, operation, "attachment", attachment_id, changes)
 
 
 def ticket_pictures(workspace: Path, access: RepairAccess, repair_id: int) -> tuple[int | None, dict[int, int]]:

@@ -18,7 +18,7 @@ from repairlib.domain.sessions import session_hash
 from repairlib.domain.tokens import OnVerified, PRESETS, api_token_hash, token_scopes
 from repairlib.paths import database_path
 from repairlib.search import PHONE_SHAPE, like_pattern, normalize_query, phone_digits, phone_search_pattern
-from repairlib.storage import StorageError, StorageOperationalError, customers, dry_run, sessions, tokens
+from repairlib.storage import StorageError, StorageOperationalError, audit, customers, dry_run, sessions, tokens
 
 FIELD_LIMITS = {"name": 160, "phone": 80, "email": 254, "address": 500, "notes": 1000}
 MAX_ID = (1 << 63) - 1
@@ -208,8 +208,8 @@ def create_customer(workspace: Path, access: CustomerAccess, details: CustomerIn
         )
         customer = with_contact_notices(customers.insert(db, principal.shop_id, details), warnings, duplicate)
         customers.save_result(db, principal.shop_id, principal.user_id, operation, key, fingerprint, customer)
-        customers.audit(db, principal.shop_id, principal.user_id, principal.username, access.source,
-                        token_label, operation, customer.id, {"fields": list(asdict(details))})
+        audit.record(db, principal, access.source, token_label, operation, "customer", customer.id,
+                         {"fields": list(asdict(details))})
         return customer
 
 
@@ -265,8 +265,8 @@ def update_customer(workspace: Path, access: CustomerAccess, customer_id: int,
             raise CustomerError(409, "stale_revision", "The customer changed. Review the latest version.")
         updated = with_contact_notices(updated, contact_warnings(updated))
         customers.save_result(db, principal.shop_id, principal.user_id, operation, key, fingerprint, updated)
-        customers.audit(db, principal.shop_id, principal.user_id, principal.username, access.source,
-                        token_label, operation, customer_id, changes)
+        audit.record(db, principal, access.source, token_label, operation, "customer", customer_id,
+                         changes)
         return updated
 
 
@@ -289,8 +289,8 @@ def change_customer_archive(workspace: Path, access: CustomerAccess, customer_id
         updated = with_contact_notices(updated, contact_warnings(updated))
         customers.save_result(db, principal.shop_id, principal.user_id, "customer.archive", key, fingerprint, updated)
         operation = "customer.archive" if change.enabled else "customer.restore"
-        customers.audit(db, principal.shop_id, principal.user_id, principal.username, access.source,
-                        token_label, operation, customer_id,
+        audit.record(db, principal, access.source, token_label, operation, "customer", customer_id,
+                        
                         {"archived_at": {"before": current.archived_at, "after": updated.archived_at}})
         return updated
 

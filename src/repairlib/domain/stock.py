@@ -18,7 +18,7 @@ from repairlib.domain.customers import MAX_ID, CustomerAccess, CustomerError, au
 from repairlib.domain.replay import replay as replay_receipt
 from repairlib.domain.inventory import find_item
 from repairlib.domain.repairs import find_repair, normalize_entry
-from repairlib.storage import charges, repairs, stock, stock_reconciliation
+from repairlib.storage import audit, charges, repairs, stock, stock_reconciliation
 from repairlib.storage.initialization import SCHEMA_VERSION
 
 StockError = CustomerError
@@ -93,7 +93,7 @@ def consume_for_repair(workspace: Path, access: CustomerAccess, repair_id: int, 
         charge = replace(charge, inventory_item_id=item.id, movement_id=movement.id,
                          consumed_quantity_milli=quantity)
         stock.save_result(db, principal, operation, key, fingerprint, movement.id, charge)
-        repairs.audit(db, principal, access.source, label, operation, "charge", charge.id, {
+        audit.record(db, principal, access.source, label, operation, "charge", charge.id, {
             "repair_id": repair.id, "item_id": item.id, "movement_id": movement.id, "work_entry_id": entry.id,
             "on_hand_milli": {"before": item.on_hand_milli, "after": updated.on_hand_milli},
             "consumed_quantity_milli": quantity, "billed_quantity_milli": charge.quantity_milli,
@@ -197,7 +197,7 @@ def _return_part(workspace, access, repair_id, charge_id, change, key, *, quanti
         totals = ChargeTotals(**{field.name: getattr(after, field.name) for field in fields(ChargeTotals)})
         result = PartReturnResult(applied, charge, totals, remaining - returned)
         stock.save_result(db, principal, operation, key, fingerprint, applied.movement.id, result)
-        repairs.audit(db, principal, access.source, label, operation, "charge", charge.id, {
+        audit.record(db, principal, access.source, label, operation, "charge", charge.id, {
             "repair_id": repair.id, "item_id": item.id, "movement_id": applied.movement.id,
             "reverses_id": charge.movement_id, "quantity_milli": returned,
             "on_hand_milli": {"before": item.on_hand_milli, "after": applied.item.on_hand_milli},
@@ -266,7 +266,7 @@ def _move(workspace, access, item_id, operation, quantity, reason, revision, key
         kind = {"inventory.receive": "receive", "inventory.adjust": "adjust"}.get(operation, "reversal")
         change = StockChange(*append_movement(db, principal, current, kind, quantity, reason, movement_id))
         stock.save_result(db, principal, operation, key, fingerprint, change.movement.id, change)
-        repairs.audit(db, principal, access.source, label, operation, "inventory_item", item_id, {
+        audit.record(db, principal, access.source, label, operation, "inventory_item", item_id, {
             "movement_id": change.movement.id, "kind": kind, "quantity_milli": quantity,
             "on_hand_milli": {"before": current.on_hand_milli, "after": change.item.on_hand_milli},
             "reason": reason, "reverses_id": movement_id,

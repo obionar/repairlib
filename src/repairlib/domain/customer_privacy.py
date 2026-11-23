@@ -10,7 +10,7 @@ from repairlib.domain.charges import visible
 from repairlib.domain.customers import (
     CustomerAccess, CustomerError, MAX_ID, authorized, find_customer, replay,
 )
-from repairlib.storage import charges, customers, repairs
+from repairlib.storage import audit, charges, customers, repairs
 
 NEUTRAL_NAME = "Anonymized customer"
 REDACTED = "[erased]"
@@ -42,8 +42,7 @@ def anonymize_customer(workspace: Path, access: CustomerAccess, customer_id: int
         customers.redact_requests(db, principal.shop_id, customer_id, RECEIPT_FINGERPRINT, updated)
         customers.save_result(db, principal.shop_id, principal.user_id, operation, key, fingerprint, updated)
         stamp = datetime.now(UTC).isoformat(timespec="milliseconds").replace("+00:00", "Z")
-        customers.audit(db, principal.shop_id, principal.user_id, principal.username, access.source,
-                        token_label, operation, customer_id,
+        audit.record(db, principal, access.source, token_label, operation, "customer", customer_id,
                         {"anonymized_at": stamp, "erased_fields": ERASED_FIELDS})
         return updated
 

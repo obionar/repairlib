@@ -14,7 +14,7 @@ from repairlib.domain.csv_intake import Intake
 from repairlib.domain.customers import CustomerError
 from repairlib.domain.inventory import FIELD_LIMITS, normalize
 from repairlib.domain.stock import REASON_LIMIT, StockError, append_movement, clean_reason
-from repairlib.storage import inventory, repairs, stock
+from repairlib.storage import audit, inventory, stock
 
 DIGITS = re.compile(r"0|[1-9][0-9]{0,15}")
 NUMBER_WIDTH = 16
@@ -128,7 +128,7 @@ def plan_opening(db, shop_id, records):
 
 def receive_opening(db, principal, source, token_label, item, quantity: int, reason: str):
     updated, movement = append_movement(db, principal, item, "receive", quantity, reason)
-    repairs.audit(db, principal, source, token_label, "inventory.opening_stock", "inventory_item", item.id, {
+    audit.record(db, principal, source, token_label, "inventory.opening_stock", "inventory_item", item.id, {
         "movement_id": movement.id, "kind": "receive", "quantity_milli": quantity,
         "on_hand_milli": {"before": item.on_hand_milli, "after": updated.on_hand_milli}, "reason": reason,
     })
@@ -142,7 +142,7 @@ def publish_catalog(db, principal, source, token_label, actions):
         for name in ("low_stock_milli", "purchase_cost_cents", "selling_price_cents"):
             values[name] = int(action.fields[name]) if action.fields[name] else None
         item = inventory.insert(db, principal.shop_id, values)
-        repairs.audit(db, principal, source, token_label, "inventory.create", "inventory_item", item.id, values)
+        audit.record(db, principal, source, token_label, "inventory.create", "inventory_item", item.id, values)
         if action.fields["opening_quantity_milli"]:
             item = receive_opening(db, principal, source, token_label, item,
                                    int(action.fields["opening_quantity_milli"]), OPENING_REASON)

@@ -13,7 +13,7 @@ from repairlib.domain.replay import replay as replay_receipt
 from repairlib.domain.repairs import (
     RepairAccess, RepairError, find_repair, find_unarchived_repair, normalize_entry, normalize_reason,
 )
-from repairlib.storage import charges, repairs
+from repairlib.storage import audit, charges, repairs
 from repairlib.storage import settings as shop_settings
 
 MAX_ACTIVE_CHARGES = 500  # with field bounds, keeps every total inside SQLite INTEGER
@@ -87,10 +87,6 @@ def charge_shape(values: dict) -> Charge:
 
 def summary_shape(values: dict) -> ChargeSummary:
     return ChargeSummary(**(values | {"items": [Charge(**item) for item in values["items"]]}))
-
-
-def audit(db, principal, source, token_label, operation, entity_type, entity_id, changes):
-    repairs.audit(db, principal, source, token_label, operation, entity_type, entity_id, changes)
 
 
 def charge_summary(workspace: Path, access: RepairAccess, repair_id: int):
@@ -236,7 +232,7 @@ def set_fees(workspace: Path, access: RepairAccess, repair_id: int, *, diagnosis
         summary = build_summary(db, principal, repair_id)
         repairs.save_result(db, principal.shop_id, principal.user_id, "repair.update", key, fingerprint,
                             repair_id, summary)
-        repairs.audit(db, principal, access.source, token_label, "repair.fees", "repair", repair_id,
+        audit.record(db, principal, access.source, token_label, "repair.fees", "repair", repair_id,
                       {"revision": revision, "fees": changes})
 
 
@@ -264,7 +260,7 @@ def create_charge(workspace: Path, access: RepairAccess, repair_id: int, details
             changes["work_entry_id"] = repairs.insert_entry(db, principal, repair_id, kind, body).id
         charges.save_result(db, principal.shop_id, principal.user_id, operation, key, fingerprint,
                             repair_id, created)
-        audit(db, principal, access.source, token_label, operation, "charge", created.id, changes)
+        audit.record(db, principal, access.source, token_label, operation, "charge", created.id, changes)
         return created
 
 
@@ -300,7 +296,7 @@ def correct_charge(workspace: Path, access: RepairAccess, repair_id: int, charge
         build_summary(db, principal, repair_id)
         charges.save_result(db, principal.shop_id, principal.user_id, "charge.update", key,
                             fingerprint, repair_id, updated)
-        audit(db, principal, access.source, token_label, "charge.correct", "charge", charge_id,
+        audit.record(db, principal, access.source, token_label, "charge.correct", "charge", charge_id,
               {"repair_id": repair_id, "reason": reason, **changes})
         return updated
 
@@ -321,7 +317,7 @@ def change_charge_visibility(workspace: Path, access: RepairAccess, repair_id: i
         build_summary(db, principal, repair_id)
         charges.save_result(db, principal.shop_id, principal.user_id, "charge.update", key,
                             fingerprint, repair_id, updated)
-        audit(db, principal, access.source, token_label,
+        audit.record(db, principal, access.source, token_label,
               "charge.delete" if change.deleted else "charge.restore", "charge", charge_id,
               {"repair_id": repair_id, "reason": reason})
         return updated
@@ -378,7 +374,7 @@ def set_discount(workspace: Path, access: RepairAccess, repair_id: int, change: 
         after = build_summary(db, principal, repair_id)
         charges.save_result(db, principal.shop_id, principal.user_id, operation, key, fingerprint,
                             repair_id, after)
-        audit(db, principal, access.source, token_label, operation, "repair_discount", repair_id, {
+        audit.record(db, principal, access.source, token_label, operation, "repair_discount", repair_id, {
             "kind": {"before": before.discount_kind, "after": change.kind},
             "value": {"before": before.discount_value, "after": change.value},
         })

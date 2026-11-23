@@ -65,18 +65,6 @@ def save_result(db, shop_id: int, actor_id: int, operation: str, key: str,
                          link=customer.id)
 
 
-def audit(db, shop_id: int, actor_id: int, username: str, source: str, token_label: str | None,
-          operation: str, customer_id: int, changes: dict) -> None:
-    db.execute(
-        """
-        INSERT INTO audit_events
-            (shop_id, actor_kind, actor_user_id, actor_username, operation, source,
-             entity_type, entity_id, changes, token_label)
-        VALUES (?, 'user', ?, ?, ?, ?, 'customer', ?, ?, ?)
-        """, (shop_id, actor_id, username, operation, source, customer_id,
-              json.dumps(changes), token_label),
-    )
-
 
 def find(db, shop_id: int, customer_id: int) -> Customer | None:
     row = db.execute(

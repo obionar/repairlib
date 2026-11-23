@@ -1,7 +1,6 @@
 """Shop-owned settings and atomic, replayable configuration changes."""
 
 from dataclasses import dataclass
-import json
 from pathlib import Path
 import sqlite3
 
@@ -80,14 +79,3 @@ def save_result(db, shop_id: int, actor_id: int, key: str, fingerprint: str,
     receipt = SettingsReceipt(**vars(result), diagnosis_fee_cents=diagnosis_fee_cents)
     request_ledger.store(db, "settings", shop_id, actor_id, None, key, fingerprint, receipt)
 
-
-def audit(db, shop_id: int, actor_id: int, username: str, source: str,
-          token_label: str | None, changes: dict) -> None:
-    db.execute(
-        """
-        INSERT INTO audit_events
-            (shop_id, actor_kind, actor_user_id, actor_username, operation, source,
-             entity_type, entity_id, changes, token_label)
-        VALUES (?, 'user', ?, ?, 'settings.update', ?, 'shop_settings', ?, ?, ?)
-        """, (shop_id, actor_id, username, source, shop_id, json.dumps(changes), token_label),
-    )

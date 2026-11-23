@@ -27,7 +27,7 @@ from repairlib.lifecycle.backup_archive import (
 from repairlib.lifecycle.operations import private_subdirectory
 from repairlib.lifecycle.workspace import WorkspaceError
 from repairlib.paths import database_path
-from repairlib.storage import blobs, repairs, portable_shop as storage
+from repairlib.storage import audit, blobs, portable_shop as storage
 from repairlib.storage.blobs import blob_path
 from repairlib.storage.stock_reconciliation import repair_snapshot_issues
 from repairlib.storage.portable_shop import (
@@ -409,7 +409,7 @@ def import_archive(workspace: Path, access: CustomerAccess, handle: BinaryIO, *,
                                       key=key, fingerprint=fingerprint, result=asdict(result))
                 if repair_snapshot_issues(db, (shop_id, shop_id), portable=True):
                     raise RecordError("The stock ledger lacks matching repair audit history.")
-                repairs.audit(db, principal, access.source, label, "portable.import", "shop_settings",
+                audit.record(db, principal, access.source, label, "portable.import", "shop_settings",
                               shop_id, asdict(result))
                 stage_originals(workspace, archive, records, ids["attachments"], staged)
                 for attachment_id, upload in staged.items():

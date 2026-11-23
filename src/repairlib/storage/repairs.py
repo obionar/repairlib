@@ -1,6 +1,5 @@
 """Shop-scoped repairs, work entries and atomic mutation bookkeeping."""
 
-import json
 
 from repairlib.contracts import (
     OPEN_REPAIR_STAGES, DeviceRepair, Repair, RepairActivityEvent, RepairInput, RepairListRow, WorkEntry,
@@ -267,18 +266,6 @@ def save_result(db, shop_id: int, actor_id: int, operation: str, key: str,
     request_ledger.store(db, "repair", shop_id, actor_id, operation, key, fingerprint, result,
                          link=repair_id)
 
-
-def audit(db, principal, source: str, token_label: str | None, operation: str,
-          entity_type: str, entity_id: int, changes: dict) -> None:
-    db.execute(
-        """
-        INSERT INTO audit_events
-            (shop_id, actor_kind, actor_user_id, actor_username, operation, source,
-             entity_type, entity_id, changes, token_label)
-        VALUES (?, 'user', ?, ?, ?, ?, ?, ?, ?, ?)
-        """, (principal.shop_id, principal.user_id, principal.username, operation, source,
-              entity_type, entity_id, json.dumps(changes), token_label),
-    )
 
 
 def entry_record(row) -> WorkEntry:

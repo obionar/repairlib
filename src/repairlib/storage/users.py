@@ -94,18 +94,6 @@ def save_result(db, shop_id: int, actor_id: int, operation: str, key: str,
                          link=user.id)
 
 
-def audit(db, shop_id: int, actor_id: int, username: str, source: str, token_label: str | None,
-          operation: str, user_id: int, changes: dict) -> None:
-    db.execute(
-        """
-        INSERT INTO audit_events
-            (shop_id, actor_kind, actor_user_id, actor_username, operation, source,
-             entity_type, entity_id, changes, token_label)
-        VALUES (?, 'user', ?, ?, ?, ?, 'user', ?, ?, ?)
-        """, (shop_id, actor_id, username, operation, source, user_id,
-              json.dumps(changes), token_label),
-    )
-
 
 class LocalActorConflict(Exception):
     """A person account already uses a local actor's name."""

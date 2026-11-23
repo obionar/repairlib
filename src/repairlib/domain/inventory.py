@@ -8,7 +8,7 @@ from repairlib.contracts import InventoryItem, InventoryPage, ItemInput
 from repairlib.domain.customers import MAX_ID, CustomerAccess, CustomerError, authorized, search_pattern
 from repairlib.domain.replay import replay as replay_receipt
 from repairlib.search import fold
-from repairlib.storage import inventory, repairs, stock
+from repairlib.storage import audit, inventory, stock
 
 InventoryError = CustomerError
 FIELD_LIMITS = {
@@ -119,7 +119,7 @@ def create_item(workspace: Path, access: CustomerAccess, details: ItemInput, *, 
         check_sku(db, principal.shop_id, values["sku"])
         item = inventory.insert(db, principal.shop_id, values)
         inventory.save_result(db, principal, operation, key, fingerprint, item)
-        repairs.audit(db, principal, access.source, label, operation, "inventory_item", item.id, values)
+        audit.record(db, principal, access.source, label, operation, "inventory_item", item.id, values)
         return item
 
 
@@ -177,5 +177,5 @@ def _change_item(workspace: Path, access: CustomerAccess, item_id: int, operatio
         if not editing:
             changes = {"archived_at": {"before": current.archived_at, "after": item.archived_at}}
         inventory.save_result(db, principal, operation, key, fingerprint, item)
-        repairs.audit(db, principal, access.source, label, operation, "inventory_item", item.id, changes)
+        audit.record(db, principal, access.source, label, operation, "inventory_item", item.id, changes)
         return item
