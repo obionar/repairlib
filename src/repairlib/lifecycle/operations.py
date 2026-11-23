@@ -26,6 +26,8 @@ RECEIPT_TABLES = (
     "inventory_requests", "portable_imports", "printer_requests", "repair_requests", "settings_requests",
     "stock_requests", "user_requests",
 )
+PERMANENT = {"stock_requests": " AND NOT (movement_id IS NOT NULL AND operation IN "
+             "('inventory.consume', 'inventory.return', 'inventory.intake_mistake'))"}
 
 
 def workspace_disk_free_bytes(workspace: Path) -> int | None:
@@ -105,8 +107,11 @@ def prune_workspace_records(path: Path, now: int) -> tuple[int, int]:
         db.execute("BEGIN IMMEDIATE")
         sessions = db.execute("DELETE FROM sessions WHERE expires_at <= ?", (now,)).rowcount
         # Static table names only; receipts are keyed by shop and actor, so no join is needed.
-        receipts = sum(db.execute(f"DELETE FROM {table} WHERE created_at < ?", (cutoff,)).rowcount
-                       for table in RECEIPT_TABLES)
+        # Blank dates are unknown, not old. Stock proof and the import boundary are evidence
+        # that `doctor` re-derives from, so they never expire (audit R02).
+        receipts = sum(db.execute(
+            f"DELETE FROM {table} WHERE created_at <> '' AND created_at < ?{PERMANENT.get(table, '')}",
+            (cutoff,)).rowcount for table in RECEIPT_TABLES if table != "portable_imports")
     return sessions, receipts
 
 
