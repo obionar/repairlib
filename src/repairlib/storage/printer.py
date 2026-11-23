@@ -5,7 +5,7 @@ import json
 import sqlite3
 
 from repairlib.storage.repairs import audit
-from repairlib.storage.users import transaction
+from repairlib.storage.dry_run import transaction
 from repairlib.storage import request_ledger
 
 

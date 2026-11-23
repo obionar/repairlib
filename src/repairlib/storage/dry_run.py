@@ -1,6 +1,6 @@
 """One-command dry run: every storage transaction shares a connection that is never committed.
 
-`armed()` is the only way in. While it is active, `transaction()` in the storage modules hands each
+`armed()` is the only way in. While it is active, `transaction()` below hands each
 caller a SAVEPOINT on one shared, outer `BEGIN IMMEDIATE` connection instead of its own committing
 one. Domain code therefore runs exactly as on the real path (validation, revision checks, receipts,
 audit rows, even the first-use local actor) and a refusal still undoes its own work, but the outer
@@ -8,7 +8,7 @@ transaction is always rolled back, so nothing can reach the file. The audit rows
 are read before the rollback and become the report.
 """
 
-from contextlib import contextmanager
+from contextlib import closing, contextmanager
 import contextvars
 import json
 from pathlib import Path
@@ -86,3 +86,16 @@ def scope(session: Session, path: Path):
         db.execute(f"RELEASE {name}")
     finally:
         session.depth -= 1
+
+
+@contextmanager
+def transaction(path: Path, *, write: bool):
+    """A committing transaction, or a savepoint on the dry run's shared connection while armed."""
+    if (session := active()) is not None:
+        with scope(session, path) as db:
+            yield db
+        return
+    with closing(connect(path, "rw" if write else "ro")) as db, db:
+        db.row_factory = sqlite3.Row
+        db.execute("BEGIN IMMEDIATE" if write else "BEGIN")
+        yield db

@@ -11,7 +11,7 @@ from repairlib.domain.customers import (
 from repairlib.domain.passwords import hash_with_salt, hasher
 from repairlib.domain.replay import KEY_FORMAT, replay as replay_receipt
 from repairlib.paths import database_path
-from repairlib.storage import users
+from repairlib.storage import dry_run, users
 
 MAX_ID = (1 << 63) - 1
 ROLES = {"admin", "technician", "viewer"}
@@ -28,7 +28,7 @@ UserAccess = CustomerAccess
 def authorized(workspace: Path, access: UserAccess, *, write: bool = False,
                capability: str = "manage users"):
     check_credential(access, UserError)
-    with audited_preset_refusal(workspace), users.transaction(database_path(workspace), write=write) as db:
+    with audited_preset_refusal(workspace), dry_run.transaction(database_path(workspace), write=write) as db:
         principal, token_label, scope = resolve_principal(db, access, UserError, "users", write)
         if principal.role != "admin":
             raise UserError(403, "forbidden", f"Only an administrator can {capability}.")

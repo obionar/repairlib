@@ -8,7 +8,7 @@ from repairlib.adapters.web.security import SESSION_COOKIE, csrf_token
 from repairlib.contracts import RepairInput
 from repairlib.lifecycle.workspace import load_form_key
 from repairlib.storage import repairs as repair_storage
-from repairlib.storage.customers import transaction
+from repairlib.storage.dry_run import transaction
 from repairlib.storage.initialization import seed_workspace
 from test_charges import LABOR, PART
 from test_repairs import API, DEVICE

@@ -107,9 +107,9 @@ def authorized(workspace: Path, access: CustomerAccess, *, write: bool = False,
     check_credential(access)
     if write and access.source not in LOCAL_SOURCES and dry_run.active() is None:
         # Refuse an unknown credential in a read transaction, before it can queue for the write lock.
-        with customers.transaction(database_path(workspace), write=False) as db:
+        with dry_run.transaction(database_path(workspace), write=False) as db:
             resolve_principal(db, access, resource=resource)
-    with audited_preset_refusal(workspace), customers.transaction(database_path(workspace), write=write) as db:
+    with audited_preset_refusal(workspace), dry_run.transaction(database_path(workspace), write=write) as db:
         principal, token_label, scope = resolve_principal(db, access, resource=resource, write=write)
         can_write = principal.role in WRITE_ROLES and scope == "write"
         if write and not can_write:

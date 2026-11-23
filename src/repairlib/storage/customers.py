@@ -1,28 +1,12 @@
 """Shop-scoped customer storage and atomic mutation bookkeeping."""
 
-from contextlib import closing, contextmanager
 from dataclasses import asdict
 import json
-from pathlib import Path
-import sqlite3
 
 from repairlib.contracts import Customer, CustomerHistoryEvent, CustomerInput, CustomerListRow, OPEN_REPAIR_STAGES
-from repairlib.storage.sessions import connect
-from repairlib.storage import dry_run, request_ledger
+from repairlib.storage import request_ledger
 
 COLUMNS = "id, revision, created_at, name, phone, email, address, notes, archived_at"
-
-
-@contextmanager
-def transaction(path: Path, *, write: bool):
-    if (session := dry_run.active()) is not None:
-        with dry_run.scope(session, path) as db:
-            yield db
-        return
-    with closing(connect(path, "rw" if write else "ro")) as db, db:
-        db.row_factory = sqlite3.Row
-        db.execute("BEGIN IMMEDIATE" if write else "BEGIN")
-        yield db
 
 
 def list_page(db, shop_id: int, before: int | None, limit: int, pattern: str | None = None,

@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 
 from repairlib.contracts import Attachment
-from repairlib.storage.customers import transaction
+from repairlib.storage.dry_run import transaction
 from repairlib.storage import request_ledger
 
 INLINE_LIMIT = 8 * 1024 * 1024

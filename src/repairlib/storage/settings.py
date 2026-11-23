@@ -6,7 +6,7 @@ from pathlib import Path
 import sqlite3
 
 from repairlib.contracts import ShopSettings
-from repairlib.storage.users import transaction
+from repairlib.storage.dry_run import transaction
 from repairlib.storage import request_ledger
 
 

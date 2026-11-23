@@ -1,13 +1,13 @@
 """Shop-scoped user administration and maintenance recovery storage."""
 
-from contextlib import closing, contextmanager
 import json
 from pathlib import Path
 import sqlite3
 
 from repairlib.contracts import User
-from repairlib.storage.sessions import connect
-from repairlib.storage import dry_run, request_ledger
+from repairlib.storage import request_ledger
+from repairlib.storage.dry_run import transaction
+from repairlib.storage.dry_run import transaction
 
 COLUMNS = "id, username, role, active, revision"
 # Built-in local actors (created on first CLI/MCP use) carry this non-Argon2
@@ -18,18 +18,6 @@ LOCAL_ACTORS = ("cli", "mcp")
 
 class UsernameConflict(Exception):
     """The normalized username is already used in this shop."""
-
-
-@contextmanager
-def transaction(path: Path, *, write: bool):
-    if (session := dry_run.active()) is not None:
-        with dry_run.scope(session, path) as db:
-            yield db
-        return
-    with closing(connect(path, "rw" if write else "ro")) as db, db:
-        db.row_factory = sqlite3.Row
-        db.execute("BEGIN IMMEDIATE" if write else "BEGIN")
-        yield db
 
 
 def record(row) -> User:
