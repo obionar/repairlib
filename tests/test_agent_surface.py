@@ -12,6 +12,11 @@ from test_repairs import DEVICE
 from test_tokens import TokenFixture
 
 
+def cli(workspace, *args):
+    return subprocess.run([*COMMAND, "repairs", *args, "--workspace", str(workspace)],
+                          capture_output=True, text=True, timeout=10, env=python_env())
+
+
 class ShopToolProfileTests(unittest.TestCase):
     def test_shop_profile_lists_only_daily_tools_and_refuses_the_rest(self):
         server = repairlib_server(None, SHOP_TOOLS)
@@ -23,8 +28,7 @@ class ShopToolProfileTests(unittest.TestCase):
 
 class CliReplyTests(TokenFixture, unittest.TestCase):
     def cli(self, *args):
-        return subprocess.run([*COMMAND, "repairs", *args, "--workspace", str(self.workspace)],
-                              capture_output=True, text=True, timeout=10, env=python_env())
+        return cli(self.workspace, *args)
 
     def test_empty_list_says_so_on_stderr_and_attach_names_the_missing_file(self):
         repair = local.create_repair(local.open_workspace(self.workspace, "mcp"), DEVICE, "r1")
@@ -49,8 +53,7 @@ class FewerCallsTests(TokenFixture, unittest.TestCase):
         self.repair = local.create_repair(self.ctx, DEVICE, "r1")
 
     def cli(self, *args):
-        return subprocess.run([*COMMAND, "repairs", *args, "--workspace", str(self.workspace)],
-                              capture_output=True, text=True, timeout=10, env=python_env())
+        return cli(self.workspace, *args)
 
     def entries(self):
         return [entry.body for entry in local.list_work_entries(self.ctx, self.repair.id, limit=10, before=None).items]
@@ -77,6 +80,19 @@ class FewerCallsTests(TokenFixture, unittest.TestCase):
         self.assertNotEqual(stale.returncode, 0)
         self.assertEqual(self.entries(), ["Digitizer test: dead zone confirmed"])
 
+    def test_refused_note_leaves_the_stage_alone_and_note_keys_cannot_collide(self):
+        too_long = self.cli("stage", str(self.repair.id), "--revision", "1", "--stage", "in_progress",
+                            "--note", "x" * 5001, "--key", "long-1")
+        self.assertNotEqual(too_long.returncode, 0)
+        self.assertIn("5000", too_long.stderr)
+        self.assertEqual(local.show_repair(self.ctx, self.repair.id).revision, 1)  # one transaction: nothing saved
+
+        local.create_work_entry(self.ctx, self.repair.id, {"kind": "note", "body": "earlier"}, "fix-note")
+        moved = self.cli("stage", str(self.repair.id), "--revision", "1", "--stage", "in_progress",
+                         "--note", "later", "--key", "fix")
+        self.assertEqual(moved.returncode, 0, moved.stderr)
+        self.assertEqual(sorted(self.entries()), ["earlier", "later"])
+
     def test_mcp_stage_note_and_compact_list_rows(self):
         server = repairlib_server(self.ctx, SHOP_TOOLS)
         moved = server.call_tool("change_repair_stage", {"key": "m1", "repair_id": self.repair.id, "revision": 1,
@@ -90,6 +106,27 @@ class FewerCallsTests(TokenFixture, unittest.TestCase):
                                   "archived": False}])
         full = repairlib_server(self.ctx).call_tool("list_repairs", {"queue": "open"})
         self.assertGreater(len(json.dumps(full)), 3 * len(json.dumps(short)))
+
+
+class McpContactMaskTests(TokenFixture, unittest.TestCase):
+    """MCP callers are AI agents: like agent API tokens, they never see phone, email or address."""
+
+    def test_mcp_masks_customer_contacts_everywhere_the_cli_does_not(self):
+        ctx = local.open_workspace(self.workspace, "mcp")
+        person = local.create_customer(ctx, {"name": "Test Person", "phone": "+35799000111",
+                                             "email": "t@example.test", "address": "1 Synthetic St"}, "c1")
+        repair = local.create_repair(ctx, {**DEVICE, "customer_id": person.id}, "r1")
+        server = repairlib_server(ctx)
+        results = [server.call_tool(name, args)["structuredContent"]["result"] for name, args in (
+            ("list_customers", {}), ("get_customer", {"customer_id": person.id}),
+            ("repair_brief", {"repair_id": repair.id}), ("dashboard", {}),
+            ("edit_customer", {"key": "e1", "customer_id": person.id, "revision": 1, "notes": "VIP"}))]
+        text = json.dumps(results)
+        for secret in ("+35799000111", "t@example.test", "1 Synthetic St", "99000111"):
+            self.assertNotIn(secret, text)
+        self.assertIn("Test Person", text)
+        self.assertIn("[masked]", json.dumps(results[2]))
+        self.assertEqual(local.show_customer(ctx, person.id).phone, "+35799000111")  # stored and CLI whole
 
 
 if __name__ == "__main__":

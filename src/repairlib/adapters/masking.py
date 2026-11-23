@@ -1,4 +1,4 @@
-"""Contact-data masking for agent callers, applied to API output only.
+"""Contact-data masking for agent callers: agent API tokens and every MCP result.
 
 The stored rows and the domain results are untouched; a person's token, a browser session and
 the local CLI see the data whole. Only phone, email and address are masked: names, notes, ids,
@@ -10,7 +10,7 @@ import logging
 from pathlib import Path
 
 from repairlib.contracts import (
-    CustomerExport, CustomerHistoryEvent, CustomerHistoryPage, CustomerPage,
+    CustomerExport, CustomerHistoryEvent, CustomerHistoryPage, CustomerPage, Dashboard, RepairBrief,
 )
 from repairlib.domain.customers import CustomerAccess
 from repairlib.domain.tokens import authenticate_api_token
@@ -45,11 +45,15 @@ def mask_event(event: CustomerHistoryEvent) -> CustomerHistoryEvent:
 
 
 def mask_result(value):
-    """Mask a customer, page, history page or export; anything else is returned as it is."""
+    """Mask a customer, page, history page, export, repair brief or dashboard; anything else as it is."""
     if isinstance(value, CustomerPage):
         return replace(value, items=[mask_customer(row) for row in value.items])
     if isinstance(value, CustomerHistoryPage):
         return replace(value, items=[mask_event(event) for event in value.items])
     if isinstance(value, CustomerExport):
         return replace(value, customer=mask_customer(value.customer))
+    if isinstance(value, RepairBrief):
+        return replace(value, customer_phone=MASK if value.customer_phone else "")
+    if isinstance(value, Dashboard):
+        return replace(value, recent_customers=[mask_customer(row) for row in value.recent_customers])
     return mask_customer(value) if hasattr(value, "phone") and hasattr(value, "email") else value

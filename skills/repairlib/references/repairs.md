@@ -14,7 +14,7 @@ have their own revisions; receipt replays may contain old revisions.
 | `repairs brief ID [--json]` | start here: repair and revision, customer and phone, allowed next stages, 10 newest entries, charge totals (MCP `repair_brief`). |
 | `repairs show ID [--json]` | full record plus diagnosis/repair/parts/discount/total, pickup and archive state, `Revision N`. |
 | `repairs edit ID --revision R --key K [--customer ID] [--technician ID] [--clear-customer] [--clear-technician] [fields…]` | supplied text fields replace values; omitted fields keep their values; `--warranty-until ""` clears the date. |
-| `repairs stage ID --revision R --key K --stage STAGE [--reason TEXT] [--note TEXT]` | transitions below; reopening a terminal repair needs `--reason`, other stages must omit it. `--note` also adds a work-log note under key `K-note` (a refused stage writes no note; retry with the same key finishes both). |
+| `repairs stage ID --revision R --key K --stage STAGE [--reason TEXT] [--note TEXT]` | transitions below; reopening a terminal repair needs `--reason`, other stages must omit it. `--note` also adds a work-log note in the same transaction: both are saved or neither is, and a retry with the same key replays both. |
 | `repairs pickup ID --revision R --key K [--undo]` | independent of stage; `--undo` clears pickup. |
 | `repairs payment ID --revision R --key K [--undo]` | terminal stage only; records paid (`--undo` = not paid). |
 | `repairs archive ID --revision R --key K [--undo]` | archive any stage; `--undo` restores. Archived repairs stay readable. |

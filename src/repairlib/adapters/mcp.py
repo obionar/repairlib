@@ -10,6 +10,7 @@ from typing import Annotated, Callable, Literal, get_type_hints
 import sys
 from pydantic import ConfigDict, Field, ValidationError, create_model
 
+from repairlib.adapters.masking import mask_result
 from repairlib.client import local
 from repairlib.client.local import Local
 from repairlib.contracts import (
@@ -193,7 +194,7 @@ def repairlib_server(ctx: Local, only: tuple[str, ...] = ()) -> "Server":
              customer_id=(Id | None, None), queue=(Literal["", "open", "pickup"], ""))
     register("get_repair", "Read a repair by ID, including its revision, stage and lifecycle state.",
              local.show_repair, **REPAIR)
-    register("repair_brief", "Start here for one repair: the repair with its revision, customer name and phone, "
+    register("repair_brief", "Start here for one repair: the repair with its revision, customer name (contacts masked), "
              "technician, allowed next stages, the 10 newest work entries and charge totals in EUR cents.",
              local.repair_brief, **REPAIR)
     register("repair_activity", "Page through who changed a repair and its entries, charges and files.",
@@ -368,7 +369,7 @@ def repairlib_server(ctx: Local, only: tuple[str, ...] = ()) -> "Server":
         except ValidationError:
             return failure("validation", "Check the tool arguments against its input schema.")
         try:
-            data = operation(ctx, **values.model_dump())
+            data = mask_result(operation(ctx, **values.model_dump()))  # MCP callers are agents
             # Serialization is inside the guard: a bug here must not end the session.
             return result(output.model_construct(result=data).model_dump(mode="json"))
         except local.ClientError as error:

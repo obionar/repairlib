@@ -106,7 +106,10 @@ class MCPMutationTests(MCPFixture, unittest.TestCase):
                     key = uuid4().hex
                     edit = {"customer_id": customer_id, "revision": 1, "phone": "555-0100", "key": key}
                     edited = await self.call(session, "edit_customer", token, **edit)
-                    self.assertEqual((edited["revision"], edited["phone"]), (2, "555-0100"))
+                    # MCP callers are agents: the reply masks contacts, the stored row keeps them.
+                    self.assertEqual((edited["revision"], edited["phone"]), (2, "[masked]"))
+                    self.assertEqual(self.snapshot(f"SELECT phone FROM customers WHERE id = {customer_id}"),
+                                     [("555-0100",)])
                     committed = self.business_state()
                     self.assertEqual(await self.call(session, "edit_customer", token, **edit), edited)
                     for code, change in (

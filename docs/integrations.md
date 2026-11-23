@@ -29,7 +29,7 @@ The HTTP API is for programs on other machines. Sign in to the web app, open **A
 
 ## Connect an MCP host over stdio
 
-The MCP bridge works on the local workspace as the built-in `mcp` administrator, like the [CLI](#use-the-cli-on-the-shop-machine), and makes no HTTP calls. It acts with full shop access (including purchase costs), so connect only hosts you trust.
+The MCP bridge works on the local workspace as the built-in `mcp` administrator, like the [CLI](#use-the-cli-on-the-shop-machine), and makes no HTTP calls. It acts with full shop access (including purchase costs), so connect only hosts you trust. Because its caller is an AI agent, every result shows customer phone, email and address as `[masked]`, as for agent API tokens; names, IDs, revisions and repairs pass through. Use the web UI or the CLI to see contact details.
 
 Configure a local stdio server in your MCP host, substituting the absolute paths to the interpreter, the checkout's `src` directory and the workspace:
 

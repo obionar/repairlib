@@ -90,7 +90,7 @@ def register_repair_commands(commands) -> None:
     add_revision(stage)
     stage.add_argument("--stage", choices=STAGES, required=True)
     stage.add_argument("--reason", default="", help="required when reopening a terminal repair")
-    stage.add_argument("--note", default="", help="also add this note to the work log (key KEY-note)")
+    stage.add_argument("--note", default="", help="also add this note to the work log, in the same transaction")
     stage.add_argument("--key", required=True)
     flag_commands = []
     for action in ("pickup", "archive", "payment"):

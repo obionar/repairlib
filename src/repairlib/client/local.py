@@ -308,21 +308,9 @@ def change_stage(ctx, repair_id, details, key) -> Repair:
     return run(ctx, repairs.change_stage, repair_id, parse(StageChange, details), key=key)
 
 
-NOTE_KEY_SUFFIX = "-note"
-
-
 def change_stage_with_note(ctx, repair_id, details, key, note) -> Repair:
-    """Stage change, then a note under a derived key. Each half is idempotent on its own key, so a
-    retry with the same key and payload finishes whichever half is missing; a refused stage writes
-    no note. Saves an agent a call and the "did the note, forgot the stage" mistake."""
-    if not note.strip():
-        return change_stage(ctx, repair_id, details, key)
-    if len(key) > 128 - len(NOTE_KEY_SUFFIX):
-        raise ClientError(f"Use a key of at most {128 - len(NOTE_KEY_SUFFIX)} characters with a note.", 2,
-                          code="validation")
-    repair = change_stage(ctx, repair_id, details, key)
-    create_work_entry(ctx, repair_id, {"kind": "note", "body": note}, key + NOTE_KEY_SUFFIX)
-    return repair  # a work entry does not change the repair revision
+    """Stage change plus an optional work-log note, in one transaction under one key."""
+    return run(ctx, repairs.change_stage, repair_id, parse(StageChange, details), key=key, note=note)
 
 
 def change_repair_flag(ctx, repair_id, flag, details, key) -> Repair:

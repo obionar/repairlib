@@ -284,14 +284,16 @@ def stage_options(stage: str) -> list[str]:
 
 
 def change_stage(workspace: Path, access: RepairAccess, repair_id: int,
-                 change: StageChange, *, key: str) -> Repair:
+                 change: StageChange, *, key: str, note: str = "") -> Repair:
+    """`note` adds a work-log note in the same transaction and under the same receipt."""
     return change_ticket_status(workspace, access, repair_id, revision=change.revision,
-                                stage=change.stage, reason=change.reason, key=key)
+                                stage=change.stage, reason=change.reason, key=key, note=note)
 
 
 def change_ticket_status(workspace: Path, access: RepairAccess, repair_id: int,
                          *, revision: int, stage: str, reason: str, key: str,
-                         pickup: bool | None = None, payment: bool | None = None) -> Repair:
+                         pickup: bool | None = None, payment: bool | None = None, note: str = "") -> Repair:
+    note = normalize_entry("note", note)[1] if note.strip() else ""
     if not 1 <= revision < MAX_ID:
         raise RepairError(422, "validation", "Supply the reviewed repair revision.")
     reason = reason.strip().replace("\r\n", "\n")
@@ -305,6 +307,8 @@ def change_ticket_status(workspace: Path, access: RepairAccess, repair_id: int,
             payload["pickup"] = pickup
         if payment is not None:
             payload["payment"] = payment
+        if note:  # only when present, so existing receipts keep their fingerprints
+            payload["note"] = note
         fingerprint, previous = replay(db, principal, "repair.update", key, payload, Repair)
         if previous is not None:
             return previous
@@ -347,6 +351,10 @@ def change_ticket_status(workspace: Path, access: RepairAccess, repair_id: int,
                 changes["reopen_reason"] = reason
             audit.record(db, principal, access.source, token_label, "repair.stage", "repair",
                           repair_id, changes)
+            if note:  # a work entry does not change the repair revision
+                entry = repairs.insert_entry(db, principal, repair_id, "note", note)
+                audit.record(db, principal, access.source, token_label, "work_entry.create", "work_entry",
+                              entry.id, {"repair_id": repair_id, "kind": "note"})
         if pickup is not None:
             timestamp = datetime.now(UTC).isoformat(timespec="milliseconds").replace("+00:00", "Z")
             updated = repairs.update_flag(db, principal.shop_id, repair_id, updated.revision,
