@@ -179,7 +179,7 @@ python3 -I -B "$repairlib_source/scripts/install.py" --reopen-update \
 ```sh
 bin/repairlib status --json     # path, schema, readiness, record counts
 bin/repairlib doctor            # app stopped: schema, SQLite integrity and FKs, stock ledger, files
-bin/repairlib cleanup           # app stopped: old upload parts, expired sessions, receipts > 90 days
+bin/repairlib cleanup           # app stopped: old upload parts, expired sessions, retry receipts > 90 days (stock proof and import records are kept)
 bin/repairlib profile check     # read-only workspace, identity and schema check
 ```
 
