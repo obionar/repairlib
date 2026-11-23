@@ -182,8 +182,12 @@ def repairlib_server(ctx: Local, only: tuple[str, ...] = ()) -> "Server":
              local.show_customer, **CUSTOMER)
     register("customer_history", "Page through a customer's history by descending event ID.",
              local.customer_history, **CUSTOMER, **PAGE)
-    register("list_repairs", "Search, filter or page through repairs by descending ID.",
-             local.list_repairs, **PAGE, query=QUERY, stage=(Stage | None, None),
+    compact = "list_repairs" in only  # shop tool set: short rows, full records come from repair_brief
+    register("list_repairs", "Search, filter or page through repairs by descending ID."
+             + (" Short rows (device, stage, customer, revision, paid, collected); use repair_brief for details."
+                if compact else ""),
+             local.list_repair_lines if compact else local.list_repairs,
+             **PAGE, query=QUERY, stage=(Stage | None, None),
              picked_up=(bool | None, None), archived=(bool | None, None), paid=(bool | None, None),
              technician=(Annotated[str, Field(description="Technician ID, me, or unassigned.")], ""),
              customer_id=(Id | None, None), queue=(Literal["", "open", "pickup"], ""))
@@ -246,10 +250,11 @@ def repairlib_server(ctx: Local, only: tuple[str, ...] = ()) -> "Server":
                       local.edit_repair, **REPAIR, body=RepairPatch,
                       require=get_type_hints(RepairPatch).keys() - {"warranty_until", "warranty_repair_id"},
                       destructive=True)
-    register_mutation("change_repair_stage", "Move a repair to an allowed stage at its reviewed revision. "
-                      "Leave reason empty, except when reopening a completed repair to in_progress; "
-                      "add notes with create_work_entry.",
-                      local.change_stage, **REPAIR, body=StageChange, destructive=True)
+    register_mutation("change_repair_stage", "Move a repair to an allowed stage at its reviewed revision, "
+                      "optionally adding a work-log note in the same call. Leave reason empty, except when "
+                      "reopening a completed repair to in_progress.",
+                      local.change_stage_with_note, **REPAIR, body=StageChange, destructive=True,
+                      note=(Annotated[str, Field(description="Optional note for the work log.")], ""))
     register_mutation("mark_repair_picked_up", "Record pickup at the reviewed repair revision.",
                       local.change_repair_flag, **REPAIR, body=RepairFlagChange,
                       fixed_args={"flag": "pickup"}, fixed_body={"enabled": True}, destructive=True)

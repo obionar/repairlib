@@ -291,6 +291,26 @@ class RepairPage:
 
 
 @dataclass(frozen=True)
+class RepairLine:
+    """One repair as a short line for small-context agents (the MCP shop tool set)."""
+    id: int
+    device: str
+    stage: str
+    customer: str
+    revision: int
+    paid: bool | None
+    collected: bool
+    archived: bool
+
+
+@dataclass(frozen=True)
+class RepairLinePage:
+    items: list[RepairLine]
+    next_before: int | None
+    total: int | None = None
+
+
+@dataclass(frozen=True)
 class QueueRepair:
     id: int
     customer_id: int | None

@@ -90,6 +90,7 @@ def register_repair_commands(commands) -> None:
     add_revision(stage)
     stage.add_argument("--stage", choices=STAGES, required=True)
     stage.add_argument("--reason", default="", help="required when reopening a terminal repair")
+    stage.add_argument("--note", default="", help="also add this note to the work log (key KEY-note)")
     stage.add_argument("--key", required=True)
     flag_commands = []
     for action in ("pickup", "archive", "payment"):
@@ -396,7 +397,8 @@ def _flag(ctx, args):
 
 @executes("stage")
 def _stage(ctx, args):
-    return local.change_stage(ctx, args.id, details_of(args, "revision", "stage", "reason"), args.key)
+    return local.change_stage_with_note(ctx, args.id, details_of(args, "revision", "stage", "reason"), args.key,
+                                        args.note)
 
 
 @executes("entries")
@@ -602,7 +604,8 @@ def _show_activity(result, args, ctx):
 
 
 def list_flags(item) -> str:
-    """Money and handover state on one line, so a list answers "unpaid" or "collected" without more reads."""
+    """Money and handover state on one line, so a list answers "unpaid" or "collected" without more reads.
+    The line also carries `rN`, the revision, so payment, pickup or a stage change need no extra read."""
     flags = [("paid" if item.payment_paid else "unpaid")] if item.stage in TERMINAL_REPAIR_STAGES else []
     flags += ["collected"] * bool(item.picked_up_at) + ["archived"] * bool(item.archived_at)
     return " ".join(flags)
@@ -621,7 +624,8 @@ def _show_page(result, args, ctx):
             print(f"{item.id}\t{item.kind}\t{display_name(item.author_username)}\t{item.body}{state}")
         else:
             print("\t".join((str(item.id), item.device_type, " ".join(filter(None, (item.brand, item.model))),
-                             item.stage, display_name(item.customer_name or ""), list_flags(item))).rstrip())
+                             item.stage, display_name(item.customer_name or ""), f"r{item.revision}",
+                             list_flags(item))).rstrip())
     next_page_hint(result)
 
 

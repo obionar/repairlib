@@ -97,6 +97,11 @@ class SkillDocumentTests(unittest.TestCase):
                     self.assertIn(positional[1], commands[positional[0]].split(),
                                   f"unknown subcommand in {path.name}: {line}")
 
+    def test_agents_snippet_matches_the_skill_shop_section(self):
+        block, = code_blocks((REFERENCES / "agents-snippet.md").read_text(encoding="utf-8"))
+        shop = block.split("\n\n", 1)[1]  # after the snippet's own two-line preface
+        self.assertIn(shop.strip(), self.text, "agents-snippet.md and SKILL.md 'Shop tasks' differ")
+
     def test_the_skill_states_the_two_hard_refusals(self):
         self.assertIn("No direct SQL", self.text)
         self.assertIn("No service control", self.text)

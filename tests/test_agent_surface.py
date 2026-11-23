@@ -1,5 +1,6 @@
 """Small-model agent surface: a lean MCP tool set and CLI replies that say what happened."""
 
+import json
 import subprocess
 import unittest
 
@@ -37,6 +38,58 @@ class CliReplyTests(TokenFixture, unittest.TestCase):
         twice = self.cli("list", "--stage", "lab_test", "--stage", "customer_test")
         self.assertEqual(twice.returncode, 2)
         self.assertIn("give one --stage per command", twice.stderr)
+
+
+class FewerCallsTests(TokenFixture, unittest.TestCase):
+    """A write should need: find (list line carries the revision), then one write."""
+
+    def setUp(self):
+        super().setUp()
+        self.ctx = local.open_workspace(self.workspace, "mcp")
+        self.repair = local.create_repair(self.ctx, DEVICE, "r1")
+
+    def cli(self, *args):
+        return subprocess.run([*COMMAND, "repairs", *args, "--workspace", str(self.workspace)],
+                              capture_output=True, text=True, timeout=10, env=python_env())
+
+    def entries(self):
+        return [entry.body for entry in local.list_work_entries(self.ctx, self.repair.id, limit=10, before=None).items]
+
+    def test_list_line_carries_the_revision_a_write_needs(self):
+        line = self.cli("list").stdout.strip().split("\t")
+        self.assertEqual(line[5], f"r{self.repair.revision}")
+        moved = self.cli("stage", str(self.repair.id), "--revision", line[5][1:], "--stage", "in_progress",
+                         "--key", "s1")
+        self.assertEqual(moved.returncode, 0, moved.stderr)
+
+    def test_stage_with_note_writes_both_retries_safely_and_refusal_writes_nothing(self):
+        args = ("stage", str(self.repair.id), "--revision", "1", "--stage", "in_progress",
+                "--note", "Digitizer test: dead zone confirmed", "--key", "start-1")
+        first = self.cli(*args)
+        self.assertEqual(first.returncode, 0, first.stderr)
+        self.assertIn("revision 2, stage in_progress", first.stdout)
+        self.assertEqual(self.cli(*args).returncode, 0)  # same key: both halves replay, nothing doubles
+        self.assertEqual(self.entries(), ["Digitizer test: dead zone confirmed"])
+        self.assertEqual(local.show_repair(self.ctx, self.repair.id).revision, 2)
+
+        stale = self.cli("stage", str(self.repair.id), "--revision", "1", "--stage", "lab_test",
+                         "--note", "should not appear", "--key", "stale-1")
+        self.assertNotEqual(stale.returncode, 0)
+        self.assertEqual(self.entries(), ["Digitizer test: dead zone confirmed"])
+
+    def test_mcp_stage_note_and_compact_list_rows(self):
+        server = repairlib_server(self.ctx, SHOP_TOOLS)
+        moved = server.call_tool("change_repair_stage", {"key": "m1", "repair_id": self.repair.id, "revision": 1,
+                                                         "stage": "waiting_parts", "note": "97 Wh battery ordered"})
+        self.assertNotIn("error", moved["structuredContent"])
+        self.assertEqual(self.entries(), ["97 Wh battery ordered"])
+
+        short = server.call_tool("list_repairs", {"queue": "open"})["structuredContent"]["result"]["items"]
+        self.assertEqual(short, [{"id": self.repair.id, "device": "Laptop Synthetic Model Γ", "stage": "waiting_parts",
+                                  "customer": "", "revision": 2, "paid": None, "collected": False,
+                                  "archived": False}])
+        full = repairlib_server(self.ctx).call_tool("list_repairs", {"queue": "open"})
+        self.assertGreater(len(json.dumps(full)), 3 * len(json.dumps(short)))
 
 
 if __name__ == "__main__":

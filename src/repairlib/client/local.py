@@ -22,7 +22,7 @@ from repairlib.contracts import (
     CustomerPage, CustomerResponse, Dashboard, DeviceRepair, InventoryItem, InventoryPage, LabelOptions, MovementPage,
     PartReturnResult, PartReturnStatus, PortableImport, PortablePreview, PrintReceipt, PrinterSettings, Repair,
     RepairBrief,
-    RepairActivityPage, RepairPage, ShopSettings, StockChange, StockReconciliation, User, UserPage, WorkEntry,
+    RepairActivityPage, RepairLine, RepairLinePage, RepairPage, ShopSettings, StockChange, StockReconciliation, User, UserPage, WorkEntry,
     WorkEntryPage, WorkEntryRevision,
     CHARGE_CONSUMPTION_FIELDS, PORTABLE_MAX_BYTES, AttachmentCaption, AttachmentDetach, AttachmentLink, AttachmentPurge,
     ChargeInput, ChargePatch, ChargeVisibility, Customer, CustomerAnonymize, CustomerArchiveChange, CustomerExport, CustomerInput, CustomerPatch,
@@ -268,6 +268,16 @@ def list_repairs(ctx, *, limit, before, query="", stage=None, picked_up=None, ar
                queue=queue, paid=paid)[0]
 
 
+def list_repair_lines(ctx, **filters) -> RepairLinePage:
+    """list_repairs with each repair cut to the fields a list answer needs (about a ninth of the size)."""
+    page = list_repairs(ctx, **filters)
+    lines = [RepairLine(id=row.id, stage=row.stage, customer=row.customer_name or "", revision=row.revision,
+                        device=" ".join(filter(None, (row.device_type, row.brand, row.model))) or row.display_device,
+                        paid=row.payment_paid, collected=row.picked_up_at is not None,
+                        archived=row.archived_at is not None) for row in page.items]
+    return RepairLinePage(lines, page.next_before, page.total)
+
+
 def create_repair(ctx, details, key) -> Repair:
     return run(ctx, repairs.create_repair, parse(RepairInput, details), key=key)
 
@@ -296,6 +306,23 @@ def edit_repair(ctx, repair_id, details, key) -> Repair:
 
 def change_stage(ctx, repair_id, details, key) -> Repair:
     return run(ctx, repairs.change_stage, repair_id, parse(StageChange, details), key=key)
+
+
+NOTE_KEY_SUFFIX = "-note"
+
+
+def change_stage_with_note(ctx, repair_id, details, key, note) -> Repair:
+    """Stage change, then a note under a derived key. Each half is idempotent on its own key, so a
+    retry with the same key and payload finishes whichever half is missing; a refused stage writes
+    no note. Saves an agent a call and the "did the note, forgot the stage" mistake."""
+    if not note.strip():
+        return change_stage(ctx, repair_id, details, key)
+    if len(key) > 128 - len(NOTE_KEY_SUFFIX):
+        raise ClientError(f"Use a key of at most {128 - len(NOTE_KEY_SUFFIX)} characters with a note.", 2,
+                          code="validation")
+    repair = change_stage(ctx, repair_id, details, key)
+    create_work_entry(ctx, repair_id, {"kind": "note", "body": note}, key + NOTE_KEY_SUFFIX)
+    return repair  # a work entry does not change the repair revision
 
 
 def change_repair_flag(ctx, repair_id, flag, details, key) -> Repair:

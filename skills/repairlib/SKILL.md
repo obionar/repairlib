@@ -15,10 +15,10 @@ never a live shop.
 ## Shop tasks (no reference needed)
 
 Read the plain text; it is shorter than `--json`. One line per repair:
-`ID  type  brand model  stage  customer  flags`, flags = `paid`/`unpaid` (finished repairs),
-`collected`, `archived`. `--query` words may match device, serial, issue or customer name in
-any order: `--query "anna ipad"`. `No matches.` means nothing found: try one word, never the
-same command twice. Never guess an ID: find it first.
+`ID  type  brand model  stage  customer  rN  flags`. `rN` is the revision a write needs;
+flags = `paid`/`unpaid` (finished repairs), `collected`, `archived`. `--query` words may match
+device, serial, issue or customer name in any order: `--query "anna ipad"`. `No matches.` means
+nothing found: try one word, never the same command twice. Never guess an ID: find it first.
 
 | Ask | Command |
 |---|---|
@@ -27,33 +27,34 @@ same command twice. Never guess an ID: find it first.
 | finished, not paid | `repairlib repairs list --queue pickup --no-paid` |
 | ready to collect | `repairlib repairs list --queue pickup --no-picked-up` |
 | find "the Dell", "Maria's phone" | `repairlib repairs list --query "maria switch"` |
-| one repair, resume work | `repairlib repairs brief ID` (revision, customer, next stages, newest entries, totals) |
+| one repair, resume work | `repairlib repairs brief ID` (issue, next stages, newest entries, totals) |
 
 Stages: new, in_progress, waiting_parts, lab_test, customer_test, repaired, no_repair.
 Words to stages: "start working / begin" = in_progress; "ordered a part / waiting for parts" =
 waiting_parts; "testing" = lab_test; "customer is testing" = customer_test; "fixed / done" =
-repaired; "cannot fix / declined" = no_repair. A request with a stage word and a note needs
-both commands.
+repaired; "cannot fix / declined" = no_repair.
 
 To continue earlier work ("let's continue with that Dell"): `--query dell`, then
 `repairs brief ID`; the newest entries say where the diagnosis stopped. If several open
 repairs match, ask which one.
 
-Writes: run `repairlib profile check` once first. `R` = the `Revision` line of a brief read just
-before. Use a new descriptive `--key` per change (letters, digits, `-`, `_`). A write prints the
-new revision (`Repair 8, revision 4, ...`): use it for the next write on that repair; do not
-re-read to verify.
+Writes: find the repair with `repairs list`, then write with `R` from its `rN` (no brief needed).
+Use a new descriptive `--key` per change (letters, digits, `-`, `_`). A write prints the new
+revision (`Repair 8, revision 4, ...`): use it for the next write on that repair; do not re-read
+to verify. On `stale_revision`, list again and retry with the new `rN` and a new key.
 
 | Do | Command |
 |---|---|
-| change status | `repairlib repairs stage ID --revision R --stage STAGE --key K` (only a stage in `Next stages`) |
-| add a note | `repairlib repairs add-entry ID --body "TEXT" --kind note --key K` (no revision) |
+| change status | `repairlib repairs stage ID --revision R --stage STAGE --key K` |
+| status and a note | `repairlib repairs stage ID --revision R --stage STAGE --note "TEXT" --key K` (one call) |
+| add a note only | `repairlib repairs add-entry ID --body "TEXT" --kind note --key K` (no revision) |
 | record payment | `repairlib repairs payment ID --revision R --key K` (repaired or no_repair only) |
 | record pickup | `repairlib repairs pickup ID --revision R --key K` |
 | device photo | `repairlib repairs attach ID "/path/file name.jpg" --photo --key K` (quote paths) |
 | photo with a note | `repairlib repairs add-entry ID --body "TEXT" --file "/path/f.jpg" --key K` |
 
-If a file is not found, run `ls` on its folder once, then retry with the real path.
+If a file is not found, run `ls` on its folder once, then retry with the real path. If a write
+refuses with a workspace or permission error, run `repairlib profile check` and report it.
 Commands wait up to 3 s for a short status check. If one still answers `busy`, maintenance is
 running: stop and tell the user. Do not investigate locks, files or processes.
 
@@ -70,8 +71,8 @@ Repair tips from the web (keep it short):
 1. For other tasks read only the relevant reference below. Use `<command> --help` for unfamiliar
    flags, `--version` for build questions, and `catalog` only when discovering tools.
    If session context and the checkout disagree, read the current files and trust the CLI.
-2. Before the first write of a session, run `repairlib profile check` and stop
-   if it reports blockers. Use returned IDs, not examples or assumed IDs.
+2. Use returned IDs, not examples or assumed IDs. Run `repairlib profile check` when a write
+   refuses with a workspace or permission error, or before setup and maintenance work.
 3. Write with the reviewed revision and a unique `--key` where required. Retry an
    uncertain result with the **same key and payload**; use `--key auto` only for a new
    intent that does not need a recoverable retry key. On `stale_revision`, re-read
@@ -97,6 +98,7 @@ quantities are decimal units in arguments and milli-units in JSON.
 
 ## Read on demand
 
+- [Agent snippet](references/agents-snippet.md) — the shop section to paste into an agent's `AGENTS.md`.
 - [Workflow example](references/quick-workflow.md) — synthetic intake to pickup.
 - [CLI/MCP contract](references/cli-contract.md) — flags, errors, retries, revisions.
 - [Workspace](references/workspace.md) — setup, profile, backup, service, update, links.
