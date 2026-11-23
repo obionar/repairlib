@@ -6,6 +6,7 @@ import time
 import unittest
 from datetime import UTC, datetime
 
+from repairlib.domain.system import facts
 from repairlib.lifecycle.operations import cleanup_workspace
 from test_tokens import TokenFixture
 
@@ -38,6 +39,16 @@ class SessionIdleTests(TokenFixture, unittest.TestCase):
             self.assertLess(abs(seen - int(time.time())), 5)
             self.age_session(IDLE_SECONDS - 60)
             self.assertEqual(client.get("/repairs").status_code, 200)
+
+    def test_status_counts_only_sessions_authentication_would_accept(self):
+        with self.client() as client:
+            self.sign_in(client)
+        seen = self.snapshot("SELECT last_seen_at FROM sessions")[0][0]
+        for now, expected in ((seen + IDLE_SECONDS - 1, 1), (seen + IDLE_SECONDS + 1, 0)):
+            self.assertEqual(facts(self.workspace, now=now)["sessions"], expected)
+        with closing(sqlite3.connect(self.db)) as db, db:
+            db.execute("UPDATE users SET active = 0 WHERE username = 'owner'")
+        self.assertEqual(facts(self.workspace, now=seen)["sessions"], 0)
 
     def test_recent_activity_is_not_rewritten_on_every_request(self):
         with self.client() as client:

@@ -84,8 +84,14 @@ def issue_session(path: Path, credential: Credential, token_hash: str, now: int,
 
 def active_count(db: sqlite3.Connection, shop_id: int, now: int) -> int:
     """Sessions still open for the shop at `now`."""
-    return db.execute("SELECT COUNT(*) FROM sessions WHERE shop_id = ? AND expires_at > ?",
-                      (shop_id, now)).fetchone()[0]
+    # Same lifetime, idle, active-user and revision rules as `session_credential`.
+    return db.execute(
+        """
+        SELECT COUNT(*) FROM sessions AS s
+        JOIN users AS u ON u.shop_id = s.shop_id AND u.id = s.user_id
+        WHERE s.shop_id = ? AND s.expires_at > ? AND s.last_seen_at > ?
+          AND u.active = 1 AND u.revision = s.user_revision
+        """, (shop_id, now, now - SESSION_IDLE_SECONDS)).fetchone()[0]
 
 
 def session_credential(db: sqlite3.Connection, token_hash: str, now: int) -> Credential | None:
