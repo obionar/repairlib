@@ -12,7 +12,7 @@ from repairlib.contracts import (
 )
 from repairlib.domain.customers import MAX_ID, CustomerAccess, CustomerError, authorized, search_pattern
 from repairlib.domain.replay import replay as replay_receipt
-from repairlib.search import phone_search_pattern
+from repairlib.search import fold, like_pattern, phone_search_pattern
 from repairlib.storage import audit, repairs
 
 RepairAccess = CustomerAccess
@@ -184,12 +184,12 @@ def list_repairs(workspace: Path, access: RepairAccess, *, before: int | None = 
                 and 1 <= int(technician) <= MAX_ID):
             raise RepairError(422, "validation", "Choose a valid technician filter.")
         technician_id = int(technician)
-    pattern = search_pattern(query)
+    words = tuple(like_pattern(word) for word in fold(query.strip()).split()) if search_pattern(query) else ()
     with authorized(workspace, access) as (db, principal, _, can_write):
         if queue == "pickup" and picked_up is True:
             return RepairPage([], None, 0), can_write
         rows, total = repairs.list_page(
-            db, principal.shop_id, before, limit + 1, pattern, stage,
+            db, principal.shop_id, before, limit + 1, words, stage,
             picked_up=False if queue == "pickup" else picked_up,
             archived=archived, paid=paid, technician=principal.user_id if technician == "me" else technician_id,
             unassigned=technician == "unassigned", customer_id=customer_id, queue_stages=REPAIR_QUEUES.get(queue, ()),

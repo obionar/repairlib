@@ -7,58 +7,70 @@ license: MIT
 # RepairLib
 
 RepairLib is not RepairFlow. Use `repairlib` or the checkout's `bin/repairlib`.
-Pass `--workspace "$WS"` on every workspace command; use an explicit absolute path.
-If the path is unknown, ask. Tests use a fresh synthetic `demo`, never a live shop.
+The workspace comes from `REPAIRLIB_WORKSPACE` (the checkout launcher sets it), so commands
+below need no `--workspace`. `repairlib profile check` prints it on its first line; add
+`--workspace PATH` only when the user names another one. Tests use a fresh synthetic `demo`,
+never a live shop.
 
 ## Shop tasks (no reference needed)
 
-Answer from plain text lists. One line per repair: `ID  type  brand model  stage  customer  flags`,
-flags = `paid`/`unpaid` (finished repairs), `collected`, `archived`. Add `--json` only when
-you need a field the line lacks. `--query` matches device, serial, issue or
-customer name. Never guess an ID: find it first.
+Read the plain text; it is shorter than `--json`. One line per repair:
+`ID  type  brand model  stage  customer  flags`, flags = `paid`/`unpaid` (finished repairs),
+`collected`, `archived`. `--query` words may match device, serial, issue or customer name in
+any order: `--query "anna ipad"`. `No matches.` means nothing found: try one word, never the
+same command twice. Never guess an ID: find it first.
 
 | Ask | Command |
 |---|---|
-| pending / open jobs | `repairlib repairs list --workspace "$WS" --queue open` |
-| one stage | `... repairs list --workspace "$WS" --stage waiting_parts` (stages: new, in_progress, waiting_parts, lab_test, customer_test, repaired, no_repair) |
-| finished, not paid | `... repairs list --workspace "$WS" --queue pickup --no-paid` |
-| ready to collect | `... repairs list --workspace "$WS" --queue pickup --no-picked-up` |
-| find "the Dell", "Maria's phone" | `... repairs list --workspace "$WS" --query Dell` |
-| everything about one repair, resume work | `... repairs brief ID --workspace "$WS" --json` (revision, customer, next stages, 10 newest entries, totals) |
+| pending / open jobs | `repairlib repairs list --queue open` |
+| one stage | `repairlib repairs list --stage waiting_parts` (one `--stage` per command) |
+| finished, not paid | `repairlib repairs list --queue pickup --no-paid` |
+| ready to collect | `repairlib repairs list --queue pickup --no-picked-up` |
+| find "the Dell", "Maria's phone" | `repairlib repairs list --query "maria switch"` |
+| one repair, resume work | `repairlib repairs brief ID` (revision, customer, next stages, newest entries, totals) |
 
-To continue earlier work ("let's continue with that Dell"): find it with `--query`, then
-`repairs brief ID --json`; the newest entries say where the diagnosis stopped. If the query
-returns several open repairs, ask which one.
+Stages: new, in_progress, waiting_parts, lab_test, customer_test, repaired, no_repair.
+Words to stages: "start working / begin" = in_progress; "ordered a part / waiting for parts" =
+waiting_parts; "testing" = lab_test; "customer is testing" = customer_test; "fixed / done" =
+repaired; "cannot fix / declined" = no_repair. A request with a stage word and a note needs
+both commands.
 
-Writes: run `repairlib profile check --workspace "$WS"` once first. Take `R` = `repair.revision` from a brief read just before, use a new descriptive
-`--key` per change. The write prints the new revision (`Repair 8, revision 4, stage ...`): use it
-for the next write on that repair and do not re-read just to verify.
+To continue earlier work ("let's continue with that Dell"): `--query dell`, then
+`repairs brief ID`; the newest entries say where the diagnosis stopped. If several open
+repairs match, ask which one.
+
+Writes: run `repairlib profile check` once first. `R` = the `Revision` line of a brief read just
+before. Use a new descriptive `--key` per change (letters, digits, `-`, `_`). A write prints the
+new revision (`Repair 8, revision 4, ...`): use it for the next write on that repair; do not
+re-read to verify.
 
 | Do | Command |
 |---|---|
-| change status | `... repairs stage ID --workspace "$WS" --revision R --stage STAGE --key K` (only stages in the brief's `next_stages`) |
-| add a note | `... repairs add-entry ID --workspace "$WS" --body "TEXT" --kind note --key K` (no revision) |
-| record payment | `... repairs payment ID --workspace "$WS" --revision R --key K` (repaired or no_repair only) |
-| record pickup | `... repairs pickup ID --workspace "$WS" --revision R --key K` |
-| device photo | `... repairs attach ID "/path/file name.jpg" --workspace "$WS" --photo --key K` (quote paths) |
-| photo with a note | `... repairs add-entry ID --workspace "$WS" --body "TEXT" --file "/path/f.jpg" --key K` |
+| change status | `repairlib repairs stage ID --revision R --stage STAGE --key K` (only a stage in `Next stages`) |
+| add a note | `repairlib repairs add-entry ID --body "TEXT" --kind note --key K` (no revision) |
+| record payment | `repairlib repairs payment ID --revision R --key K` (repaired or no_repair only) |
+| record pickup | `repairlib repairs pickup ID --revision R --key K` |
+| device photo | `repairlib repairs attach ID "/path/file name.jpg" --photo --key K` (quote paths) |
+| photo with a note | `repairlib repairs add-entry ID --body "TEXT" --file "/path/f.jpg" --key K` |
 
+If a file is not found, run `ls` on its folder once, then retry with the real path.
 Commands wait up to 3 s for a short status check. If one still answers `busy`, maintenance is
 running: stop and tell the user. Do not investigate locks, files or processes.
 
 Repair tips from the web (keep it short):
-1. `repairs brief ID --json` for model, issue and the newest entries.
+1. `repairlib repairs brief ID` for model, issue and the newest entries.
 2. One `websearch`: `<brand> <model> <symptom> fix solved` (add the chip or part if known).
 3. `webfetch` at most two results, preferring solved threads (iFixit, Badcaps, Reddit repair
-   subs, manufacturer forums).
-4. Answer: likely cause, 3-5 steps, parts, links. Save a two-line `--kind note` only when asked.
+   subs, manufacturer forums). If search fails, answer from the brief and say so.
+4. Answer: likely cause, 3-5 steps, parts, links. Save one `--kind note` of two lines only
+   when asked.
 
 ## Operate
 
 1. For other tasks read only the relevant reference below. Use `<command> --help` for unfamiliar
    flags, `--version` for build questions, and `catalog` only when discovering tools.
    If session context and the checkout disagree, read the current files and trust the CLI.
-2. Before the first write of a session, run `repairlib profile check --workspace "$WS"` and stop
+2. Before the first write of a session, run `repairlib profile check` and stop
    if it reports blockers. Use returned IDs, not examples or assumed IDs.
 3. Write with the reviewed revision and a unique `--key` where required. Retry an
    uncertain result with the **same key and payload**; use `--key auto` only for a new
@@ -70,7 +82,8 @@ Repair tips from the web (keep it short):
    Branch on `error.code` when present; parser errors can exit 2 with stderr only.
 
 Use CLI for one-offs, CSV preview/apply for reviewed batches, and an already configured
-stdio MCP session for many calls. Amounts are EUR in arguments and cents in JSON;
+stdio MCP session for many calls (`repairlib mcp --tools shop` serves only the daily repair
+tools, for small-context agents). Amounts are EUR in arguments and cents in JSON;
 quantities are decimal units in arguments and milli-units in JSON.
 
 ## Boundaries

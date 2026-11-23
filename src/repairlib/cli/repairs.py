@@ -408,8 +408,8 @@ def _device_history(ctx, args):
 def open_source(path: Path):
     try:
         return path.expanduser().open("rb")
-    except OSError:
-        raise local.ClientError("Could not read the file to attach.", 8) from None
+    except OSError as error:  # name the path and reason so an agent can look for the right file
+        raise local.ClientError(f"Could not read the file to attach: {path} ({error.strerror}).", 8) from None
 
 
 @executes("add-entry")
@@ -601,6 +601,8 @@ def list_flags(item) -> str:
 
 @renders("list", "entries", "attachments")
 def _show_page(result, args, ctx):
+    if not result.items:  # empty stdout reads as a failed command to agents; scripts keep a clean stdout
+        print("No matches.", file=sys.stderr)
     for item in result.items:
         if isinstance(item, Attachment):
             state = "detached" if item.detached else "attached"

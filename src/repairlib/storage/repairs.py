@@ -14,18 +14,19 @@ ENTRY_COLUMNS = ("id, repair_id, author_id, author_username, kind, body, created
                  "deleted_at IS NOT NULL AS deleted")
 
 
-def list_page(db, shop_id: int, before: int | None, limit: int, pattern: str | None = None,
+def list_page(db, shop_id: int, before: int | None, limit: int, words: tuple[str, ...] = (),
               stage: str | None = None, *, picked_up: bool | None = None, archived: bool | None = None,
               paid: bool | None = None,
               technician: int | None = None, unassigned: bool = False, customer_id: int | None = None,
               queue_stages: tuple[str, ...] = (), phone_pattern: str | None = None) -> tuple[list[RepairListRow], int]:
     filters = ["r.shop_id = ?"]
     params = [shop_id]
-    if pattern is not None:
-        filters.append(r"""(rl_fold(r.device_type || ' ' || r.brand || ' ' || r.model || ' ' || r.serial
-                            || ' ' || r.display_device || ' ' || r.reported_issue) LIKE ? ESCAPE '\'
-                            OR rl_fold(c.name) LIKE ? ESCAPE '\' OR c.phone_digits LIKE ?)""")
-        params.extend((pattern, pattern, phone_pattern))
+    if words:  # every word must match the device, issue or customer name; any order, any field
+        text = r"""rl_fold(r.device_type || ' ' || r.brand || ' ' || r.model || ' ' || r.serial || ' '
+                   || r.display_device || ' ' || r.reported_issue || ' ' || COALESCE(c.name, ''))"""
+        matches = " AND ".join(f"{text} LIKE ? ESCAPE '\\'" for _ in words)
+        filters.append(f"(({matches}) OR c.phone_digits LIKE ?)")
+        params.extend((*words, phone_pattern))
     if queue_stages:
         filters.append(f"r.archived_at IS NULL AND r.stage IN ({', '.join('?' for _ in queue_stages)})")
         params.extend(queue_stages)

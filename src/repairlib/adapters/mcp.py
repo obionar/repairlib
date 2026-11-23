@@ -128,7 +128,12 @@ def failure(code: str, message: str, *, http_status: int | None = None,
     return result({"error": details}, error=True)
 
 
-def repairlib_server(ctx: Local) -> "Server":
+# Daily shop work in about a tenth of the full schema size, for small-context agents.
+SHOP_TOOLS = ("dashboard", "list_repairs", "repair_brief", "list_customers", "change_repair_stage",
+              "create_work_entry", "mark_repair_paid", "mark_repair_picked_up", "upload_attachment")
+
+
+def repairlib_server(ctx: Local, only: tuple[str, ...] = ()) -> "Server":
     tools = {}
     read_annotations = ToolAnnotations(
         read_only_hint=True, destructive_hint=False, idempotent_hint=True, open_world_hint=False,
@@ -374,6 +379,8 @@ def repairlib_server(ctx: Local) -> "Server":
                 message += " The outcome may be uncertain. Retry with the original key and identical arguments."
             return failure("server_error", message)
 
+    if only:  # call_tool reads `tools` late, so hidden tools are refused as unknown, not just unlisted
+        tools = {name: tool for name, tool in tools.items() if name in only}
     return Server(call_tool, [definition for definition, *_ in tools.values()])
 
 
@@ -447,9 +454,9 @@ def tool_definitions() -> list[Tool]:
     return list(repairlib_server(None).repairlib_tools)
 
 
-def run_mcp(workspace: str | None) -> int:
+def run_mcp(workspace: str | None, tools: str = "all") -> int:
     ctx = local.open_workspace(workspace, actor="mcp")
     sys.stdin.reconfigure(encoding="utf-8", errors="replace")
     sys.stdout.reconfigure(encoding="utf-8")
-    repairlib_server(ctx).serve(sys.stdin, sys.stdout)
+    repairlib_server(ctx, SHOP_TOOLS if tools == "shop" else ()).serve(sys.stdin, sys.stdout)
     return 0

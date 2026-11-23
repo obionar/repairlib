@@ -162,6 +162,8 @@ def register_workspace_commands(commands) -> None:
     reconcile.add_argument("--json", action="store_true", help="print machine-readable JSON")
     mcp = commands.add_parser("mcp", help="serve workspace tools over MCP stdio as the local 'mcp' user")
     add_workspace(mcp)
+    mcp.add_argument("--tools", choices=("all", "shop"), default="all",
+                     help="'shop' serves only daily repair tools, for small-context agents")
     dashboard = commands.add_parser("dashboard", help="show open work, pickup and low-stock counts")
     add_workspace(dashboard)
     dashboard.add_argument("--json", action="store_true", help="print machine-readable JSON")

@@ -70,6 +70,10 @@ class SearchTests(TokenFixture, unittest.TestCase):
 
             screen = client.get(API, params={"q": "οθονη"}, headers=auth).json()["items"]
             self.assertEqual([item["id"] for item in screen], [repairs[7]["id"]])
+            # Every word may match a different field, in any order: "Anna iPad", "Giorgos Dell XPS".
+            mixed = client.get(API, params={"q": "06 δοκιμης  model"}, headers=auth).json()["items"]
+            self.assertEqual([item["id"] for item in mixed], [repairs[6]["id"]])
+            self.assertEqual(client.get(API, params={"q": "δοκιμης Model 07"}, headers=auth).json()["items"], [])
             by_customer = client.get(API, params={"q": "ΔΟΚΙΜΗΣ", "limit": "4"}, headers=auth).json()
             self.assertEqual(len(by_customer["items"]), 4)
             second = client.get(API, params={"q": "ΔΟΚΙΜΗΣ", "limit": "4",

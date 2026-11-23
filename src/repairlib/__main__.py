@@ -88,7 +88,7 @@ def run_service_command(args) -> int:
 def run_mcp_command(args) -> int:
     from repairlib.adapters.mcp import run_mcp
 
-    return run_command(args, "mcp", lambda _: run_mcp(args.workspace))
+    return run_command(args, "mcp", lambda _: run_mcp(args.workspace, args.tools))
 
 
 def main(argv: Sequence[str] | None = None, *, update_state: dict | None = None) -> int:
