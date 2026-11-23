@@ -49,6 +49,9 @@ def template(workspace: Path, access: CustomerAccess, intake: Intake) -> str:
         return ",".join(intake.limits) + "\r\n"
 
 
+SAVE_AS = 'save it as "CSV UTF-8 (Comma delimited)"'  # the Excel choice that produces a valid file
+
+
 def read_records(raw: bytes, limits: dict[str, int]):
     if len(raw) > CSV_MAX_BYTES:
         raise CustomerError(413, "csv_too_large", "The CSV exceeds its size limit.")
@@ -56,7 +59,7 @@ def read_records(raw: bytes, limits: dict[str, int]):
         text = raw.decode("utf-8")
     except UnicodeDecodeError as error:
         row = len(NEWLINE.findall(raw[:error.start])) + 1
-        return [], [CsvIssue(row, "csv", "Use valid UTF-8.")]
+        return [], [CsvIssue(row, "csv", f"Use valid UTF-8: {SAVE_AS}.")]
     text = text.removeprefix("\ufeff")  # Excel's "CSV UTF-8" starts with a byte-order mark
     stream = StringIO(text, newline="")
     reader = csv.reader(stream, strict=True)
@@ -76,6 +79,8 @@ def read_records(raw: bytes, limits: dict[str, int]):
             errors.append(CsvIssue(row, "csv", f"Use at most {CSV_MAX_ROWS} data rows."))
             break
         if index == 0:
+            if len(fields) == 1 and fields[0].split(";") == list(limits):
+                return [], [CsvIssue(1, "csv", f"Separate columns with commas, not semicolons: {SAVE_AS}.")]
             if fields != list(limits):
                 return [], [CsvIssue(1, "csv", "Use the exact template header.")]
             continue
