@@ -13,6 +13,8 @@ import subprocess
 from repairlib.adapters import mcp as mcp_adapter
 from repairlib.__main__ import build_parser
 from repairlib.cli import catalog
+from test_baseline import python_env
+from test_cli_identity import COMMAND
 
 ROOT = Path(__file__).resolve().parents[1]
 SKILL = ROOT / "skills" / "repairlib" / "SKILL.md"
@@ -130,3 +132,60 @@ class SkillDocumentTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class UnpaidRecipeTests(unittest.TestCase):
+    """The documented 'all finished and unpaid' recipe finds collected repairs too (audit R15)."""
+
+    def test_recipe_lists_collected_and_uncollected_unpaid_but_not_paid_repairs(self):
+        from repairlib.client import local
+        from test_repairs import DEVICE
+        from test_tokens import TokenFixture
+
+        class Fixture(TokenFixture, unittest.TestCase):
+            def runTest(self):
+                pass
+
+        fixture = Fixture()
+        fixture.setUp()
+        self.addCleanup(fixture.doCleanups)
+        ctx = local.open_workspace(fixture.workspace)
+
+        def finish(repair, stage, *, picked_up, paid):
+            revision = local.show_repair(ctx, repair).revision
+            local.change_stage(ctx, repair, {"revision": revision, "stage": stage}, f"stage-{repair}")
+            for flag, enabled in (("pickup", picked_up), ("payment", paid)):
+                if enabled:
+                    revision = local.show_repair(ctx, repair).revision
+                    local.change_repair_flag(ctx, repair, flag, {"revision": revision, "enabled": True},
+                                             f"{flag}-{repair}")
+            return repair
+
+        made = []
+
+        def make(stage, **flags):
+            repair = local.create_repair(ctx, DEVICE, f"make-{len(made)}").id
+            made.append(repair)
+            if stage == "repaired":
+                local.change_stage(ctx, repair, {"revision": 1, "stage": "in_progress"}, f"start-{repair}")
+            return finish(repair, stage, **flags)
+
+        waiting = make("repaired", picked_up=False, paid=False)
+        collected = make("no_repair", picked_up=True, paid=False)
+        make("repaired", picked_up=True, paid=True)  # paid: never listed
+        make("no_repair", picked_up=False, paid=True)
+        local.create_repair(ctx, DEVICE, "open-one")
+
+        recipe = [line for line in SKILL.read_text().splitlines() if line.startswith("| all finished and unpaid")]
+        commands = re.findall(r"`repairlib (repairs list [^`]+)`", recipe[0])
+        self.assertEqual(len(commands), 2, recipe)
+
+        def listed(args):
+            done = subprocess.run([*COMMAND, *args.split(), "--workspace", str(fixture.workspace)], text=True,
+                                  capture_output=True, timeout=30, env=python_env())
+            self.assertEqual(done.returncode, 0, done.stderr)
+            return {int(line.split("\t")[0]) for line in done.stdout.splitlines() if line.split("\t")[0].isdigit()}
+
+        self.assertEqual(set().union(*(listed(command) for command in commands)), {waiting, collected})
+        # The pickup queue alone is not the answer: it omits the collected repair.
+        self.assertEqual(listed("repairs list --queue pickup --no-paid"), {waiting})

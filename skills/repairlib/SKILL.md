@@ -25,7 +25,8 @@ nothing found: try one word, never the same command twice. Never guess an ID: fi
 |---|---|
 | pending / open jobs | `repairlib repairs list --queue open` |
 | one stage | `repairlib repairs list --stage waiting_parts` (one `--stage` per command) |
-| finished, not paid | `repairlib repairs list --queue pickup --no-paid` |
+| finished, unpaid, awaiting pickup | `repairlib repairs list --queue pickup --no-paid` |
+| all finished and unpaid (collected or not) | `repairlib repairs list --stage repaired --no-paid` and `repairlib repairs list --stage no_repair --no-paid`; follow each `Next page: --before N` |
 | ready to collect | `repairlib repairs list --queue pickup --no-picked-up` |
 | find "the Dell", "Maria's phone" | `repairlib repairs list --query "maria switch"` |
 | one repair, resume work | `repairlib repairs brief ID` (issue, next stages, newest entries, totals) |
@@ -44,7 +45,12 @@ repairs match, ask which one.
 Writes: find the repair with `repairs list`, then write with `R` from its `rN` (no brief needed).
 Use a new descriptive `--key` per change (letters, digits, `-`, `_`). A write prints the new
 revision (`Repair 8, revision 4, ...`): use it for the next write on that repair; do not re-read
-to verify. On `stale_revision`, list again and retry with the new `rN` and a new key.
+to verify. On `stale_revision`, read the repair again (`repairs brief ID`): if your change is already
+there, say so; if the other change touches what you meant to do, ask; otherwise retry once with the new
+`rN` and a new key. Several repairs match: ask which one, write nothing. A lost reply: repeat the exact
+command (same key and arguments) once, in the same tool; never repeat a write through another tool (CLI
+and MCP are different actors, so that is a second write) and never repeat a label print. A pickup
+question is answered from the list, not from customer records.
 
 | Do | Command |
 |---|---|
@@ -59,7 +65,8 @@ to verify. On `stale_revision`, list again and retry with the new `rN` and a new
 If a file is not found, run `ls` on its folder once, then retry with the real path. If a write
 refuses with a workspace or permission error, run `repairlib profile check` and report it.
 Commands wait up to 3 s for a short status check. If one still answers `busy`, maintenance is
-running: stop and tell the user. Do not investigate locks, files or processes.
+running: stop and tell the user. Do not investigate locks, files or processes. A forbidden or busy
+refusal is final: report it, do not switch tools or use the shell as a bypass.
 
 Repair tips from the web (keep it short):
 1. `repairlib repairs brief ID` for model, issue and the newest entries.
