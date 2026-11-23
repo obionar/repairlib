@@ -7,6 +7,7 @@ import sqlite3
 from repairlib.storage.initialization import apply_migration
 from repairlib.storage.stock import mismatches
 from repairlib.storage.stock_reconciliation import consumption_link_issues, movement_issues
+from repairlib.storage.users import LOCAL_ACTORS
 
 SCHEMA = 21
 MAX_RECORDS = 50_000
@@ -275,6 +276,8 @@ def map_history(row, maps):
 def map_records(db, records: dict, shop_id: int):
     maps = allocate_ids(db, records, shop_id)
     occupied = {row[0] for row in db.execute("SELECT username FROM users WHERE shop_id = ?", (shop_id,))}
+    # The built-in `cli` and `mcp` names stay free even before first use, so imported history never takes them.
+    occupied |= set(LOCAL_ACTORS)
     reserved = occupied | {row["username"] for row in records["users"]}
     mapped = {}
     for table in COLUMNS:
