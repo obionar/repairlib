@@ -255,6 +255,21 @@ podman build -t localhost/repairlib .
 systemctl --user restart repairlib.service   # or: podman rm -f repairlib, then the run command
 ```
 
+## Daily runbook
+
+Run from the checkout. On OpenRC add `--openrc-system`; add `--lan` if you installed with it.
+
+| Task | Command |
+|---|---|
+| Is it up? | `bin/repairlib service status` (look for `"health": "ready"`) |
+| Stop / start | `bin/repairlib service stop`, `bin/repairlib service start` |
+| Check data (app stopped) | `bin/repairlib doctor` |
+| Backup for your own scripts | `bin/repairlib backup snapshot --online --output <file>`, then copy that file and `data/state/files/` |
+| Update | `bin/repairlib update --check`, then `bin/repairlib update` outside opening hours |
+
+Never copy the live `data/state/repairlib.sqlite3` with `cp`: it can produce a broken copy.
+On an error page, note the request ID it shows; the service log has the matching line.
+
 ## Tips
 
 - **One machine, one workspace.** Keep `data/` (or `repairlib-data/`) on local disk, not a network
