@@ -16,7 +16,7 @@ from repairlib.cli.common import add_revision, add_workspace, display_name, pars
 from repairlib.cli.printer import label_result
 from repairlib.client import local
 from repairlib.contracts import (
-    CHARGE_CONSUMPTION_FIELDS, SUMMARY_CONSUMPTION_FIELDS, Attachment, Charge, ChargeSummary, WorkEntry,
+    CHARGE_CONSUMPTION_FIELDS, SUMMARY_CONSUMPTION_FIELDS, TERMINAL_REPAIR_STAGES, Attachment, Charge, ChargeSummary, WorkEntry,
 )
 
 FIELDS = ("device_type", "brand", "model", "serial", "display_device", "reported_issue", "notes")
@@ -592,6 +592,13 @@ def _show_activity(result, args, ctx):
     next_page_hint(result)
 
 
+def list_flags(item) -> str:
+    """Money and handover state on one line, so a list answers "unpaid" or "collected" without more reads."""
+    flags = [("paid" if item.payment_paid else "unpaid")] if item.stage in TERMINAL_REPAIR_STAGES else []
+    flags += ["collected"] * bool(item.picked_up_at) + ["archived"] * bool(item.archived_at)
+    return " ".join(flags)
+
+
 @renders("list", "entries", "attachments")
 def _show_page(result, args, ctx):
     for item in result.items:
@@ -602,7 +609,8 @@ def _show_page(result, args, ctx):
             state = " (deleted)" if item.deleted else ""
             print(f"{item.id}\t{item.kind}\t{display_name(item.author_username)}\t{item.body}{state}")
         else:
-            print(f"{item.id}\t{item.device_type}\t{item.model}\t{item.stage}")
+            print("\t".join((str(item.id), item.device_type, " ".join(filter(None, (item.brand, item.model))),
+                             item.stage, display_name(item.customer_name or ""), list_flags(item))).rstrip())
     next_page_hint(result)
 
 

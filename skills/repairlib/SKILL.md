@@ -12,8 +12,9 @@ If the path is unknown, ask. Tests use a fresh synthetic `demo`, never a live sh
 
 ## Shop tasks (no reference needed)
 
-Answer from plain text lists (one line per repair: `ID  type  device  stage`); add `--json`
-only when you need a field the line lacks. `--query` matches device, serial, issue or
+Answer from plain text lists. One line per repair: `ID  type  brand model  stage  customer  flags`,
+flags = `paid`/`unpaid` (finished repairs), `collected`, `archived`. Add `--json` only when
+you need a field the line lacks. `--query` matches device, serial, issue or
 customer name. Never guess an ID: find it first.
 
 | Ask | Command |
@@ -30,7 +31,8 @@ To continue earlier work ("let's continue with that Dell"): find it with `--quer
 returns several open repairs, ask which one.
 
 Writes: run `repairlib profile check --workspace "$WS"` once first. Take `R` = `repair.revision` from a brief read just before, use a new descriptive
-`--key` per change, and re-read the brief before the next revisioned write.
+`--key` per change. The write prints the new revision (`Repair 8, revision 4, stage ...`): use it
+for the next write on that repair and do not re-read just to verify.
 
 | Do | Command |
 |---|---|
@@ -41,12 +43,15 @@ Writes: run `repairlib profile check --workspace "$WS"` once first. Take `R` = `
 | device photo | `... repairs attach ID "/path/file name.jpg" --workspace "$WS" --photo --key K` (quote paths) |
 | photo with a note | `... repairs add-entry ID --workspace "$WS" --body "TEXT" --file "/path/f.jpg" --key K` |
 
-If a command answers `busy` ("maintenance is in progress"), wait 2 seconds and run the same
-command once more; if it fails again, stop and tell the user. Do not investigate locks or files.
+Commands wait up to 3 s for a short status check. If one still answers `busy`, maintenance is
+running: stop and tell the user. Do not investigate locks, files or processes.
 
-Repair tips from the web: read the brief, search with the exact model and symptom, prefer
-threads marked solved (iFixit, Badcaps, Reddit r/mobilerepair, manufacturer forums), cite
-2-3 links, and save a short summary with `add-entry --kind note` only when asked.
+Repair tips from the web (keep it short):
+1. `repairs brief ID --json` for model, issue and the newest entries.
+2. One `websearch`: `<brand> <model> <symptom> fix solved` (add the chip or part if known).
+3. `webfetch` at most two results, preferring solved threads (iFixit, Badcaps, Reddit repair
+   subs, manufacturer forums).
+4. Answer: likely cause, 3-5 steps, parts, links. Save a two-line `--kind note` only when asked.
 
 ## Operate
 

@@ -6,11 +6,12 @@ workspace already implies full control of its files, so no token is needed;
 the audit trail still names the tool that made each change.
 """
 
-from contextlib import contextmanager
+from contextlib import ExitStack, contextmanager
 from dataclasses import dataclass, replace
 from hashlib import sha256
 import json
 import shutil
+import time
 from typing import BinaryIO
 
 from pydantic import TypeAdapter, ValidationError
@@ -106,15 +107,26 @@ def open_workspace(path=None, actor: str = "cli") -> Local:
     return Local(workspace, CustomerAccess(actor))
 
 
+# `status` and `profile check` hold the exclusive lock for a moment; agents often run them in
+# parallel with other calls. Wait that out; real maintenance (update, migrate) stays `busy`.
+LOCK_WAIT_SECONDS = 3
+
+
 @contextmanager
 def local_lock(workspace):
-    try:
-        with maintenance_lock(workspace, exclusive=False, create=False):
-            yield
-    except WorkspaceError as error:
-        raise ClientError(str(error), 3, code="busy") from None
-    except OSError:
-        raise ClientError("Could not open the workspace lock.", 3, code="unavailable") from None
+    deadline = time.monotonic() + LOCK_WAIT_SECONDS
+    with ExitStack() as stack:
+        while True:  # retry taking the lock only; errors from the caller's body pass through
+            try:
+                stack.enter_context(maintenance_lock(workspace, exclusive=False, create=False))
+                break
+            except WorkspaceError as error:
+                if time.monotonic() >= deadline:
+                    raise ClientError(str(error), 3, code="busy") from None
+                time.sleep(0.1)
+            except OSError:
+                raise ClientError("Could not open the workspace lock.", 3, code="unavailable") from None
+        yield
 
 
 def domain_error(error: CustomerError) -> ClientError:

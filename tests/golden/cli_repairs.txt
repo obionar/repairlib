@@ -34,7 +34,7 @@ $ repairs show 1 --json  -> exit 0
 
 $ repairs list  -> exit 0
 2	Phone		new
-1	Laptop	X1	new
+1	Laptop	Acme X1	new	Golden Customer
 
 $ repairs list --queue open --json  -> exit 0
 {"items": [{"customer_id": null, "technician_id": null, "device_type": "Phone", "brand": "", "model": "", "serial": "", "display_device": "", "reported_issue": "Cracked screen", "notes": "", "warranty_until": null, "warranty_repair_id": null, "id": 2, "stage": "new", "revision": 1, "created_at": "<ts>", "picked_up_at": null, "archived_at": null, "payment_paid": null, "customer_name": null, "technician_username": null}, {"customer_id": 1, "technician_id": null, "device_type": "Laptop", "brand": "Acme", "model": "X1", "serial": "SN-GOLD", "display_device": "", "reported_issue": "No power", "notes": "", "warranty_until": null, "warranty_repair_id": null, "id": 1, "stage": "new", "revision": 1, "created_at": "<ts>", "picked_up_at": null, "archived_at": null, "payment_paid": null, "customer_name": "Golden Customer", "technician_username": null}], "next_before": null, "total": 2}
