@@ -12,6 +12,7 @@ from fastapi.responses import JSONResponse
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel
 
+from repairlib.adapters.masking import shown
 from repairlib.adapters.body import API_PREFIX
 from repairlib.adapters.api.attachments import attachment_routes
 from repairlib.adapters.api.charges import charge_routes
@@ -60,7 +61,7 @@ def mount_api(app, workspace: Path) -> None:
 
     @router.get("/dashboard", response_model=Dashboard)
     def dashboard(principal_access: Annotated[CustomerAccess, Depends(access)]):
-        return read_dashboard(workspace, principal_access)
+        return shown(workspace, principal_access, read_dashboard(workspace, principal_access))
 
     @router.get("/identity", response_model=TokenIdentity, response_model_exclude_defaults=True,
                 responses={401: {"model": ErrorResponse}, 503: {"model": ErrorResponse}})

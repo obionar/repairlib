@@ -12,6 +12,7 @@
   {{ ui.customer_notices(contact_warnings, possible_duplicate_id) }}
   {% set labels = {'name': _('Name'), 'phone': _('Phone'), 'email': _('Email'), 'address': _('Address')} %}
   <dl class="rl-ticket-facts rl-inline-facts">
+    <div><dt>{{ _('Customer ID') }}:</dt> <dd>C{{ record.id }}</dd></div>
     {% for field in ('name', 'phone', 'email', 'address') %}
       <div><dt>{{ labels[field] }}:</dt> <dd class="customer-multiline">{{ record[field] or '—' }}</dd></div>
     {% endfor %}

@@ -65,6 +65,9 @@ class MCPReadTests(MCPFixture, unittest.TestCase):
             token = self.token(api)
             profile = self.profile(api, token)
             auth = {"Authorization": f"Bearer {token}"}
+            # MCP callers are agents, so MCP answers match the API as an agent token sees it.
+            agent_auth = {"Authorization": "Bearer " + issued_secret(
+                api.post(ACCOUNT, data=self.issue_form(api, name="Agent view", kind="agent")))}
 
             def post(path, body=None, **kwargs):
                 response = api.post(API + path, json=body, **kwargs,
@@ -131,7 +134,7 @@ class MCPReadTests(MCPFixture, unittest.TestCase):
                     self.assertEqual(tools["get_repair"].input_schema["required"], ["repair_id"])
                     self.assertEqual(tools["get_repair"].input_schema["properties"]["repair_id"]["type"], "integer")
                     for name, (path, arguments) in cases.items():
-                        response = api.get(API + path, headers=auth)
+                        response = api.get(API + path, headers=agent_auth)
                         self.assertEqual(response.status_code, 200)
                         self.assertEqual(await self.call(session, name, token, **arguments), response.json(), name)
                     summary = await self.call(session, "charge_summary", token, repair_id=repair)
@@ -143,7 +146,7 @@ class MCPReadTests(MCPFixture, unittest.TestCase):
                     filtered = await self.call(session, "list_repairs", token, queue="open",
                                                technician="unassigned", customer_id=customer, picked_up=False)
                     self.assertEqual(filtered["total"], 1)
-                    self.assertEqual(filtered["items"][0]["customer_name"], "Synthetic customer")
+                    self.assertEqual(filtered["items"][0]["customer_name"], f"C{customer}")
                     second = await self.call(session, "list_customers", token, limit=1, before=first["next_before"])
                     self.assertEqual([row["id"] for row in second["items"]], [older])
                     self.assertIsNone(second["next_before"])

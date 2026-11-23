@@ -29,7 +29,10 @@ class RepairBriefTests(TokenFixture, unittest.TestCase):
         brief = local.repair_brief(ctx, repair.id)
         self.assertEqual((brief.repair.id, brief.repair.revision, brief.repair.stage),
                          (repair.id, repair.revision, "waiting_parts"))
-        self.assertEqual((brief.customer, brief.customer_phone), ("Synthetic Brief", "+357 555 0101"))
+        # MCP is an agent route: the person stays private; a person's view shows them.
+        self.assertEqual((brief.customer, brief.customer_phone), (f"C{customer.id}", "[masked]"))
+        person = local.repair_brief(local.open_workspace(self.workspace, "cli"), repair.id)
+        self.assertEqual((person.customer, person.customer_phone), ("Synthetic Brief", "+357 555 0101"))
         self.assertEqual(brief.next_stages, ["in_progress", "lab_test", "no_repair"])
         self.assertEqual([entry.body for entry in brief.recent_entries][:2], ["Note 11", "Note 10"])
         self.assertEqual(len(brief.recent_entries), 10)

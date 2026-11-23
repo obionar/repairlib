@@ -10,6 +10,7 @@ from contextlib import ExitStack, contextmanager
 from dataclasses import dataclass, replace
 from hashlib import sha256
 import json
+import os
 import shutil
 import time
 from typing import BinaryIO
@@ -38,6 +39,7 @@ from repairlib.domain import (
 from repairlib.domain.customer_csv import CUSTOMERS
 from repairlib.domain.customers import CustomerAccess, CustomerError, StorageError, StorageOperationalError
 from repairlib.domain.inventory_csv import CATALOG, OPENING_STOCK
+from repairlib.domain.privacy import private_names, private_result
 from repairlib.lifecycle.workspace import WorkspaceError, maintenance_lock, workspace_status
 
 CSV_INTAKES = {intake.kind: intake for intake in (CUSTOMERS, CATALOG, OPENING_STOCK)}
@@ -88,6 +90,7 @@ class ClientError(Exception):
 class Local:
     workspace: object
     access: CustomerAccess
+    private: bool = False  # an AI agent is calling: hide customer identity (domain.privacy)
 
 
 def open_workspace(path=None, actor: str = "cli") -> Local:
@@ -104,7 +107,9 @@ def open_workspace(path=None, actor: str = "cli") -> Local:
             raise ClientError("The workspace is not ready. Check --workspace or run repairlib migrate.",
                               3, code="unavailable")
         call(users.ensure_local_actor, workspace, actor)
-    return Local(workspace, CustomerAccess(actor))
+    # MCP callers are always agents; an agent's CLI runs with REPAIRLIB_AGENT=1 in its environment.
+    private = actor == "mcp" or os.environ.get("REPAIRLIB_AGENT", "") not in ("", "0")
+    return Local(workspace, CustomerAccess(actor), private)
 
 
 # `status` and `profile check` hold the exclusive lock for a moment; agents often run them in
@@ -164,7 +169,8 @@ def parse(shape: type, details: dict):
 
 def run(ctx: Local, operation, *args, **kwargs):
     with local_lock(ctx.workspace):
-        return call(operation, ctx.workspace, ctx.access, *args, **kwargs)
+        result = call(operation, ctx.workspace, ctx.access, *args, **kwargs)
+    return private_result(result) if ctx.private else result
 
 
 # Shop, users and settings
@@ -289,7 +295,7 @@ def show_repair(ctx, repair_id) -> Repair:
 def repair_with_names(ctx, repair_id):
     """Return `(repair, names)` where names holds customer and technician display names."""
     repair, names, _ = run(ctx, repairs.read_repair, repair_id)
-    return repair, names
+    return repair, private_names(repair.customer_id, names) if ctx.private else names
 
 
 def repair_activity(ctx, repair_id, *, limit=25, before=None) -> RepairActivityPage:

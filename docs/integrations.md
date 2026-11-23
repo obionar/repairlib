@@ -2,9 +2,21 @@
 
 [RepairLib README](../README.md)
 
-[Local CLI](#use-the-cli-on-the-shop-machine) · [HTTP API](#http-api) · [MCP host setup and tool reference](#connect-an-mcp-host-over-stdio)
+[Customer privacy for agents](#customer-privacy-for-ai-agents) · [Local CLI](#use-the-cli-on-the-shop-machine) · [HTTP API](#http-api) · [MCP host setup and tool reference](#connect-an-mcp-host-over-stdio)
 
 Task-specific CLI and API examples are in [Workshop workflows](workshop.md) and [Data transfer and recovery](data.md).
+
+## Customer privacy for AI agents
+
+AI agents never need to know who a customer is to run the workshop. Every agent route shows a customer
+as the reference `C7` (the customer ID, also shown in the web customer list and record) instead of the
+name, and phone, email and address as `[masked]`. Agent routes are: the MCP bridge, API tokens of kind
+`agent`, and the CLI when `REPAIRLIB_AGENT=1` is set in the agent's environment (put it in the agent
+host's configuration, next to `REPAIRLIB_WORKSPACE`). Search still matches the real name, so "Maria's
+phone" finds her repair; the agent answers with `C7` and staff look it up in the web UI. People (the web
+UI, `user` API tokens and the CLI without the variable) see everything. Work-log text and customer notes
+are shown as written, so keep personal details out of them. This keeps personal data out of the model's
+context in normal use; it is not a barrier against someone who can read the workspace folder.
 
 ## Use the CLI on the shop machine
 
@@ -29,7 +41,7 @@ The HTTP API is for programs on other machines. Sign in to the web app, open **A
 
 ## Connect an MCP host over stdio
 
-The MCP bridge works on the local workspace as the built-in `mcp` administrator, like the [CLI](#use-the-cli-on-the-shop-machine), and makes no HTTP calls. It acts with full shop access (including purchase costs), so connect only hosts you trust. Because its caller is an AI agent, every result shows customer phone, email and address as `[masked]`, as for agent API tokens; names, IDs, revisions and repairs pass through. Use the web UI or the CLI to see contact details.
+The MCP bridge works on the local workspace as the built-in `mcp` administrator, like the [CLI](#use-the-cli-on-the-shop-machine), and makes no HTTP calls. It acts with full shop access (including purchase costs), so connect only hosts you trust. Because its caller is an AI agent, every result follows [customer privacy for agents](#customer-privacy-for-ai-agents).
 
 Configure a local stdio server in your MCP host, substituting the absolute paths to the interpreter, the checkout's `src` directory and the workspace:
 

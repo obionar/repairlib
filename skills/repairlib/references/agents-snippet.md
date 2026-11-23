@@ -10,7 +10,8 @@ You run the shop's RepairLib with the `repairlib` command; it already points at 
 workspace. For anything not covered here, load the `repairlib` skill.
 
 Read the plain text; it is shorter than `--json`. One line per repair:
-`ID  type  brand model  stage  customer  rN  flags`. `rN` is the revision a write needs;
+`ID  type  brand model  stage  customer  rN  flags`. `rN` is the revision a write needs; with
+`REPAIRLIB_AGENT=1` the customer shows as `C7` (customer 7, filter with `--customer 7`), never a name;
 flags = `paid`/`unpaid` (finished repairs), `collected`, `archived`. `--query` words may match
 device, serial, issue or customer name in any order: `--query "anna ipad"`. `No matches.` means
 nothing found: try one word, never the same command twice. Never guess an ID: find it first.

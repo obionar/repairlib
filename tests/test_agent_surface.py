@@ -109,7 +109,7 @@ class FewerCallsTests(TokenFixture, unittest.TestCase):
 
 
 class McpContactMaskTests(TokenFixture, unittest.TestCase):
-    """MCP callers are AI agents: like agent API tokens, they never see phone, email or address."""
+    """MCP callers are AI agents: like agent API tokens, they see `C<id>`, never names or contacts."""
 
     def test_mcp_masks_customer_contacts_everywhere_the_cli_does_not(self):
         ctx = local.open_workspace(self.workspace, "mcp")
@@ -124,9 +124,11 @@ class McpContactMaskTests(TokenFixture, unittest.TestCase):
         text = json.dumps(results)
         for secret in ("+35799000111", "t@example.test", "1 Synthetic St", "99000111"):
             self.assertNotIn(secret, text)
-        self.assertIn("Test Person", text)
+        self.assertNotIn("Test Person", text)
+        self.assertIn(f'"C{person.id}"', text)
         self.assertIn("[masked]", json.dumps(results[2]))
-        self.assertEqual(local.show_customer(ctx, person.id).phone, "+35799000111")  # stored and CLI whole
+        person_view = local.open_workspace(self.workspace, "cli")
+        self.assertEqual(local.show_customer(person_view, person.id).phone, "+35799000111")  # stored and CLI whole
 
 
 if __name__ == "__main__":

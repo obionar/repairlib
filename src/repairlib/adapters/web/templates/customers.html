@@ -62,6 +62,7 @@
           {% if page.items %}
             {% call ui.table('Customers', wide=true) %}
               <thead><tr>
+                <th scope="col">{{ _('Customer ID') }}</th>
                 <th scope="col">{{ _('Customer') }}</th>
                 <th scope="col" class="obi-number">{{ _('Open repairs') }}</th>
                 <th scope="col">{{ _('Phone') }}</th>
@@ -70,6 +71,7 @@
               <tbody>
                 {% for customer in page.items %}
                   <tr>
+                    <td>C{{ customer.id }}</td>
                     <th scope="row">
                       <a href="{{ request.url_for('customer_detail', customer_id=customer.id).path }}">{{ customer.name }}</a>
                       {% if customer.archived_at %}<span class="obi-row-detail">{{ ui.status('Archived customer') }}</span>{% endif %}

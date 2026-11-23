@@ -406,7 +406,7 @@ class MaskingTests(test_tokens.TokenFixture, TestCase):
             detail = client.get(f"{CUSTOMERS}/{customer_id}", headers=auth["agent"]).json()
             self.assertEqual((detail["phone"], detail["email"], detail["address"]), (MASK, MASK, MASK))
             self.assertEqual((detail["id"], detail["name"], detail["notes"], detail["revision"]),
-                             (customer_id, CONTACT["name"], CONTACT["notes"], 2))
+                             (customer_id, f"C{customer_id}", CONTACT["notes"], 2))  # name hidden as C<id>
             human = client.get(f"{CUSTOMERS}/{customer_id}", headers=auth["user"]).json()
             self.assertEqual((human["phone"], human["email"], human["address"]),
                              ("+357 555 0200", "masked@example.test", "9 Synthetic Street"))
@@ -435,7 +435,11 @@ class MaskingTests(test_tokens.TokenFixture, TestCase):
                 agent = client.get(path, headers=auth["agent"])
                 person = client.get(path, headers=auth["user"])
                 self.assertEqual(agent.status_code, 200, path)
-                self.assertEqual(agent.json(), person.json(), path)
+                expected = person.json()
+                if path == "/api/v1/repairs":  # the only change: the customer name becomes C<id>
+                    for row in expected["items"]:
+                        row["customer_name"] = f"C{row['customer_id']}" if row["customer_id"] else None
+                self.assertEqual(agent.json(), expected, path)
             self.assertIn("Synthetic repair text", client.get(
                 f"/api/v1/repairs/{repair_id}", headers=auth["agent"]).text)
             self.assertIn("4500", client.get(
@@ -443,8 +447,9 @@ class MaskingTests(test_tokens.TokenFixture, TestCase):
             export = client.get(f"{CUSTOMERS}/{customer_id}/export", headers=auth["agent"]).json()
             reference = client.get(f"{CUSTOMERS}/{customer_id}/export", headers=auth["user"]).json()
             self.assertEqual(export["repairs"], reference["repairs"])
-            for field in ("id", "name", "notes", "revision", "created_at"):
+            for field in ("id", "notes", "revision", "created_at"):
                 self.assertEqual(export["customer"][field], reference["customer"][field], field)
+            self.assertEqual(export["customer"]["name"], f"C{customer_id}")  # the name is hidden as C<id>
             history = client.get(f"{CUSTOMERS}/{customer_id}/history", headers=auth["agent"]).json()
             change = next(e for e in history["items"] if e["operation"] == "customer.update")
             self.assertEqual(change["changes"]["phone"], {"before": MASK, "after": MASK})

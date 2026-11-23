@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, Header, HTTPException, Request
 from pydantic import TypeAdapter, ValidationError
 
 from repairlib.adapters.body import bounded_body, API_PREFIX
-from repairlib.adapters.masking import is_agent, mask_result
+from repairlib.adapters.masking import shown as shown_to
 from repairlib.contracts import (
     CustomerAnonymize, CustomerArchiveChange, CustomerExport, CustomerHistoryPage, CustomerInput, CustomerPage, CustomerPatch, CustomerResponse,
 )
@@ -73,8 +73,7 @@ def customer_routes(workspace: Path, access_dependency) -> APIRouter:
     router = APIRouter(prefix=API_PREFIX + "/customers")
 
     def shown(access: CustomerAccess, value):
-        """Agent callers get contact data masked; everyone else gets it whole."""
-        return mask_result(value) if is_agent(workspace, access) else value
+        return shown_to(workspace, access, value)
 
     @router.get("", response_model=CustomerPage)
     def index(access: Annotated[CustomerAccess, Depends(access_dependency)],

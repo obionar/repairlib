@@ -7,6 +7,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends
 from pydantic import TypeAdapter
 
+from repairlib.adapters.masking import shown
 from repairlib.adapters.body import API_PREFIX
 from repairlib.adapters.api.customers import body_schema, idempotency_key, json_body, page_number as customer_page_number
 from repairlib.contracts import (
@@ -58,7 +59,7 @@ def repair_routes(workspace: Path, access_dependency) -> APIRouter:
                                limit=page_number(limit, 25), query=q, stage=stage, picked_up=picked_up,
                                archived=archived, technician=technician, customer_id=customer_id, queue=queue,
                                paid=paid)
-        return page
+        return shown(workspace, access, page)
 
     @router.post("", response_model=Repair, status_code=201, openapi_extra=body_schema(INPUT))
     def create(access: Annotated[RepairAccess, Depends(access_dependency)],

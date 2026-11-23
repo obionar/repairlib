@@ -10,7 +10,6 @@ from typing import Annotated, Callable, Literal, get_type_hints
 import sys
 from pydantic import ConfigDict, Field, ValidationError, create_model
 
-from repairlib.adapters.masking import mask_result
 from repairlib.client import local
 from repairlib.client.local import Local
 from repairlib.contracts import (
@@ -369,7 +368,7 @@ def repairlib_server(ctx: Local, only: tuple[str, ...] = ()) -> "Server":
         except ValidationError:
             return failure("validation", "Check the tool arguments against its input schema.")
         try:
-            data = mask_result(operation(ctx, **values.model_dump()))  # MCP callers are agents
+            data = operation(ctx, **values.model_dump())  # ctx.private hides customer identity
             # Serialization is inside the guard: a bug here must not end the session.
             return result(output.model_construct(result=data).model_dump(mode="json"))
         except local.ClientError as error:
