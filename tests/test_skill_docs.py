@@ -64,6 +64,11 @@ class SkillDocumentTests(unittest.TestCase):
         head = self.text.split("---", 2)[1]
         self.assertRegex(head, r"(?m)^name: repairlib$")
         self.assertRegex(head, r"(?m)^description: .{40,}")
+        # A plain scalar cannot hold ": "; the harness YAML parse rejects it.
+        for line in head.splitlines():
+            key, _, value = line.partition(": ")
+            if value and not value.startswith(('"', "'", "|", ">", "[")):
+                self.assertNotIn(": ", value, f"quote the frontmatter {key} value")
 
     def test_every_relative_link_resolves(self):
         for target in re.findall(r"\]\(([^)#][^)]*)\)", self.text):

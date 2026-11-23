@@ -19,7 +19,7 @@ Every command here is run by the operator (or with the operator's explicit autho
 | `reconcile-files [--json]` | while stopped, remove never-committed uploads and verify attachment bytes; damaged files are reported and exit 2. |
 | `support bundle --output FILE` | write a zip of system facts and counts only (no records, costs or tokens). Never overwrites. |
 | `dashboard [--json]` | open work, awaiting pickup and low-stock counts, with previews. |
-| `links [--home DIR] [--executable PATH] [--skills PATH] [--json]` | install `~/.local/bin/repairlib` and `~/.agents/skills/repairlib` as symlinks (see below). |
+| `links [--executable PATH]` | install `~/.local/bin/repairlib` and `~/.agents/skills/repairlib` as symlinks (see below). |
 
 `links` creates two symlinks and never replaces a real file or directory: `command` →
 the launcher, `skill` → this skill directory. It reports `created`, `unchanged` or

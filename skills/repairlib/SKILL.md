@@ -1,6 +1,6 @@
 ---
 name: repairlib
-description: Use RepairLib CLI or MCP to inspect or operate a repair shop: customers, repairs, billing, inventory, CSV intake, settings, backups and diagnostics.
+description: "Use RepairLib CLI or MCP to inspect or operate a repair shop: customers, repairs, billing, inventory, CSV intake, settings, backups and diagnostics."
 license: MIT
 ---
 
