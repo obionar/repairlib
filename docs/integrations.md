@@ -8,15 +8,22 @@ Task-specific CLI and API examples are in [Workshop workflows](workshop.md) and 
 
 ## Customer privacy for AI agents
 
-AI agents never need to know who a customer is to run the workshop. Every agent route shows a customer
-as the reference `C7` (the customer ID, also shown in the web customer list and record) instead of the
-name, and phone, email and address as `[masked]`. Agent routes are: the MCP bridge, API tokens of kind
-`agent`, and the CLI when `REPAIRLIB_AGENT=1` is set in the agent's environment (put it in the agent
-host's configuration, next to `REPAIRLIB_WORKSPACE`). Search still matches the real name, so "Maria's
-phone" finds her repair; the agent answers with `C7` and staff look it up in the web UI. People (the web
-UI, `user` API tokens and the CLI without the variable) see everything. Work-log text and customer notes
-are shown as written, so keep personal details out of them. This keeps personal data out of the model's
-context in normal use; it is not a barrier against someone who can read the workspace folder.
+RepairLib sends an AI agent only the customer data a request needs, so less personal data reaches a
+cloud model. Lists, repair briefs, the dashboard, customer history and exports show a customer as `C7`
+(the customer ID, also shown in the web customer list and record) with phone, email and address as
+`[masked]`. A request about a person gets the details:
+
+- A customer search by name (`customers list --query john`, MCP `list_customers` with `query`, API
+  `GET /api/v1/customers?q=john`) returns the matching names; contacts stay masked. "All repairs from
+  John" is that search, then `repairs list --customer ID`.
+- One customer's record (`customers show 7`, MCP `get_customer`) is shown whole: "who is C7?" or
+  "what is John's phone?". Agent API tokens get the name and keep contacts masked.
+
+Agent routes are the MCP bridge, API tokens of kind `agent`, and the CLI when `REPAIRLIB_AGENT=1` is
+set in the agent's environment (put it in the agent host's configuration, next to
+`REPAIRLIB_WORKSPACE`). People (the web UI, `user` API tokens and the CLI without the variable) see
+everything. Work-log text and customer notes are shown as written. This reduces what reaches a model in
+normal use; it is not a barrier against someone who can read the workspace folder.
 
 ## Use the CLI on the shop machine
 

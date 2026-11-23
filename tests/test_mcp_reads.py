@@ -134,7 +134,8 @@ class MCPReadTests(MCPFixture, unittest.TestCase):
                     self.assertEqual(tools["get_repair"].input_schema["required"], ["repair_id"])
                     self.assertEqual(tools["get_repair"].input_schema["properties"]["repair_id"]["type"], "integer")
                     for name, (path, arguments) in cases.items():
-                        response = api.get(API + path, headers=agent_auth)
+                        # One customer's record is an explicit request: MCP shows it whole, like a user token.
+                        response = api.get(API + path, headers=auth if name == "get_customer" else agent_auth)
                         self.assertEqual(response.status_code, 200)
                         self.assertEqual(await self.call(session, name, token, **arguments), response.json(), name)
                     summary = await self.call(session, "charge_summary", token, repair_id=repair)

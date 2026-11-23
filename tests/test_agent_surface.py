@@ -118,15 +118,14 @@ class McpContactMaskTests(TokenFixture, unittest.TestCase):
         repair = local.create_repair(ctx, {**DEVICE, "customer_id": person.id}, "r1")
         server = repairlib_server(ctx)
         results = [server.call_tool(name, args)["structuredContent"]["result"] for name, args in (
-            ("list_customers", {}), ("get_customer", {"customer_id": person.id}),
-            ("repair_brief", {"repair_id": repair.id}), ("dashboard", {}),
+            ("list_customers", {}), ("repair_brief", {"repair_id": repair.id}), ("dashboard", {}),
             ("edit_customer", {"key": "e1", "customer_id": person.id, "revision": 1, "notes": "VIP"}))]
         text = json.dumps(results)
         for secret in ("+35799000111", "t@example.test", "1 Synthetic St", "99000111"):
             self.assertNotIn(secret, text)
         self.assertNotIn("Test Person", text)
         self.assertIn(f'"C{person.id}"', text)
-        self.assertIn("[masked]", json.dumps(results[2]))
+        self.assertIn("[masked]", json.dumps(results[1]))
         person_view = local.open_workspace(self.workspace, "cli")
         self.assertEqual(local.show_customer(person_view, person.id).phone, "+35799000111")  # stored and CLI whole
 

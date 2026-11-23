@@ -176,9 +176,11 @@ def repairlib_server(ctx: Local, only: tuple[str, ...] = ()) -> "Server":
                  annotations=ToolAnnotations(read_only_hint=False, destructive_hint=destructive,
                                                    idempotent_hint=True, open_world_hint=False))
 
-    register("list_customers", "Search or page through customers by descending ID.", local.list_customers,
+    register("list_customers", "Search or page through customers by descending ID. Rows show C<id> and masked "
+             "contacts; a search by name (query) returns the matching names.", local.list_customers,
              **PAGE, query=QUERY, include_archived=ARCHIVED)
-    register("get_customer", "Read a customer by ID, including its revision and archive state.",
+    register("get_customer", "Read one customer's whole record by ID (name, phone, email, revision, archive "
+             "state). Use it only when the user asks about this person.",
              local.show_customer, **CUSTOMER)
     register("customer_history", "Page through a customer's history by descending event ID.",
              local.customer_history, **CUSTOMER, **PAGE)

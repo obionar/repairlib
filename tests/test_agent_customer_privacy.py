@@ -46,41 +46,61 @@ class CustomerPrivacyTests(TokenFixture, unittest.TestCase):
         if shows_customer:
             self.assertIn(self.ref, text)
 
-    def test_agent_cli_shows_customer_ids_never_names_or_contacts(self):
-        outputs = [self.cli(*args) for args in (
+    def test_agent_cli_lists_minimal_and_answers_requests_about_a_person(self):
+        minimal = [self.cli(*args) for args in (
             ("repairs", "list"), ("repairs", "list", "--json"), ("repairs", "list", "--query", "maria"),
             ("repairs", "brief", str(self.repair.id)), ("repairs", "show", str(self.repair.id)),
-            ("customers", "list"), ("customers", "show", str(self.person.id)),
-            ("customers", "show", str(self.person.id), "--json"), ("dashboard",))]
-        for text in outputs[:-1]:
+            ("customers", "list"))]
+        for text in minimal:
             self.assertPrivate(text)
-        self.assertPrivate(outputs[-1], shows_customer=False)  # the dashboard text lists no customers
-        self.assertIn(str(self.repair.id), outputs[2])  # searching by the name still finds the repair
-        self.assertIn(NAME, self.cli("repairs", "list", agent=False))  # a person still sees the name
-        self.assertEqual(local.show_customer(self.ctx, self.person.id).name, NAME)
+        self.assertPrivate(self.cli("dashboard"), shows_customer=False)  # the dashboard text lists no customers
 
-    def test_mcp_shows_customer_ids_never_names_or_contacts(self):
+        # "Tell me all repairs from Maria": search the name, take the ID, list repairs by customer ID.
+        found = self.cli("customers", "list", "--query", "maria")
+        self.assertIn(NAME, found)
+        self.assertNotIn(PHONE, found)
+        by_customer = self.cli("repairs", "list", "--customer", str(self.person.id))
+        self.assertIn(f"{self.repair.id}\t", by_customer)
+        # "Whose is repair 1?" / "Maria's phone?": one customer's record is the explicit request.
+        record = self.cli("customers", "show", str(self.person.id))
+        self.assertIn(NAME, record)
+        self.assertIn(PHONE, record)
+        self.assertIn(NAME, self.cli("repairs", "list", agent=False))  # a person sees names everywhere
+
+    def test_mcp_lists_minimal_and_answers_requests_about_a_person(self):
         server = repairlib_server(local.open_workspace(self.workspace, "mcp"))
-        results = [server.call_tool(name, args)["structuredContent"]["result"] for name, args in (
-            ("list_repairs", {"query": "maria"}), ("repair_brief", {"repair_id": self.repair.id}),
-            ("list_customers", {}), ("get_customer", {"customer_id": self.person.id}), ("dashboard", {}))]
-        self.assertPrivate(json.dumps(results))
-        self.assertEqual(results[0]["items"][0]["id"], self.repair.id)
 
-    def test_agent_api_token_shows_customer_ids_user_token_shows_names(self):
+        def tool(name, **args):
+            return server.call_tool(name, args)["structuredContent"]["result"]
+        minimal = [tool("list_repairs", query="maria"), tool("repair_brief", repair_id=self.repair.id),
+                   tool("list_customers"), tool("dashboard")]
+        self.assertPrivate(json.dumps(minimal))
+        self.assertEqual(minimal[0]["items"][0]["id"], self.repair.id)
+        found = tool("list_customers", query="maria")["items"][0]
+        self.assertEqual((found["name"], found["phone"]), (NAME, "[masked]"))
+        record = tool("get_customer", customer_id=self.person.id)
+        self.assertEqual((record["name"], record["phone"], record["email"]), (NAME, PHONE, EMAIL))
+
+    def test_agent_api_token_lists_minimal_user_token_sees_everything(self):
         with self.client() as client:
             self.sign_in(client)
-            seen = {}
+            auth = {}
             for kind in ("agent", "user"):
                 issued = client.post(ACCOUNT, data=self.issue_form(client, name=f"T {kind}", kind=kind))
                 self.assertEqual(issued.status_code, 201)
-                auth = {"Authorization": f"Bearer {issued_secret(issued)}"}
-                seen[kind] = json.dumps([client.get(path, headers=auth).json() for path in (
-                    "/api/v1/repairs", "/api/v1/dashboard", "/api/v1/customers",
-                    f"/api/v1/customers/{self.person.id}")])
-            self.assertPrivate(seen["agent"])
-            self.assertIn(NAME, seen["user"])
-            self.assertIn(PHONE, seen["user"])
+                auth[kind] = {"Authorization": f"Bearer {issued_secret(issued)}"}
+
+            def get(kind, path):
+                return client.get(path, headers=auth[kind]).json()
+            lists = ("/api/v1/repairs", "/api/v1/dashboard", "/api/v1/customers")
+            self.assertPrivate(json.dumps([get("agent", path) for path in lists]))
+            found = get("agent", "/api/v1/customers?q=maria")["items"][0]
+            record = get("agent", f"/api/v1/customers/{self.person.id}")
+            for value in (found, record):  # names on request; agent tokens keep contacts masked
+                self.assertEqual((value["name"], value["phone"]), (NAME, "[masked]"))
+            everything = json.dumps([get("user", path) for path in lists])
+            self.assertIn(NAME, everything)
+            self.assertIn(PHONE, everything)
 
     def test_staff_see_the_customer_id_agents_use_in_the_web_list_and_record(self):
         with self.client() as client:

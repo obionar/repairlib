@@ -20,6 +20,6 @@ def is_agent(workspace: Path, access: CustomerAccess) -> bool:
     return identity is None or identity.kind == "agent"
 
 
-def shown(workspace: Path, access: CustomerAccess, value):
-    """Agent callers get customer names as `C<id>` and contacts masked; everyone else the whole value."""
-    return private_result(value) if is_agent(workspace, access) else value
+def shown(workspace: Path, access: CustomerAccess, value, *, names: bool = False):
+    """Agent callers get minimized customer data (see domain.privacy); everyone else the whole value."""
+    return private_result(value, names) if is_agent(workspace, access) else value

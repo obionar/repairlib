@@ -189,7 +189,10 @@ class MCPMutationTests(MCPFixture, unittest.TestCase):
                                                name="Lost acknowledgement", key=create_key)
                     self.assertEqual(replayed, initial_customer)
                     ids = {"customer_id": customer["id"]}
-                    self.assertEqual(await self.call(session, "get_customer", token, **ids), customer)
+                    # One customer's record is an explicit request: whole, where write replies are minimized.
+                    record = await self.call(session, "get_customer", token, **ids)
+                    self.assertEqual((record["name"], record["phone"]), ("Lost acknowledgement", "555-0100"))
+                    self.assertEqual({**record, "name": customer["name"], "phone": customer["phone"]}, customer)
                     history = await self.call(session, "customer_history", token, **ids)
                     self.assertEqual([event["operation"] for event in history["items"]],
                                      [row[0] for row in reversed(audit[:4])])

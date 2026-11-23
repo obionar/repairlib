@@ -11,7 +11,7 @@ workspace. For anything not covered here, load the `repairlib` skill.
 
 Read the plain text; it is shorter than `--json`. One line per repair:
 `ID  type  brand model  stage  customer  rN  flags`. `rN` is the revision a write needs; with
-`REPAIRLIB_AGENT=1` the customer shows as `C7` (customer 7, filter with `--customer 7`), never a name;
+`REPAIRLIB_AGENT=1` lists show the customer as `C7` (customer 7) to keep names out of the chat;
 flags = `paid`/`unpaid` (finished repairs), `collected`, `archived`. `--query` words may match
 device, serial, issue or customer name in any order: `--query "anna ipad"`. `No matches.` means
 nothing found: try one word, never the same command twice. Never guess an ID: find it first.
@@ -24,6 +24,8 @@ nothing found: try one word, never the same command twice. Never guess an ID: fi
 | ready to collect | `repairlib repairs list --queue pickup --no-picked-up` |
 | find "the Dell", "Maria's phone" | `repairlib repairs list --query "maria switch"` |
 | one repair, resume work | `repairlib repairs brief ID` (issue, next stages, newest entries, totals) |
+| repairs of a named person ("all repairs from John") | `repairlib customers list --query john`, then `repairlib repairs list --customer ID` |
+| who is `C7`, their phone (only when asked) | `repairlib customers show 7` |
 
 Stages: new, in_progress, waiting_parts, lab_test, customer_test, repaired, no_repair.
 Words to stages: "start working / begin" = in_progress; "ordered a part / waiting for parts" =

@@ -1,9 +1,10 @@
-"""Customer privacy for AI agent callers: names become `C<id>`, phone, email and address `[masked]`.
+"""Data minimization for AI agent callers: send a model only the customer data a request needs.
 
-Applied to results on their way out (agent API tokens, MCP, the CLI under `REPAIRLIB_AGENT=1`);
-stored rows and domain results are untouched. Search still matches the real name server-side.
-It keeps personal data out of the model's context in normal use; it is not a security boundary
-against a caller who can read the workspace files.
+Lists, briefs, dashboards, history and exports show a customer as `C<id>` with phone, email and
+address `[masked]`. A request about a person gets more: a customer search by name keeps the names
+(`names=True`), and the caller decides when one customer's whole record is shown. Applied on the
+way out (agent API tokens, MCP, the CLI under `REPAIRLIB_AGENT=1`); stored rows are untouched.
+It reduces what reaches a cloud model in normal use; it is not a security boundary.
 """
 
 from dataclasses import fields, is_dataclass, replace
@@ -26,9 +27,9 @@ def is_customer(value) -> bool:
     return is_dataclass(value) and {"id", "name", "phone", "email"} <= {f.name for f in fields(value)}
 
 
-def private_customer(customer):
-    return replace(customer, name=customer_ref(customer.id),
-                   **{name: MASK for name in CONTACT_FIELDS if getattr(customer, name)})
+def private_customer(customer, names: bool = False):
+    hidden = {} if names else {"name": customer_ref(customer.id)}
+    return replace(customer, **hidden, **{name: MASK for name in CONTACT_FIELDS if getattr(customer, name)})
 
 
 def private_event(event: CustomerHistoryEvent) -> CustomerHistoryEvent:
@@ -46,9 +47,13 @@ def private_names(customer_id: int | None, names: dict) -> dict:
             **{key: MASK for key in ("customer_phone", "customer_email") if names.get(key)}}
 
 
-def private_result(value):
-    """Hide customer identity in any result shape that carries it; anything else is returned as it is."""
-    if isinstance(value, (CustomerPage, CustomerHistoryPage, RepairPage)):
+def private_result(value, names: bool = False):
+    """Minimize customer data in any result shape that carries it; anything else is returned as it is.
+
+    `names=True` keeps customer names (a search by name, a read of one customer) and masks contacts."""
+    if isinstance(value, CustomerPage):
+        return replace(value, items=[private_customer(item, names) for item in value.items])
+    if isinstance(value, (CustomerHistoryPage, RepairPage)):
         return replace(value, items=[private_result(item) for item in value.items])
     if isinstance(value, CustomerHistoryEvent):
         return private_event(value)
@@ -64,5 +69,5 @@ def private_result(value):
     if isinstance(value, CustomerExport):
         return replace(value, customer=private_customer(value.customer))
     if isinstance(value, (list, tuple)):
-        return type(value)(private_result(item) for item in value)
-    return private_customer(value) if is_customer(value) else value
+        return type(value)(private_result(item, names) for item in value)
+    return private_customer(value, names) if is_customer(value) else value

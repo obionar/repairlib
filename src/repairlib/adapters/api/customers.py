@@ -72,8 +72,8 @@ def page_number(raw: str | None, default: int | None = None, noun: str = "custom
 def customer_routes(workspace: Path, access_dependency) -> APIRouter:
     router = APIRouter(prefix=API_PREFIX + "/customers")
 
-    def shown(access: CustomerAccess, value):
-        return shown_to(workspace, access, value)
+    def shown(access: CustomerAccess, value, *, names: bool = False):
+        return shown_to(workspace, access, value, names=names)
 
     @router.get("", response_model=CustomerPage)
     def index(access: Annotated[CustomerAccess, Depends(access_dependency)],
@@ -81,7 +81,7 @@ def customer_routes(workspace: Path, access_dependency) -> APIRouter:
               include_archived: bool = False):
         page, _ = list_customers(workspace, access, before=page_number(before),
                                  limit=page_number(limit, 25), query=q, include_archived=include_archived)
-        return shown(access, page)
+        return shown(access, page, names=bool(q.strip()))  # a search by name keeps the matching names
 
     @router.post("", response_model=CustomerResponse, status_code=201, openapi_extra=body_schema(INPUT))
     def create(access: Annotated[CustomerAccess, Depends(access_dependency)],
@@ -92,7 +92,7 @@ def customer_routes(workspace: Path, access_dependency) -> APIRouter:
     @router.get("/{customer_id}", response_model=CustomerResponse)
     def detail(customer_id: int, access: Annotated[CustomerAccess, Depends(access_dependency)]):
         customer, _ = read_customer(workspace, access, customer_id)
-        return shown(access, customer)
+        return shown(access, customer, names=True)  # agent tokens: the name, contacts stay masked
 
     @router.patch("/{customer_id}", response_model=CustomerResponse, openapi_extra=body_schema(PATCH))
     def edit(customer_id: int, access: Annotated[CustomerAccess, Depends(access_dependency)],

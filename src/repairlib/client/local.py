@@ -167,9 +167,14 @@ def parse(shape: type, details: dict):
         raise ClientError("Check the request fields.", 8, code="validation") from None
 
 
-def run(ctx: Local, operation, *args, **kwargs):
+def whole(ctx: Local, operation, *args, **kwargs):
+    """Run an operation and return its result unfiltered; only for an explicit request about a person."""
     with local_lock(ctx.workspace):
-        result = call(operation, ctx.workspace, ctx.access, *args, **kwargs)
+        return call(operation, ctx.workspace, ctx.access, *args, **kwargs)
+
+
+def run(ctx: Local, operation, *args, **kwargs):
+    result = whole(ctx, operation, *args, **kwargs)
     return private_result(result) if ctx.private else result
 
 
@@ -231,8 +236,10 @@ def send_label(ctx, revision, key, *, repair_id=None, printer_revision=None) -> 
 # Customers
 
 def list_customers(ctx, *, limit, before, query="", include_archived=False) -> CustomerPage:
-    return run(ctx, customers.list_customers, before=before, limit=limit, query=query,
-               include_archived=include_archived)[0]
+    page = whole(ctx, customers.list_customers, before=before, limit=limit, query=query,
+                 include_archived=include_archived)[0]
+    # An agent searching by name already holds the name: matches keep theirs, contacts stay masked.
+    return private_result(page, names=bool(query.strip())) if ctx.private else page
 
 
 def create_customer(ctx, details, key) -> CustomerResponse:
@@ -240,7 +247,8 @@ def create_customer(ctx, details, key) -> CustomerResponse:
 
 
 def show_customer(ctx, customer_id) -> CustomerResponse:
-    return run(ctx, customers.read_customer, customer_id)[0]
+    """One customer's whole record, also for agents: asking for this person is the request."""
+    return whole(ctx, customers.read_customer, customer_id)[0]
 
 
 def edit_customer(ctx, customer_id, details, key) -> CustomerResponse:

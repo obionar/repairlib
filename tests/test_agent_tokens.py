@@ -406,7 +406,7 @@ class MaskingTests(test_tokens.TokenFixture, TestCase):
             detail = client.get(f"{CUSTOMERS}/{customer_id}", headers=auth["agent"]).json()
             self.assertEqual((detail["phone"], detail["email"], detail["address"]), (MASK, MASK, MASK))
             self.assertEqual((detail["id"], detail["name"], detail["notes"], detail["revision"]),
-                             (customer_id, f"C{customer_id}", CONTACT["notes"], 2))  # name hidden as C<id>
+                             (customer_id, CONTACT["name"], CONTACT["notes"], 2))
             human = client.get(f"{CUSTOMERS}/{customer_id}", headers=auth["user"]).json()
             self.assertEqual((human["phone"], human["email"], human["address"]),
                              ("+357 555 0200", "masked@example.test", "9 Synthetic Street"))
