@@ -1,5 +1,6 @@
 """Offline, recoverable updates for a checkout with a registered service."""
 
+import hashlib
 import json
 import os
 import shutil
@@ -24,9 +25,14 @@ KEEP_RECOVERY = 2
 RECOVERY_PREFIX = ".repairlib-recovery-"
 
 
-def prune_recovery(parent: Path, current: Path) -> None:
-    """Keep this run's archive and the newest others: each holds every attachment and would fill the disk."""
-    found = sorted((path for path in parent.glob(RECOVERY_PREFIX + "*")
+def recovery_prefix(repo: Path) -> str:
+    """Name archives by the checkout that made them, so sibling checkouts never prune each other's."""
+    return RECOVERY_PREFIX + hashlib.sha256(os.fsencode(repo.resolve())).hexdigest()[:12] + "-"
+
+
+def prune_recovery(repo: Path, current: Path) -> None:
+    """Keep this run's archive and the newest of this checkout's others: each holds every attachment."""
+    found = sorted((path for path in repo.parent.glob(recovery_prefix(repo) + "*")
                     if path.is_dir() and not path.is_symlink() and path != current),
                    key=lambda path: path.stat().st_mtime, reverse=True)
     for old in found[KEEP_RECOVERY - 1:]:
@@ -129,7 +135,7 @@ def update_checkout(repo: Path, *, progress: Callable[[str], None] | None = None
         workspace, port, openrc, *_ = target
         validate_workspace(repo, workspace, after)
         restart = stopped_or_running(repo, target) != "stopped"
-        recovery = Path(mkdtemp(prefix=RECOVERY_PREFIX, dir=repo.parent))
+        recovery = Path(mkdtemp(prefix=recovery_prefix(repo), dir=repo.parent))
         backup = recovery / "backup.zip"
         state = {"old_commit": before, "new_commit": after, "workspace": str(workspace), "port": port,
                  "backend": "openrc" if openrc else "systemd", "restart": restart, "backup": str(backup)}
@@ -188,7 +194,7 @@ def update_checkout(repo: Path, *, progress: Callable[[str], None] | None = None
                     raise CheckoutError("The service listener and health checks did not pass.")
             pending.unlink()
             sync_directory(metadata)
-            prune_recovery(repo.parent, recovery)
+            prune_recovery(repo, recovery)
         except (Exception, KeyboardInterrupt) as error:
             detail = "Interrupted." if isinstance(error, KeyboardInterrupt) else str(error)
             if stage == READY:

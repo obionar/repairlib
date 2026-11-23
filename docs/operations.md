@@ -98,7 +98,7 @@ workspace. It refuses dirty or diverged checkouts and does nothing without an in
 fast-forward. With one, it:
 
 1. stops the service and runs `doctor` under the exclusive maintenance lock;
-2. writes and verifies a full archive in `.repairlib-recovery-*` beside the checkout, restores it
+2. writes and verifies a full archive in `.repairlib-recovery-<checkout id>-*` beside the checkout (only this checkout's archives are ever pruned), restores it
    to a throwaway workspace and tests migration and `doctor` there;
 3. fast-forwards to that exact commit, migrates the live workspace if needed, runs `doctor`;
 4. restarts the service if it was running and checks `/health`.
