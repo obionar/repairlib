@@ -756,6 +756,7 @@
   "This is the diagnosis or repair fee. Change it in the fee form.": "This is the diagnosis or repair fee. Change it in the fee form.",
   "This request already created a token. The secret is shown once.": "This request already created a token. The secret is shown once.",
   "This stock movement is already reversed.": "This stock movement is already reversed.",
+  "This workspace holds the most data a backup can carry. Purge detached files first.": "This workspace holds the most data a backup can carry. Purge detached files first.",
   "This workspace holds the most files a backup can carry. Purge detached files first.": "This workspace holds the most files a backup can carry. Purge detached files first.",
   "Timezone": "Timezone",
   "Token created": "Token created",

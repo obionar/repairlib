@@ -283,6 +283,9 @@ def run_reconcile_files(args) -> int:
     else:
         print(f"Checked {report['checked']} attachments; removed {report['removed_staging']} "
               f"staging and {report['removed_orphans']} uncommitted files.")
+        if report.get("unresolved_links"):
+            print(f"{report['unresolved_links']} staging file(s) share a hard link with something else and were "
+                  "left untouched; inspect them by hand.")
         for name in ("missing", "mismatched"):
             if report[name]:
                 print(f"{name.title()} attachment IDs: {', '.join(map(str, report[name]))}")

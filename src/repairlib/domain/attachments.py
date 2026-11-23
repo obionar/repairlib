@@ -31,6 +31,10 @@ from repairlib.storage import audit as audit_log
 MAX_UPLOAD_BYTES = 2048 * 1024 * 1024
 # Whole-workspace archives and updates carry at most this many retained files (see lifecycle/backup_archive).
 MAX_RETAINED_ATTACHMENTS = 10_000
+# A full backup carries 256 GiB in all; keep room for the database.
+# shortcut: fixed headroom, not the live database size; a database beyond it is refused by the backup itself.
+DATABASE_HEADROOM = 8 << 30
+MAX_RETAINED_BYTES = (256 << 30) - DATABASE_HEADROOM
 PURGE_AFTER = timedelta(days=30)
 MAX_FILENAME = 255
 MAX_CAPTION = 1000
@@ -156,6 +160,9 @@ def commit_upload(workspace: Path, access: RepairAccess, repair_id: int, upload:
             if attachments.retained_count(db) >= MAX_RETAINED_ATTACHMENTS:
                 raise RepairError(409, "attachment_limit",
                                   "This workspace holds the most files a backup can carry. Purge detached files first.")
+            if attachments.retained_bytes(db) + upload.size > MAX_RETAINED_BYTES:
+                raise RepairError(409, "attachment_limit",
+                                  "This workspace holds the most data a backup can carry. Purge detached files first.")
             if entry is not None:
                 composed = repairs.insert_entry(db, principal, repair_id, kind, body)
                 audit_log.record(db, principal, access.source, token_label, "work_entry.create", "work_entry",
@@ -430,14 +437,17 @@ def reconcile_files(workspace: Path) -> dict:
             *directory, filename = blobs.blob_parts(shop_id, name)
             known.setdefault(tuple(directory), []).append((attachment_id, filename, digest))
         missing, mismatched = [], []
-        staging = orphans = 0
+        staging = orphans = unresolved = 0
         with private_subdirectory(workspace, ACTIVE, blobs.FILES) as files:
             if files is None:
                 missing = [attachment_id for _, attachment_id, _, _ in recorded]
             else:
+                referenced = {(directory, filename) for directory, rows in known.items()
+                              for _, filename, _ in rows}
+                staging, orphans, unresolved = blobs.resolve_link_pairs(files, referenced)
                 with private_subdirectory(files, blobs.STAGING) as stages:
                     if stages is not None:
-                        staging = blobs.remove_unreferenced(stages, blobs.UPLOAD_PART)
+                        staging += blobs.remove_unreferenced(stages, blobs.UPLOAD_PART)
                 for directory in sorted(known.keys() | set(blobs.blob_directories(files))):
                     rows = known.get(directory, ())
                     with private_subdirectory(files, *directory) as shop:
@@ -452,6 +462,8 @@ def reconcile_files(workspace: Path) -> dict:
                                 mismatched.append(attachment_id)
                         orphans += blobs.remove_unreferenced(shop, blobs.BLOB_NAME, {name for _, name, _ in rows})
         report = {"checked": len(recorded), "removed_staging": staging,
-                  "removed_orphans": orphans, "missing": sorted(missing), "mismatched": sorted(mismatched)}
+                  "removed_orphans": orphans, "missing": sorted(missing), "mismatched": sorted(mismatched),
+                  # Present only when something was left alone, so the usual report keeps its shape.
+                  **({"unresolved_links": unresolved} if unresolved else {})}
         attachments.audit_reconciliation(path, report)
         return report

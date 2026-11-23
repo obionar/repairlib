@@ -165,6 +165,55 @@ def remove_unreferenced(directory: int, pattern: re.Pattern, known: Collection[s
     return removed
 
 
+def resolve_link_pairs(files: int, referenced: Collection[tuple[tuple[str, ...], str]]) -> tuple[int, int, int]:
+    """Clear the two-name state left when publication stopped between `link` and `unlink`.
+
+    A staging name whose other name is a managed blob in this workspace (same device and inode, exactly
+    two names, ours) is that state. If the database references the blob only the staging name goes;
+    otherwise the upload was never acknowledged and both go. Any other hard link is left alone and
+    counted. Returns (staging removed, orphans removed, unresolved).
+    """
+    try:
+        stages = os.open(STAGING, DIRECTORY_FLAGS, dir_fd=files)
+    except FileNotFoundError:
+        return 0, 0, 0
+    try:
+        staged = {}
+        for name in os.listdir(stages):
+            info = os.stat(name, dir_fd=stages, follow_symlinks=False)
+            if UPLOAD_PART.fullmatch(name) and stat.S_ISREG(info.st_mode) and info.st_nlink == 2 \
+                    and info.st_uid == os.geteuid():
+                staged[(info.st_dev, info.st_ino)] = name
+        removed_staging = removed_orphans = 0
+        for directory in blob_directories(files) if staged else ():
+            fd = files
+            opened = []
+            try:
+                for part in directory:
+                    fd = os.open(part, DIRECTORY_FLAGS, dir_fd=fd)
+                    opened.append(fd)
+                for name in os.listdir(fd):
+                    if not BLOB_NAME.fullmatch(name):
+                        continue
+                    info = os.stat(name, dir_fd=fd, follow_symlinks=False)
+                    twin = staged.get((info.st_dev, info.st_ino))
+                    if twin is None or not (stat.S_ISREG(info.st_mode) and info.st_nlink == 2
+                                            and info.st_uid == os.geteuid()):
+                        continue
+                    os.unlink(twin, dir_fd=stages)
+                    removed_staging += 1
+                    del staged[(info.st_dev, info.st_ino)]
+                    if (directory, name) not in referenced:
+                        os.unlink(name, dir_fd=fd)
+                        removed_orphans += 1
+            finally:
+                for opened_fd in opened:
+                    os.close(opened_fd)
+        return removed_staging, removed_orphans, len(staged)
+    finally:
+        os.close(stages)
+
+
 def file_digest(directory: int, name: str) -> str | None:
     try:
         fd = os.open(name, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK | os.O_CLOEXEC, dir_fd=directory)

@@ -28,6 +28,29 @@ class AttachmentCapTests(TokenFixture, unittest.TestCase):
             self.assertEqual(replayed.status_code, 201)
             self.assertEqual(replayed.json()["id"], first.json()["id"])
 
+    def test_retained_bytes_including_detached_files_stay_inside_the_backup_payload(self):
+        with self.client() as client:
+            _, auth = test_attachments.AttachmentTests.admin_auth(self, client)
+            repair = test_attachments.AttachmentTests.repair(self, client, auth)
+            with patch.object(attachment_domain, "MAX_RETAINED_BYTES", 10):
+                first_key = uuid4().hex
+                first = test_attachments.AttachmentTests.upload(self, client, auth, repair["id"], b"123456", key=first_key)
+                self.assertEqual(first.status_code, 201, first.text)
+                detached = client.post(f"/api/v1/repairs/{repair['id']}/attachments/{first.json()['id']}/detach",
+                                       headers={**auth, "Idempotency-Key": uuid4().hex},
+                                       json={"revision": 1, "detached": True})
+                self.assertEqual(detached.status_code, 200, detached.text)
+                refused = test_attachments.AttachmentTests.upload(self, client, auth, repair["id"], b"abcde")
+                fits = test_attachments.AttachmentTests.upload(self, client, auth, repair["id"], b"abcd")
+                replayed = test_attachments.AttachmentTests.upload(self, client, auth, repair["id"], b"123456", key=first_key)
+            self.assertEqual((refused.status_code, refused.json()["error"]["code"]), (409, "attachment_limit"))
+            self.assertEqual((fits.status_code, replayed.status_code), (201, 201))
+            self.assertEqual(len(test_attachments.AttachmentTests.stored_files(self)), 2)
+
+    def test_upload_limits_leave_headroom_for_the_database_in_a_backup(self):
+        self.assertEqual(attachment_domain.MAX_RETAINED_BYTES + attachment_domain.DATABASE_HEADROOM,
+                         backup_archive.MAX_PAYLOAD)
+
     def test_backup_and_upload_share_one_limit(self):
         self.assertEqual(backup_archive.MAX_ATTACHMENTS, attachment_domain.MAX_RETAINED_ATTACHMENTS)
 

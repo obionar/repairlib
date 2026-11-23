@@ -35,6 +35,10 @@ def retained_count(db) -> int:
     return db.execute("SELECT COUNT(*) FROM attachments WHERE purged_at IS NULL").fetchone()[0]
 
 
+def retained_bytes(db) -> int:
+    return db.execute("SELECT COALESCE(SUM(size_bytes), 0) FROM attachments WHERE purged_at IS NULL").fetchone()[0]
+
+
 def entry_exists(db, shop_id: int, repair_id: int, entry_id: int, *, visible_only: bool) -> bool:
     return db.execute(
         """SELECT 1 FROM work_entries
