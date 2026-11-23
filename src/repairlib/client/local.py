@@ -444,9 +444,10 @@ def ticket_fees(ctx, repair_id) -> dict:
 
 
 def set_fees(ctx, repair_id, details, revision, key) -> ChargeSummary:
-    run(ctx, charges.set_fees, repair_id, diagnosis=details.get("diagnosis"),
-        labor=details.get("labor"), discount=details.get("discount"), revision=revision, key=key)
-    return charge_summary(ctx, repair_id)
+    summary = run(ctx, charges.set_fees, repair_id, diagnosis=details.get("diagnosis"),
+                  labor=details.get("labor"), discount=details.get("discount"), revision=revision, key=key,
+                  discount_revision=details.get("discount_revision"))
+    return replace(summary, items=[without_consumption(item) for item in summary.items])
 
 
 def show_charge(ctx, repair_id, charge_id, *, include_consumption=False) -> Charge:

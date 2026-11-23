@@ -61,6 +61,8 @@ def build_summary(db, principal, repair_id: int) -> ChargeSummary:
     parts = sum(item.line_total_cents for item in active if item.kind == "part")
     labor = sum(item.line_total_cents for item in active if item.kind == "labor")
     kind, value, revision = charges.discount(db, principal.shop_id, repair_id)
+    diagnosis_id = repairs.fee_charge_ids(db, principal.shop_id, repair_id).get("diagnosis")
+    diagnosis = next((item.unit_price_cents for item in active if item.id == diagnosis_id), 0)
     subtotal = parts + labor
     try:
         reduction = money.discount(kind, value, subtotal)
@@ -73,7 +75,7 @@ def build_summary(db, principal, repair_id: int) -> ChargeSummary:
         items=[visible(item, principal) for item in items], parts_subtotal_cents=parts,
         labor_subtotal_cents=labor, subtotal_cents=subtotal, discount_kind=kind,
         discount_value=value, discount_cents=reduction, total_cents=subtotal - reduction,
-        discount_revision=revision,
+        discount_revision=revision, diagnosis_cents=diagnosis,
     )
 
 
@@ -152,9 +154,10 @@ def ticket_fees(workspace: Path, access: RepairAccess, repair_id: int):
             stored[key] = next((item.unit_price_cents for item in summary.items
                                 if item.id == charge_id and not item.deleted), 0)
         default = shop_settings.diagnosis_fee(db, principal.shop_id)
-        # An explicit zero stays zero; the bench diagnosis is proposed until the technician saves.
-        proposed = {"diagnosis": stored["diagnosis"] if "diagnosis" in linked else default,
-                    "labor": stored["labor"] if "labor" in linked else 0}
+        # A saved zero stays zero; the bench diagnosis is proposed until the technician saves one.
+        proposed = {"diagnosis": stored["diagnosis"] if repairs.diagnosis_saved(db, principal.shop_id, repair_id)
+                    else default,
+                    "labor": stored["labor"]}
         other = summary.subtotal_cents - stored["diagnosis"] - stored["labor"]
         return {"diagnosis": stored["diagnosis"],
                 "diagnosis_input": proposed["diagnosis"],
@@ -164,15 +167,22 @@ def ticket_fees(workspace: Path, access: RepairAccess, repair_id: int):
                 "total_cents": summary.total_cents,
                 "pending_total_cents": sum(proposed.values()) + other - summary.discount_cents,
                 "discount_cents": summary.discount_cents,
+                "discount_kind": summary.discount_kind,
+                "discount_value": summary.discount_value,
+                "discount_revision": summary.discount_revision,
                 "discount_amount": summary.discount_value if summary.discount_kind == "amount" else 0,
                 "default_cents": default,
                 "revision": repair.revision}, can_write and repair.archived_at is None
 
 
 def set_fees(workspace: Path, access: RepairAccess, repair_id: int, *, diagnosis: int | None = None,
-             labor: int | None = None, discount: int | None, revision: int, key: str) -> None:
+             labor: int | None = None, discount: int | None, revision: int, key: str,
+             discount_revision: int | None = None) -> ChargeSummary:
     if not 1 <= revision < MAX_ID:
         raise RepairError(422, "validation", "Supply the reviewed repair revision.")
+    if discount_revision is not None and (type(discount_revision) is not int
+                                          or not 0 <= discount_revision < MAX_ID):
+        raise RepairError(422, "validation", "Supply the reviewed discount revision.")
     for name, amount in (("diagnosis", diagnosis), ("labor", labor)):
         if amount is not None and (type(amount) is not int or not 0 <= amount <= money.MAX_CENTS):
             raise RepairError(422, "validation", "Check the amounts.",
@@ -187,10 +197,12 @@ def set_fees(workspace: Path, access: RepairAccess, repair_id: int, *, diagnosis
                 payload[name] = amount
         if discount is not None:
             payload["discount"] = discount
+        if discount_revision is not None:
+            payload["discount_revision"] = discount_revision
         fingerprint, previous = replay_receipt(db, principal, "repair", "repair.update", key, payload,
-                                               lambda _: True, RepairError)
+                                               summary_shape, RepairError)
         if previous is not None:
-            return
+            return previous
         current = find_unarchived_repair(db, principal.shop_id, repair_id)
         if current.revision != revision:
             raise RepairError(409, "stale_revision", "The repair changed. Review the latest version.")
@@ -225,20 +237,29 @@ def set_fees(workspace: Path, access: RepairAccess, repair_id: int, *, diagnosis
                 changes[name] = {"before": existing.unit_price_cents, "after": amount, "charge_id": existing.id}
                 if not amount:
                     repairs.save_fee(db, principal.shop_id, repair_id, None, name)
+        discount_change = None
         if discount is not None:
-            before_summary = build_summary(db, principal, repair_id)
-            if (before_summary.discount_kind, before_summary.discount_value) != ("amount", discount):
-                if discount:
-                    try:
-                        money.discount("amount", discount, before_summary.subtotal_cents)
-                    except ValueError as error:
-                        raise RepairError(409, "discount_exceeds_subtotal",
-                                          f"{error} Change the discount first.") from None
-                if not charges.save_discount(db, principal.shop_id, repair_id, "amount" if discount else "none",
-                                             discount, before_summary.discount_revision):
+            held_kind, held_value, held_revision = charges.discount(db, principal.shop_id, repair_id)
+            wanted = ("amount", discount) if discount else ("none", 0)
+            # Unset and zero are the same discount; kind and value are compared together.
+            if wanted != ((held_kind, held_value) if held_value else ("none", 0)):
+                if discount_revision is not None and discount_revision != held_revision:
                     raise RepairError(409, "stale_revision", "The discount changed. Review the latest totals.")
-                changes["discount"] = {"before": before_summary.discount_value, "after": discount}
+                subtotal = sum(item.line_total_cents
+                               for item in charges.list_for_repair(db, principal.shop_id, repair_id)
+                               if not item.deleted)
+                try:
+                    money.discount(*wanted, subtotal)
+                except ValueError as error:
+                    raise RepairError(409, "discount_exceeds_subtotal",
+                                      f"{error} Change the discount first.") from None
+                if not charges.save_discount(db, principal.shop_id, repair_id, wanted[0], discount, held_revision):
+                    raise RepairError(409, "stale_revision", "The discount changed. Review the latest totals.")
+                discount_change = {"before": held_value, "after": discount,
+                                   "kind": {"before": held_kind, "after": wanted[0]}}
         changes = {name: value for name, value in changes.items() if value["before"] != value["after"]}
+        if discount_change:
+            changes["discount"] = discount_change
         if changes:
             repairs.bump_revision(db, principal.shop_id, repair_id)
         summary = build_summary(db, principal, repair_id)
@@ -246,6 +267,7 @@ def set_fees(workspace: Path, access: RepairAccess, repair_id: int, *, diagnosis
                             repair_id, summary)
         audit.record(db, principal, access.source, token_label, "repair.fees", "repair", repair_id,
                       {"revision": revision, "fees": changes})
+        return summary
 
 
 def create_charge(workspace: Path, access: RepairAccess, repair_id: int, details: ChargeInput,
@@ -292,6 +314,9 @@ def correct_charge(workspace: Path, access: RepairAccess, repair_id: int, charge
         if previous is not None:
             return previous
         find_unarchived_repair(db, principal.shop_id, repair_id)
+        protected = repairs.fee_charge_ids(db, principal.shop_id, repair_id).values()
+        if charge_id in protected:
+            raise RepairError(409, "protected_fee", "This is the diagnosis or repair fee. Change it in the fee form.")
         current = find_charge(db, principal.shop_id, repair_id, charge_id)
         if current.deleted:
             raise RepairError(409, "deleted", "Restore the charge before correcting it.")
@@ -327,6 +352,9 @@ def change_charge_visibility(workspace: Path, access: RepairAccess, repair_id: i
         if previous is not None:
             return previous
         find_unarchived_repair(db, principal.shop_id, repair_id)
+        protected = repairs.fee_charge_ids(db, principal.shop_id, repair_id).values()
+        if charge_id in protected:
+            raise RepairError(409, "protected_fee", "This is the diagnosis or repair fee. Change it in the fee form.")
         current = find_charge(db, principal.shop_id, repair_id, charge_id)
         updated = apply_charge_visibility(db, principal, current, change.revision, change.deleted)
         build_summary(db, principal, repair_id)

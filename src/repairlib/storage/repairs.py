@@ -347,11 +347,20 @@ def fee_charge_ids(db, shop_id: int, repair_id: int) -> dict[str, int | None]:
     return {} if row is None else {"diagnosis": row[0], "labor": row[1]}
 
 
+def diagnosis_saved(db, shop_id: int, repair_id: int) -> bool:
+    """False until the diagnosis fee was saved, even as zero; the shop default is proposed until then."""
+    row = db.execute("SELECT diagnosis_saved FROM repair_fees WHERE shop_id = ? AND repair_id = ?",
+                     (shop_id, repair_id)).fetchone()
+    return bool(row and row[0])
+
+
 def save_fee(db, shop_id: int, repair_id: int, charge_id: int | None, name: str) -> None:
     try:
         column = FEE_COLUMNS[name]
     except KeyError:
         raise ValueError(f"Unknown fee: {name}") from None
-    db.execute(f"""INSERT INTO repair_fees(shop_id, repair_id, {column}) VALUES (?, ?, ?)
-        ON CONFLICT (shop_id, repair_id) DO UPDATE SET {column} = excluded.{column}""",
-               (shop_id, repair_id, charge_id))
+    saved = int(name == "diagnosis")
+    db.execute(f"""INSERT INTO repair_fees(shop_id, repair_id, {column}, diagnosis_saved) VALUES (?, ?, ?, ?)
+        ON CONFLICT (shop_id, repair_id) DO UPDATE SET {column} = excluded.{column},
+            diagnosis_saved = max(diagnosis_saved, excluded.diagnosis_saved)""",
+               (shop_id, repair_id, charge_id, saved))

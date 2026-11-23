@@ -517,15 +517,23 @@ def repair_routes(workspace: Path, templates, key: bytearray) -> APIRouter:
     def repair_fees(request: Request, repair_id: int, form: Annotated[dict[str, str], Depends(fees_form)]):
         credential = access(request).credential
         check_csrf(request, form, csrf_token(key, f"repair.fees:{repair_id}", credential) if credential else None)
-        draft = {name: form.get(name, "") for name in ("diagnosis", "labor", "discount")}
+        # A percentage discount has no field here, so a fee-only save leaves it alone.
+        names = ("diagnosis", "labor", "discount") if "discount" in form else ("diagnosis", "labor")
+        draft = {name: form.get(name, "") for name in names}
         try:
             try:
                 amounts = {name: money.parse_cents(value.replace(",", ".") or "0")
                            for name, value in draft.items()}
+                reviewed = form.get("discount_revision", "")
+                discount_revision = int(reviewed) if "discount" in draft and reviewed.isascii() \
+                    and reviewed.isdigit() else None
             except ValueError as error:
                 raise RepairError(422, "validation", str(error)) from None
+            if "discount" in draft and discount_revision is None:
+                raise RepairError(422, "validation", "Supply the reviewed discount revision.")
             charges.set_fees(workspace, access(request), repair_id, diagnosis=amounts["diagnosis"],
-                             labor=amounts["labor"], discount=amounts["discount"],
+                             labor=amounts["labor"], discount=amounts.get("discount"),
+                             discount_revision=discount_revision,
                              revision=form_revision(form), key=form.get("key", ""))
         except RepairError as error:
             if error.status in (409, 422):

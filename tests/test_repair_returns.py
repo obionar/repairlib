@@ -336,6 +336,7 @@ class ReturnAdapterTests(TokenFixture, unittest.TestCase):
             live = client.get(f"{API}/{repair_id}/charges", params={"include_consumption": "true"},
                               headers=auth).json()
             self.assertEqual(live.pop("items"), [done["charge"]])
+            live.pop("diagnosis_cents")  # A summary field, not one of the totals.
             self.assertEqual(live, done["totals"])
             self.assertEqual((done["charge"]["consumed_quantity_milli"], done["charge"]["quantity_milli"],
                               done["charge"]["deleted"]), (3000, 500, True))

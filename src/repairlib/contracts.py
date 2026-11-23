@@ -550,6 +550,8 @@ class ChargeTotals:
 @dataclass(frozen=True, kw_only=True)
 class ChargeSummary(ChargeTotals):
     items: list[Charge]
+    # The diagnosis fee line when the summary was made; None on receipts stored before it was kept.
+    diagnosis_cents: int | None = None
 
 
 @dataclass(frozen=True)

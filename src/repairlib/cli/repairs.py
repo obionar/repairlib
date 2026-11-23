@@ -653,12 +653,17 @@ def _show_charges(result, args, ctx):
               f"{money.format_milli(item.quantity_milli)} {item.unit}\t"
               f"{money.format_cents(item.unit_price_cents)}\t{money.format_cents(item.line_total_cents)}"
               f"{consumed}")
-    fees = local.ticket_fees(ctx, args.id)
-    # Every labour charge above the diagnosis is repair work, including free-text labour rows.
-    repair = result.labor_subtotal_cents - fees["diagnosis"]
-    print(f"Diagnosis {money.format_cents(fees['diagnosis'])}, repair {money.format_cents(repair)}, "
-          f"parts {money.format_cents(fees['parts'])}, discount {money.format_cents(fees['discount_cents'])}, "
-          f"total {money.format_cents(fees['total_cents'])} EUR (discount revision {result.discount_revision}).")
+    # Totals come from this one result, so a replayed receipt never describes a later bill.
+    # Receipts stored before the diagnosis split was kept print their recorded totals only.
+    if result.diagnosis_cents is None:
+        split = f"labour {money.format_cents(result.labor_subtotal_cents)}"
+    else:
+        # Every labour charge above the diagnosis is repair work, including free-text labour rows.
+        split = (f"diagnosis {money.format_cents(result.diagnosis_cents)}, "
+                 f"repair {money.format_cents(result.labor_subtotal_cents - result.diagnosis_cents)}")
+    print(f"{split.capitalize()}, parts {money.format_cents(result.parts_subtotal_cents)}, "
+          f"discount {money.format_cents(result.discount_cents)}, "
+          f"total {money.format_cents(result.total_cents)} EUR (discount revision {result.discount_revision}).")
 
 
 @renders("consume-part")
