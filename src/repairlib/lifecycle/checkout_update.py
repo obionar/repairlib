@@ -2,6 +2,7 @@
 
 import json
 import os
+import shutil
 from collections.abc import Callable
 from contextlib import suppress
 from pathlib import Path
@@ -18,6 +19,19 @@ from repairlib.lifecycle.checkout import (
 from repairlib.lifecycle.service import check_path, ignored_in_checkout, overlaps
 from repairlib.lifecycle.workspace import WorkspaceError, maintenance_lock, migrate_workspace
 from repairlib.paths import sync_directory
+
+KEEP_RECOVERY = 2
+RECOVERY_PREFIX = ".repairlib-recovery-"
+
+
+def prune_recovery(parent: Path, current: Path) -> None:
+    """Keep this run's archive and the newest others: each holds every attachment and would fill the disk."""
+    found = sorted((path for path in parent.glob(RECOVERY_PREFIX + "*")
+                    if path.is_dir() and not path.is_symlink() and path != current),
+                   key=lambda path: path.stat().st_mtime, reverse=True)
+    for old in found[KEEP_RECOVERY - 1:]:
+        shutil.rmtree(old, ignore_errors=True)
+
 
 BOOT = (
     "import sys; sys.path.insert(0, sys.argv.pop(1)); "
@@ -115,7 +129,7 @@ def update_checkout(repo: Path, *, progress: Callable[[str], None] | None = None
         workspace, port, openrc, *_ = target
         validate_workspace(repo, workspace, after)
         restart = stopped_or_running(repo, target) != "stopped"
-        recovery = Path(mkdtemp(prefix=".repairlib-recovery-", dir=repo.parent))
+        recovery = Path(mkdtemp(prefix=RECOVERY_PREFIX, dir=repo.parent))
         backup = recovery / "backup.zip"
         state = {"old_commit": before, "new_commit": after, "workspace": str(workspace), "port": port,
                  "backend": "openrc" if openrc else "systemd", "restart": restart, "backup": str(backup)}
@@ -174,6 +188,7 @@ def update_checkout(repo: Path, *, progress: Callable[[str], None] | None = None
                     raise CheckoutError("The service listener and health checks did not pass.")
             pending.unlink()
             sync_directory(metadata)
+            prune_recovery(repo.parent, recovery)
         except (Exception, KeyboardInterrupt) as error:
             detail = "Interrupted." if isinstance(error, KeyboardInterrupt) else str(error)
             if stage == READY:

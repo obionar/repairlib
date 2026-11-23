@@ -104,7 +104,7 @@ fast-forward. With one, it:
 4. restarts the service if it was running and checks `/health`.
 
 Plan downtime and disk space for the archive, a restored copy and a temporary checkout. Run no
-other Git, SQLite or service commands meanwhile.
+other Git, SQLite or service commands meanwhile. After success it keeps only this archive and the previous one.
 
 ### Recover an interrupted checkout update
 
