@@ -247,7 +247,8 @@ def repairlib_server(ctx: Local, only: tuple[str, ...] = ()) -> "Server":
                       require=get_type_hints(RepairPatch).keys() - {"warranty_until", "warranty_repair_id"},
                       destructive=True)
     register_mutation("change_repair_stage", "Move a repair to an allowed stage at its reviewed revision. "
-                      "Supply a reason when reopening a completed repair to in_progress.",
+                      "Leave reason empty, except when reopening a completed repair to in_progress; "
+                      "add notes with create_work_entry.",
                       local.change_stage, **REPAIR, body=StageChange, destructive=True)
     register_mutation("mark_repair_picked_up", "Record pickup at the reviewed repair revision.",
                       local.change_repair_flag, **REPAIR, body=RepairFlagChange,
