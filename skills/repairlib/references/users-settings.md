@@ -52,6 +52,9 @@ repairlib settings edit --workspace "$WS" --revision 1 --key settings-1 \
 | `printer set --revision R --key K p15\|none` | driver is positional; `none` disables direct printing. |
 | `printer test --revision R --key K` | send one physical test label to P15; exit 7 unless acknowledged. |
 
+For machine-specific notes, if present, see `~/.config/repairlib/agent-local.md`.
+An illuminated printer can still have direct printing disabled in the workspace.
+
 Printing and the P15 configuration are physical operations: get explicit authorization,
 verify the printer before retrying, and never send test labels to a shop's printer
 unasked. The driver must be installed for the same user (on `PATH` or
