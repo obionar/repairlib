@@ -99,6 +99,9 @@ class WebStockFormsTests(TokenFixture, unittest.TestCase):
             used = ticket.split('aria-labelledby="stock-usage">', 1)[1].split('</section>', 1)[0]
             self.assertIn("Φίλτρο · ×1.5 pcs · 3.25 €", used)
             self.assertIn('<p class="obi-entry-body">Part used: Φίλτρο × 1.5 pcs</p>', ticket)
+            greek = client.get(f"/repairs/{repair['id']}", cookies={"repairlib_lang": "el"}).text
+            used = greek.split('aria-labelledby="stock-usage">', 1)[1].split('</section>', 1)[0]
+            self.assertIn("Φίλτρο · ×1.5 τεμ. · 3.25 €", used)  # stored "pcs" shown in the reader's language
         with self.client() as restarted:
             self.assertEqual(restarted.get(f"{INVENTORY}/1", headers=auth).json()["on_hand_milli"], 2500)
             charges = restarted.get(f"{API}/{repair['id']}/charges", headers=auth).json()

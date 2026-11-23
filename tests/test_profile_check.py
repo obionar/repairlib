@@ -9,13 +9,12 @@ from tempfile import TemporaryDirectory
 import unittest
 
 from repairlib.domain.setup import initialize_workspace
-from repairlib.lifecycle.backup_schedule import scheduled_snapshot
 from repairlib.storage.initialization import SCHEMA_VERSION
 from test_baseline import python_env
 from test_tokens import PASSWORD
 
 COMMAND = [sys.executable, "-m", "repairlib"]
-FIELDS = ("Workspace:", "State:", "Schema:", "Backup verified today:", "Identity:", "Role:", "Server:")
+FIELDS = ("Workspace:", "State:", "Schema:", "Identity:", "Role:", "Server:")
 
 
 class ProfileCheckTests(unittest.TestCase):
@@ -40,17 +39,12 @@ class ProfileCheckTests(unittest.TestCase):
             self.assertIn(field, result.stdout)
         self.assertIn(f"Workspace: {self.workspace}", result.stdout)
         self.assertIn(f"Schema: {SCHEMA_VERSION} (expected {SCHEMA_VERSION})", result.stdout)
-        self.assertIn("Backup verified today: no", result.stdout)
         self.assertIn("Identity: cli", result.stdout)
         self.assertIn("Role: admin", result.stdout)
         self.assertIn("Server: not configured", result.stdout)
         # Read-only: the built-in local actor is created by the first write, not by this check.
         with closing(sqlite3.connect(self.database)) as db:
             self.assertEqual(db.execute("SELECT COUNT(*) FROM users WHERE username = 'cli'").fetchone(), (0,))
-
-    def test_verified_backup_today_is_reported(self):
-        self.assertIsNotNone(scheduled_snapshot(self.workspace))
-        self.assertIn("Backup verified today: yes", self.run_check().stdout)
 
     def test_outdated_schema_blocks_and_names_the_expected_version(self):
         with closing(sqlite3.connect(self.database)) as db, db:

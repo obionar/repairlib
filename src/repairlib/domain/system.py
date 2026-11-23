@@ -5,7 +5,6 @@ from datetime import datetime
 from pathlib import Path
 import time
 
-from repairlib.lifecycle.backup_schedule import backup_state
 from repairlib.lifecycle.operations import local_status
 from repairlib.paths import database_path
 from repairlib.storage import audit, printer as printer_records
@@ -29,7 +28,6 @@ def skew_seconds(newest: str | None, now: int) -> int | None:
 def facts(workspace: Path, *, now: int | None = None) -> dict:
     moment = int(time.time()) if now is None else now
     report = local_status(workspace)
-    backup = backup_state(workspace, now=moment)
     printer, sessions, newest = "none", 0, None
     if report["ready"]:
         path = database_path(workspace)
@@ -45,7 +43,6 @@ def facts(workspace: Path, *, now: int | None = None) -> dict:
         "expected_schema_version": report["expected_schema_version"],
         "workspace": report["workspace"],
         "disk_free_bytes": report["disk_free_bytes"],
-        "backup": backup,
         "printer": printer or "none",
         "sessions": sessions,
         "clock_skew_seconds": skew,
@@ -63,8 +60,6 @@ def lines(report: dict) -> list[str]:
     """Plain diagnostic text for a support bundle; English on purpose."""
     free = report["disk_free_bytes"]
     disk = "unknown" if free is None else f"{free // (1024 * 1024)} MiB free"
-    backup = report["backup"]
-    last = backup["last_verified_at"] or "none"
     clock = "ok" if not report["clock_warning"] else (
         f"clock trails the newest record by {report['clock_skew_seconds']} s")
     return [
@@ -72,7 +67,6 @@ def lines(report: dict) -> list[str]:
         f"Schema: {report['schema_version']} (expected {report['expected_schema_version']})",
         f"Workspace: {report['workspace']}",
         f"Disk: {disk}",
-        f"Last verified backup: {last}",
         f"Printer: {report['printer']}",
         f"Sessions: {report['sessions']}",
         f"Clock: {clock}",

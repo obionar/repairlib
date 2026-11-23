@@ -10,7 +10,6 @@ from pathlib import Path
 from repairlib.config import DISK_RESERVE_BYTES, resolve_workspace
 from repairlib.contracts import StockReconciliation
 from repairlib.lifecycle.backup_archive import MAX_ATTACHMENTS, RESTORE_STAGE_PREFIX, SHA256, hash_stream, private_file
-from repairlib.lifecycle.backup_schedule import backup_line, backup_state
 from repairlib.lifecycle.operations import private_subdirectory, workspace_disk_free_bytes
 from repairlib.lifecycle.workspace import (
     ACTIVE, STAGE_PREFIX, WorkspaceError, check_database_files, database_path, offline_lock, workspace_schema,
@@ -55,7 +54,6 @@ class DoctorReport:
     attachment_issues: dict[str, list[int]] = field(default_factory=dict)
     stock: StockReconciliation | None = None
     disk_free_bytes: int | None = None
-    backup: dict | None = None
 
     @property
     def stock_mismatch_ids(self) -> list[int] | None:
@@ -95,8 +93,6 @@ class DoctorReport:
             f"Stock ledger mismatches: {self.stock_mismatches if self.stock_mismatches is not None else unchecked}",
             f"Stock ledger issues: {len(self.stock.issues) if self.stock is not None else unchecked}",
         ]
-        if self.backup is not None:
-            lines.append(backup_line(self.backup))
         if self.attachments_checked is not None and self.attachments_checked >= MAX_ATTACHMENTS * 8 // 10:
             lines.append(f"Warning: {self.attachments_checked} of {MAX_ATTACHMENTS} retained attachments; "
                          "past the backup limit a backup cannot be created. Purge detached files.")
@@ -201,8 +197,7 @@ def count_image_folders(report: DoctorReport, shop_files: int, shop: str, known:
 
 def diagnose_workspace(explicit: str | Path | None = None, *, lock_fd: int | None = None) -> DoctorReport:
     workspace = resolve_workspace(explicit)
-    report = DoctorReport("invalid", workspace, disk_free_bytes=workspace_disk_free_bytes(workspace),
-                          backup=backup_state(workspace))
+    report = DoctorReport("invalid", workspace, disk_free_bytes=workspace_disk_free_bytes(workspace))
     try:
         report.restore_staging = sum(1 for _ in workspace.parent.glob(f"{RESTORE_STAGE_PREFIX}*"))
         if workspace.is_symlink():

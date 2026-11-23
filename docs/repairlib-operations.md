@@ -16,8 +16,8 @@ Run the read-only check first and read every blocker and field it prints:
 repairlib profile check --workspace "$repairlib_workspace"
 ```
 
-It prints workspace path, state, schema version (with expected), backup verification
-today, the local identity (`cli`), role and configured server. Exit 1 means at least one
+It prints workspace path, state, schema version (with expected), the local identity
+(`cli`), role and configured server. Exit 1 means at least one
 blocker; do not write until it exits 0.
 
 Use a separate synthetic demo workspace for each agent. Stop any running server

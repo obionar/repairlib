@@ -95,8 +95,10 @@ class MCPInventoryTests(MCPFixture, unittest.TestCase):
                     returned = await call("return_part", key="physical", **charge_ref, quantity_milli=500,
                                           repair_revision=review["repair_revision"],
                                           item_revision=review["item_revision"], reason="Unused piece")
-                    self.assertEqual(returned["charge"], charge)
-                    self.assertEqual(returned["totals"]["total_cents"], 160)
+                    # The return takes 0.5 off the 2.0 billed at the charge price (0.80).
+                    self.assertEqual(returned["charge"], charge | {
+                        "quantity_milli": 1500, "line_total_cents": 120, "revision": charge["revision"] + 1})
+                    self.assertEqual(returned["totals"]["total_cents"], 120)
                     self.assertEqual(returned["remaining_quantity_milli"], 1000)
                     self.assertEqual(returned["stock"]["item"]["on_hand_milli"], 5000)
                     review = await call("part_return_status", **charge_ref)
@@ -104,7 +106,7 @@ class MCPInventoryTests(MCPFixture, unittest.TestCase):
                                          repair_revision=review["repair_revision"], item_revision=review["item_revision"],
                                          charge_revision=review["charge_revision"], reason="Wrong repair selected")
                     self.assertTrue(mistake["charge"]["deleted"])
-                    self.assertEqual(mistake["charge"]["revision"], charge["revision"] + 1)
+                    self.assertEqual(mistake["charge"]["revision"], charge["revision"] + 2)
                     self.assertEqual(mistake["totals"]["total_cents"], 0)
                     self.assertEqual(mistake["remaining_quantity_milli"], 0)
                     self.assertEqual(mistake["stock"]["item"]["on_hand_milli"], 6000)

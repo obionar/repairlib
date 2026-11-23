@@ -291,7 +291,7 @@ def repairlib_server(ctx: Local) -> "Server":
                       "revisions. Set separate consumed and billed quantities in milli-units. "
                       "Use null for the catalog selling price or give an override in EUR cents.",
                       local.consume_part, **REPAIR, body=PartConsumption, destructive=True)
-    register_mutation("return_part", "Physically return stock in milli-units and preserve the repair charge. "
+    register_mutation("return_part", "Physically return stock in milli-units; the charge's billed quantity drops by the same amount (removed at zero). "
                       "Read part_return_status for the reviewed repair and item revisions and returnable quantity.",
                       local.return_part, **CHARGE, body=PartReturn)
     register_mutation("correct_intake_mistake", "Return all remaining consumption and hide the charge. "

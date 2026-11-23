@@ -36,8 +36,8 @@
                   <a class="obi-id" href="{{ request.url_for('inventory_detail', item_id=item.id).path }}">{{ item.sku }}</a>
                   <span class="obi-row-detail">{{ item.description }}</span>
                 </th>
-                <td class="obi-number">{{ item.on_hand_milli|milli }} {{ item.unit }}</td>
-                <td class="obi-number">{{ item.low_stock_milli|milli }} {{ item.unit }}</td>
+                <td class="obi-number">{{ item.on_hand_milli|milli }} {{ _(item.unit) }}</td>
+                <td class="obi-number">{{ item.low_stock_milli|milli }} {{ _(item.unit) }}</td>
               </tr>
             {% endfor %}
           </tbody>

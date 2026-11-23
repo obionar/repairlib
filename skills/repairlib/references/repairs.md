@@ -60,7 +60,7 @@ repairlib repairs show 1 --workspace "$WS" --json        # revision is now 2
 | `repairs restore-charge ID CHARGE_ID --revision R --key K --reason TEXT` | restore a hidden charge. |
 | `repairs consume-part ID ITEM_ID --repair-revision R --item-revision R --consumed-quantity Q --billed-quantity Q --key K [--unit-price EUR]` | atomic stock move + charge; quantities are separate so wastage can be billed differently. Price defaults to the reviewed catalog selling price. |
 | `repairs part-return-status ID CHARGE_ID` | remaining returnable quantity and the reviewed charge/item revisions. |
-| `repairs return-part ID CHARGE_ID --repair-revision R --item-revision R --quantity Q --reason TEXT --key K` | put stock back; keeps the charge and total. |
+| `repairs return-part ID CHARGE_ID --repair-revision R --item-revision R --quantity Q --reason TEXT --key K` | put stock back; billed quantity drops by the same amount at the charge price. |
 | `repairs intake-mistake ID CHARGE_ID --repair-revision R --item-revision R --charge-revision R --reason TEXT --key K` | return all remaining consumption and hide the charge. |
 | `repairs discount ID --revision R --key K --kind none|amount|percent [--value V]` | `--revision` is the **discount** revision (`0` before the first discount), not the repair revision. Value is EUR for `amount`, whole points for `percent`, `0` for `none`. |
 | `repairs fees ID --revision R --key K [--diagnosis EUR] [--repair EUR] [--discount EUR]` | set the two protected fees and/or an amount discount; bumps the repair revision. Diagnosis defaults to the shop setting until first saved. |

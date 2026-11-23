@@ -29,7 +29,7 @@
     <table>
       <thead><tr><th scope="col">{{ _('Description') }}</th><th scope="col" class="numeric">{{ _('Quantity') }}</th><th scope="col" class="numeric">{{ _('Unit price') }}</th><th scope="col" class="numeric">{{ _('Total') }}</th></tr></thead>
       <tbody>
-        {% for item in view.charges['items'] %}<tr><td>{{ item.description }}</td><td class="numeric">{{ item.quantity_milli|milli }} {{ item.unit }}</td><td class="numeric">{{ item.unit_price_cents|cents }}</td><td class="numeric">{{ item.line_total_cents|cents }}</td></tr>{% endfor %}
+        {% for item in view.charges['items'] %}<tr><td>{{ item.description }}</td><td class="numeric">{{ item.quantity_milli|milli }} {{ _(item.unit) }}</td><td class="numeric">{{ item.unit_price_cents|cents }}</td><td class="numeric">{{ item.line_total_cents|cents }}</td></tr>{% endfor %}
       </tbody>
       <tfoot>
         <tr><th scope="row" colspan="3">{{ _('Parts') }}</th><td class="numeric">{{ view.charges.parts_subtotal_cents|cents }}</td></tr>

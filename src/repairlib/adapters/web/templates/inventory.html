@@ -102,12 +102,12 @@
                     <td>{{ item.category or '—' }}</td>
                     <td>{{ item.bin or '—' }}</td>
                     <td class="obi-number">
-                      {{ item.on_hand_milli|milli }} {{ item.unit }}
+                      {{ item.on_hand_milli|milli }} {{ _(item.unit) }}
                       {% if not item.archived_at and item.on_hand_milli <= item.low_stock_milli %}
                         <span class="obi-row-detail">{{ ui.status('Out of stock' if item.on_hand_milli == 0 else 'Low stock', 'warning') }}</span>
                       {% endif %}
                     </td>
-                    <td class="obi-number">{{ item.low_stock_milli|milli }} {{ item.unit }}</td>
+                    <td class="obi-number">{{ item.low_stock_milli|milli }} {{ _(item.unit) }}</td>
                     <td class="obi-number">{{ item.selling_price_cents|cents }}</td>
                     {% if can_write %}<td class="obi-number">{{ '—' if item.purchase_cost_cents is none else item.purchase_cost_cents|cents }}</td>{% endif %}
                   </tr>

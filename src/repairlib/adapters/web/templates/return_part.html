@@ -4,9 +4,9 @@
 {% block content %}
   <h2>{{ review.description }}</h2>
   <dl class="record-details">
-    <dt>{{ _('Originally consumed') }}</dt><dd>{{ review.consumed_quantity_milli|milli }} {{ review.unit }}</dd>
-    <dt>{{ _('Remaining to return') }}</dt><dd>{{ review.remaining_quantity_milli|milli }} {{ review.unit }}</dd>
-    <dt>{{ _('On hand') }}</dt><dd>{{ review.on_hand_milli|milli }} {{ review.unit }}</dd>
+    <dt>{{ _('Originally consumed') }}</dt><dd>{{ review.consumed_quantity_milli|milli }} {{ _(review.unit) }}</dd>
+    <dt>{{ _('Remaining to return') }}</dt><dd>{{ review.remaining_quantity_milli|milli }} {{ _(review.unit) }}</dd>
+    <dt>{{ _('On hand') }}</dt><dd>{{ review.on_hand_milli|milli }} {{ _(review.unit) }}</dd>
   </dl>
   {% if error %}
     <p class="obi-notice" role="alert" id="form-error">{{ _(error) }}</p>
@@ -24,7 +24,7 @@
       {% if combined %}
         <p>{{ _('Removes the whole charge and returns all remaining quantity from this consumption.') }}</p>
       {% else %}
-        <p>{{ _('Returns stock and leaves the charge as recorded.') }}</p>
+        <p>{{ _('Returns stock and takes the same quantity off the bill at the charge price.') }}</p>
       {% endif %}
       <form method="post" action="{{ request.url_for(action, repair_id=repair_id, charge_id=charge_id).path }}"{% if attempted == action %} aria-describedby="form-error"{% endif %}>
         {% for field in ('csrf', 'key', 'repair_revision', 'item_revision') %}

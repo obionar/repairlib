@@ -88,7 +88,7 @@ API: `POST /api/v1/repairs/{repair_id}/consume-part` with integer `item_id`, `re
 
 Open the part's charge from **Parts used**. Editing billed quantity, price or notes, or removing/restoring the charge, changes billing only; the original description, unit, cost and consumed quantity stay attached. CLI: `edit-charge`, `delete-charge`, `restore-charge`; an archived item can still have billing corrected on an active repair.
 
-- **Review physical return** shows the remaining quantity; **Return physical part** returns all or part against that charge's original consumption (not above what remains) and leaves billing unchanged. The ledger shows the positive return with the original movement number.
+- **Review physical return** shows the remaining quantity; **Return physical part** returns all or part against that charge's original consumption (not above what remains) and takes the same quantity off the bill at the charge's unit price; a line billed to zero is removed. The ledger shows the positive return with the original movement number.
 - **Intake mistake: remove charge and return part** removes the charge and returns its remaining quantity in one transaction. Both return actions need a reason and an active item and repair.
 - Generic **Reverse** applies only to receipts and adjustments. If stock changed after you opened a movement page, review the latest balance and your drafted reason, then **Review and reverse**; you return to the movement page.
 

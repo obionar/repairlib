@@ -19,7 +19,7 @@
             {% for item in part_results.items %}
               <li>
                 <div class="rl-part-name"><strong>{{ item.description }}</strong>
-                  <span class="obi-muted">{{ item.sku }} · {{ _('On hand') }} {{ item.on_hand_milli|milli }} {{ item.unit }} · {{ item.selling_price_cents|cents }} €</span></div>
+                  <span class="obi-muted">{{ item.sku }} · {{ _('On hand') }} {{ item.on_hand_milli|milli }} {{ _(item.unit) }} · {{ item.selling_price_cents|cents }} €</span></div>
                 {% if item.on_hand_milli > 0 %}
                   <form method="post" action="{{ request.url_for('consume_part', repair_id=repair.id, item_id=item.id).path }}" class="rl-part-use">
                     <input type="hidden" name="csrf" value="{{ part_csrf[item.id] }}">
@@ -63,7 +63,7 @@
     <div class="obi-panel-body rl-used-parts">
       <ul class="customer-list">
         {% for item in used_parts %}
-          <li>{{ item.description }} · ×{{ (item.consumed_quantity_milli or item.quantity_milli)|milli }} {{ item.unit }} · {{ item.unit_price_cents|cents }} €</li>
+          <li>{{ item.description }} · ×{{ (item.consumed_quantity_milli or item.quantity_milli)|milli }} {{ _(item.unit) }} · {{ item.unit_price_cents|cents }} €</li>
         {% endfor %}
       </ul>
       {% set stocked = used_parts|selectattr('movement_id')|list %}
@@ -72,7 +72,7 @@
           <summary>{{ _('Return to stock') }}</summary>
           <ul class="obi-link-list">
             {% for item in stocked %}
-              <li><a href="{{ request.url_for('return_part_review', repair_id=repair.id, charge_id=item.id).path }}">{{ item.description }} · {{ item.consumed_quantity_milli|milli }} {{ item.unit }} · #{{ item.id }}</a></li>
+              <li><a href="{{ request.url_for('return_part_review', repair_id=repair.id, charge_id=item.id).path }}">{{ item.description }} · {{ item.consumed_quantity_milli|milli }} {{ _(item.unit) }} · #{{ item.id }}</a></li>
             {% endfor %}
           </ul>
         </details>

@@ -45,7 +45,7 @@ class AdminStatusTests(TokenFixture, unittest.TestCase):
         with self.client() as client:
             self.sign_in(client)
             page = client.get(SYSTEM).text
-            for label in ("Schema", "Workspace", "Last verified backup", "Printer", "Sessions"):
+            for label in ("Schema", "Workspace", "Printer", "Sessions"):
                 self.assertIn(label, page)
             self.assertIn(str(self.workspace), page)
             self.assertNotIn(name, page)

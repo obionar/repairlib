@@ -392,7 +392,7 @@ class PortableShopTests(TokenFixture, unittest.TestCase):
                              {"items_checked": 1, "mismatches": [], "issues": []})
             self.assertEqual(get("/inventory/2").json()["on_hand_milli"], 4250)
             summary = get("/repairs/2/charges?include_consumption=true").json()
-            self.assertEqual(summary["total_cents"], 2699)
+            self.assertEqual(summary["total_cents"], 2249)  # 1.25 billed after the 0.25 return, less 10%
             self.assertEqual(summary["items"][0]["inventory_item_id"], 2)
             settings = get("/settings").json()
             self.assertEqual((settings["name"], settings["timezone"], settings["revision"]),

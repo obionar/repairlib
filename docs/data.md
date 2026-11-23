@@ -130,19 +130,7 @@ repairlib backup snapshot --online --workspace "$repairlib_workspace" \
 
 `--online` takes the shared maintenance lock, so it runs beside a working app but is refused while an exclusive operation such as an update holds the lock. It reads the running database through a read-only SQLite connection and copies it with SQLite's backup API: committed transactions still in the WAL are included, uncommitted writes are not. If a writer keeps the database busy for 30 seconds the snapshot is refused and no output file is left. The result is verified and published like a stopped snapshot. It holds the database only, not attachment originals; use `backup create` while stopped for a full archive.
 
-### Daily online snapshots
-
-`backup schedule` takes the online snapshot when the newest one in `<workspace>-backups` (beside the workspace) is a day old, deletes snapshots older than 14 days and always keeps the newest. It does nothing while the last snapshot is current, so hourly cron or a systemd timer is safe:
-
-```sh
-repairlib backup schedule --workspace "$repairlib_workspace"
-```
-
-```cron
-17 * * * * cd /path/to/repairlib && PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python3 -m repairlib backup schedule --workspace "$HOME/.local/state/repairlib"
-```
-
-`status`, `doctor` and the dashboard report the last verified snapshot and warn when it is older than 26 hours. Scheduled snapshots stay on the same disk, so keep the weekly `backup create` archive off the machine.
+Scheduling and copying backups off the machine is up to your own scripts: call `backup snapshot --online` (or `backup create` while stopped) and copy the output plus `state/files/`.
 
 The stopped snapshot and the archive hold the exclusive maintenance lock through publication; the online snapshot holds the shared lock. All verify the staged backup and publish it with owner-only POSIX permissions under a new name in an existing owner-only directory outside the workspace; the destination filesystem must support hard links. The database-only snapshot is unencrypted, sensitive and holds attachment metadata but not the files. Keep it owner-writable for verification. Both verification paths check supported prior schemas in place and leave the backup unchanged.
 

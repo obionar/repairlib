@@ -11,9 +11,9 @@ Every command here is run by the operator (or with the operator's explicit autho
 | `demo [--username owner]` | initialize a new synthetic demo workspace; password from stdin. Refuses to reuse a workspace. |
 | `demo reset --confirm` | while stopped, reseed the synthetic customers of a pristine demo; accounts and credentials are preserved. |
 | `dev [--host 127.0.0.1] [--port 8000] [--browser-setup]` | run the loopback development server; `--browser-setup` prints a one-time setup link on an interactive terminal. |
-| `status [--json]` | workspace state, schema vs expected, disk free, backup state, counts, and update phase when launched through the installer. Exit 1 when the workspace is initialized but not ready. |
+| `status [--json]` | workspace state, schema vs expected, disk free, counts, and update phase when launched through the installer. Exit 1 when the workspace is initialized but not ready. |
 | `doctor` | read-only diagnosis: schema compatibility, disk, SQLite integrity/foreign keys, retained attachments, staging/orphans. Exit 3 for an unhealthy workspace. |
-| `profile check [--json]` | pre-write facts an agent needs: path, state, schema, backup verification, local identity/role, server. Exit 1 for any blocker — do not write until it exits 0. |
+| `profile check [--json]` | pre-write facts an agent needs: path, state, schema, local identity/role, server. Exit 1 for any blocker — do not write until it exits 0. |
 | `migrate [--backup ARTIFACT]` | upgrade an initialized workspace explicitly. A verified backup of the current schema may be required with `--backup`; use `backup create` first on real data. |
 | `cleanup` | while stopped, remove stale upload staging, expired sessions and old request receipts. |
 | `reconcile-files [--json]` | while stopped, remove never-committed uploads and verify attachment bytes; damaged files are reported and exit 2. |
@@ -40,7 +40,6 @@ repairlib backup restore  "$XDG_BACKUP_DIR/shop.zip" --workspace "$NEW_WS"
 | Command | Notes |
 |---|---|
 | `backup snapshot --output FILE [--online]` | database-only verified snapshot; `--online` copies a running shop through SQLite's backup API. Stopped by default. |
-| `backup schedule` | take the daily online snapshot when it is due (used by the service timer). |
 | `backup create --output FILE` | stopped workspace archive including retained attachment files. |
 | `backup verify ARTIFACT` | verify an archive or standalone snapshot; prints its kind and schema. |
 | `backup restore ARTIFACT --workspace NEW` | restore a verified archive only into a new destination; never overwrites. |

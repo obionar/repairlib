@@ -16,7 +16,6 @@ from repairlib.doctor import SQLITE_POLICY, SQLITE_POLICY_LINE, diagnose_workspa
 from repairlib.lifecycle.backup_archive import (
     create_archive, restore_archive, verify_backup, verify_restore_point,
 )
-from repairlib.lifecycle.backup_schedule import backup_line, backup_state, scheduled_snapshot
 from repairlib.lifecycle.checkout import CheckoutError
 from repairlib.lifecycle.operations import cleanup_workspace, local_status, reset_demo_workspace
 from repairlib.lifecycle.profile import profile_check, profile_lines
@@ -120,9 +119,6 @@ def register_workspace_commands(commands) -> None:
     snapshot.add_argument("--output", type=Path, required=True)
     snapshot.add_argument("--online", action="store_true",
                           help="copy a running workspace through SQLite's backup API")
-    schedule = backup_commands.add_parser(
-        "schedule", help="take the daily online snapshot when it is due")
-    schedule.add_argument("--workspace", default=None)
     archive = backup_commands.add_parser("create", help="archive the stopped workspace and retained files")
     archive.add_argument("--workspace", default=None)
     archive.add_argument("--output", type=Path, required=True)
@@ -179,9 +175,8 @@ def print_update_state(state: dict) -> None:
 
 def run_status(args, update_state: dict | None) -> int:
     workspace = resolve_workspace(args.workspace)
-    report = {**local_status(workspace,
-                             writes_closed=update_state is not None and not update_state["writes_open"]),
-              "backup": backup_state(workspace)}
+    report = local_status(workspace,
+                          writes_closed=update_state is not None and not update_state["writes_open"])
     if args.json:
         print(json.dumps({**report, **(update_state or {}), "sqlite": SQLITE_POLICY}))
     else:
@@ -193,7 +188,6 @@ def run_status(args, update_state: dict | None) -> int:
               f"(expected {report['expected_schema_version']})")
         print(SQLITE_POLICY_LINE)
         print(disk_space_line(report["disk_free_bytes"]))
-        print(backup_line(report["backup"]))
         if report["ready"]:
             print(f"Customers: {report['customers']}, repairs: {report['repairs']}")
             print(f"Synthetic demo seeded: {'yes' if report['demo_seeded'] else 'no'}")
@@ -250,10 +244,6 @@ def run_backup(args) -> int:
         version = snapshot_workspace(resolve_workspace(args.workspace), args.output.expanduser(),
                                      online=args.online)
         print(f"Verified SQLite snapshot saved (schema {version}).")
-    elif args.backup_command == "schedule":
-        taken = scheduled_snapshot(resolve_workspace(args.workspace))
-        print(f"Verified online snapshot saved: {taken}" if taken
-              else "A verified snapshot is already current.")
     elif args.backup_command == "create":
         version = create_archive(resolve_workspace(args.workspace), args.output.expanduser())
         print(f"Backup archive saved (schema {version}).")

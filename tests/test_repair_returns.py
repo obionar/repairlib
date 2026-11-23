@@ -64,6 +64,18 @@ class ReturnTests(unittest.TestCase):
         return charges.correct_charge(self.workspace, self.tech, self.first.id, current.id,
                                       ChargePatch(**(patch | changes)), key=key)
 
+    def test_physical_return_credits_the_bill_at_the_charge_price(self):
+        first = self.physical()
+        self.assertEqual(first, self.physical())
+        self.assertEqual((first.charge.quantity_milli, first.charge.unit_price_cents, first.charge.revision,
+                          first.charge.deleted, first.totals.total_cents), (500, 1999, 2, False, 1000))
+        rest = self.physical("rest", item_revision=4, quantity_milli=1000)
+        self.assertEqual((rest.charge.quantity_milli, rest.charge.deleted, rest.totals.total_cents,
+                          rest.remaining_quantity_milli), (500, True, 0, 2000))
+        self.assertEqual(self.snapshot(
+            "SELECT json_extract(changes, '$.billed_quantity_milli.after'), json_extract(changes, '$.total_cents.after') "
+            "FROM audit_events WHERE operation='inventory.return' ORDER BY id"), [(500, 1000), (0, 0)])
+
     def test_billing_only_free_remove_restore_and_physical_return(self):
         before = self.state()
         self.refused("inventory_linked", lambda: self.correction(description="Rewrite snapshot"))
@@ -93,7 +105,7 @@ class ReturnTests(unittest.TestCase):
         self.assertEqual(self.visibility(3, False), restored)
         self.assertEqual(self.state()[1:4], stock_after_return)
         physical2 = self.physical("part-two", item_revision=4, quantity_milli=1000)
-        self.assertEqual(physical2.remaining_quantity_milli, 2000)
+        self.assertEqual((physical2.remaining_quantity_milli, physical2.charge.deleted), (2000, True))
         before = self.state()
         for movement_id in (self.charge.movement_id, physical.stock.movement.id):
             self.refused("not_reversible", lambda: stock.reverse_movement(
@@ -129,12 +141,12 @@ class ReturnTests(unittest.TestCase):
         before = self.state()
         self.refused("discount_exceeds_subtotal", self.combined)
         self.assertEqual(self.state(), before)
-        partial = self.physical()
-        self.assertEqual(partial.totals.total_cents, 2899)
+        partial = self.physical()  # 1.5 billed - 1 returned = 0.5 x 19.99, less the 1.00 discount
+        self.assertEqual(partial.totals.total_cents, 900)
         charges.set_discount(self.workspace, self.tech, self.first.id,
                              DiscountChange(1, "none", 0), key="clear")
-        done = self.combined(item_revision=4)
-        self.assertEqual(done, self.combined(item_revision=4))
+        done = self.combined(item_revision=4, charge_revision=2)
+        self.assertEqual(done, self.combined(item_revision=4, charge_revision=2))
         self.assertEqual((done.stock.movement.quantity_milli, done.stock.item.on_hand_milli,
                           done.remaining_quantity_milli, done.totals.total_cents), (3000, 5000, 0, 0))
         self.assertTrue(done.charge.deleted)
@@ -289,12 +301,12 @@ class ReturnAdapterTests(TokenFixture, unittest.TestCase):
             self.assertEqual(client.post(web_return, data=web_form | {
                 "csrf": "invalid", "quantity": "1", "reason": "Spare"}).status_code, 403)
             physical = ("repairs", "return-part", str(repair_id), str(charge_id), "--repair-revision", "1",
-                        "--item-revision", "3", "--quantity", "1", "--reason", "Spare", "--key", "physical", "--json")
+                        "--item-revision", "3", "--quantity", "0.5", "--reason", "Spare", "--key", "physical", "--json")
             result = cli(*physical)
             self.assertEqual(result, cli(*physical))
-            self.assertEqual((result["stock"]["item"]["on_hand_milli"], result["remaining_quantity_milli"]),
-                             (3000, 2000))
-            payload = {"repair_revision": 1, "charge_revision": 5, "item_revision": 4, "reason": "Intake error"}
+            self.assertEqual((result["stock"]["item"]["on_hand_milli"], result["remaining_quantity_milli"],
+                              result["charge"]["quantity_milli"]), (2500, 2500, 500))
+            payload = {"repair_revision": 1, "charge_revision": 6, "item_revision": 4, "reason": "Intake error"}
             mistake = f"{base}/intake-mistake"
 
             def lose_response(response):
@@ -315,7 +327,7 @@ class ReturnAdapterTests(TokenFixture, unittest.TestCase):
             self.assertEqual(done, send(mistake, payload, "mistake").json())
             committed = self.snapshot("SELECT * FROM inventory_movements ORDER BY id")
             cli("repairs", "intake-mistake", str(repair_id), str(charge_id), "--repair-revision", "1",
-                "--charge-revision", "5", "--item-revision", "4", "--reason", "Intake error",
+                "--charge-revision", "6", "--item-revision", "4", "--reason", "Intake error",
                 "--key", "mistake", "--json", code=7)
             self.assertEqual(self.snapshot("SELECT * FROM inventory_movements ORDER BY id"), committed)
             self.assertEqual(send(mistake, payload | {"reason": "Changed"}, "mistake").status_code, 409)
@@ -326,7 +338,7 @@ class ReturnAdapterTests(TokenFixture, unittest.TestCase):
             self.assertEqual(live.pop("items"), [done["charge"]])
             self.assertEqual(live, done["totals"])
             self.assertEqual((done["charge"]["consumed_quantity_milli"], done["charge"]["quantity_milli"],
-                              done["charge"]["deleted"]), (3000, 1000, True))
+                              done["charge"]["deleted"]), (3000, 500, True))
             self.assertEqual(self.snapshot(
                 "SELECT kind, quantity_milli FROM inventory_movements ORDER BY id"),
-                [("receive", 5000), ("consume", -3000), ("return", 1000), ("return", 2000)])
+                [("receive", 5000), ("consume", -3000), ("return", 500), ("return", 2500)])

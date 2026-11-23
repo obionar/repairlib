@@ -87,7 +87,7 @@ def consume_for_repair(workspace: Path, access: CustomerAccess, repair_id: int, 
         updated, movement = append_movement(db, principal, item, "consume", -quantity, "")
         charge = billing.append_charge(db, principal, repair.id, values)
         charges.link_consumption(db, principal.shop_id, charge.id, movement.id)
-        heading = f"Part used: {item.description} × {money.format_milli(quantity)} {item.unit}"
+        heading = billing.part_used(billing.shop_text(db, principal.shop_id), item.description, quantity, item.unit)
         kind, body = normalize_entry("work", f"{heading}\n{work_note}" if work_note else heading)
         entry = repairs.insert_entry(db, principal, repair.id, kind, body)
         charge = replace(charge, inventory_item_id=item.id, movement_id=movement.id,
@@ -191,9 +191,12 @@ def _return_part(workspace, access, repair_id, charge_id, change, key, *, quanti
         before = billing.build_summary(db, principal, repair.id)
         applied = StockChange(*append_movement(
             db, principal, item, "return", returned, reason, charge.movement_id))
+        billed = charge.quantity_milli
         if combined:
             charge = billing.apply_charge_visibility(db, principal, charge, change.charge_revision, True)
-        after = billing.build_summary(db, principal, repair.id) if combined else before
+        elif not charge.deleted:
+            charge = credit_return(db, principal, charge, returned)
+        after = billing.build_summary(db, principal, repair.id)
         totals = ChargeTotals(**{field.name: getattr(after, field.name) for field in fields(ChargeTotals)})
         result = PartReturnResult(applied, charge, totals, remaining - returned)
         stock.save_result(db, principal, operation, key, fingerprint, applied.movement.id, result)
@@ -203,9 +206,22 @@ def _return_part(workspace, access, repair_id, charge_id, change, key, *, quanti
             "on_hand_milli": {"before": item.on_hand_milli, "after": applied.item.on_hand_milli},
             "total_cents": {"before": before.total_cents, "after": after.total_cents},
             "reason": reason, **({"deleted": {"before": False, "after": True},
-                                  "charge_revision": charge.revision} if combined else {}),
+                                  "charge_revision": charge.revision} if combined else {
+                "billed_quantity_milli": {"before": billed, "after": 0 if charge.deleted else charge.quantity_milli}}),
         })
         return result
+
+
+def credit_return(db, principal, charge: Charge, returned: int) -> Charge:
+    """Take the returned quantity off the bill at the charge's own price; nothing left removes the line."""
+    billed = charge.quantity_milli - returned
+    if billed <= 0:
+        return billing.apply_charge_visibility(db, principal, charge, charge.revision, True)
+    values = {name: getattr(charge, name) for name in charges.FIELDS} | {"quantity_milli": billed}
+    updated = charges.update(db, principal.shop_id, charge, values)
+    if updated is None:
+        raise StockError(409, "stale_revision", "The charge changed. Review the latest version.")
+    return updated
 
 
 def receive_stock(workspace: Path, access: CustomerAccess, item_id: int, quantity_milli: int, *,

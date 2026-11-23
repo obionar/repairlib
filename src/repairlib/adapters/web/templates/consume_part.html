@@ -16,7 +16,7 @@
     {% endif %}
     <h2>{{ item.sku }} · {{ item.description }}</h2>
     <dl class="record-details">
-      <dt>{{ _('On hand') }}</dt><dd>{{ item.on_hand_milli|milli }} {{ item.unit }}</dd>
+      <dt>{{ _('On hand') }}</dt><dd>{{ item.on_hand_milli|milli }} {{ _(item.unit) }}</dd>
     </dl>
     <form method="post" action="{{ request.url_for('consume_part', repair_id=repair.id, item_id=item.id).path }}{{ query }}"{% if error %} aria-describedby="form-error"{% endif %}>
       <input type="hidden" name="csrf" value="{{ csrf }}">
@@ -55,7 +55,7 @@
             <ul class="customer-list">
               {% for part in page.items %}
                 <li><a href="{{ request.url_for('review_part', repair_id=repair.id, item_id=part.id).path }}{{ query }}">{{ part.sku }} · {{ part.description }}</a>
-                  <span>{{ _('On hand') }} · {{ part.on_hand_milli|milli }} {{ part.unit }}</span></li>
+                  <span>{{ _('On hand') }} · {{ part.on_hand_milli|milli }} {{ _(part.unit) }}</span></li>
               {% endfor %}
             </ul>
           </div>

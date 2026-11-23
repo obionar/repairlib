@@ -4,7 +4,7 @@ from dataclasses import fields, replace
 from datetime import UTC, datetime
 from pathlib import Path
 
-from repairlib import money
+from repairlib import i18n, money
 from repairlib.contracts import (
     Charge, ChargeInput, ChargePatch, ChargeSummary, ChargeVisibility, DiscountChange,
 )
@@ -131,6 +131,16 @@ def append_charge(db, principal, repair_id: int, values: dict) -> Charge:
 PROTECTED = {"diagnosis": "Diagnosis", "labor": "Labour"}
 
 
+def shop_text(db, shop_id: int):
+    """Text the app writes onto a ticket uses the shop's language (D6); English when unset."""
+    return i18n.translator(shop_settings.find(db, shop_id).language or i18n.DEFAULT)
+
+
+def part_used(say, description: str, quantity_milli: int, unit: str) -> str:
+    return say("Part used: {part} × {quantity} {unit}", part=description,
+               quantity=money.format_milli(quantity_milli), unit=say(unit))
+
+
 def ticket_fees(workspace: Path, access: RepairAccess, repair_id: int):
     with authorized(workspace, access) as (db, principal, _, can_write):
         repair = find_repair(db, principal.shop_id, repair_id)
@@ -185,12 +195,14 @@ def set_fees(workspace: Path, access: RepairAccess, repair_id: int, *, diagnosis
         if current.revision != revision:
             raise RepairError(409, "stale_revision", "The repair changed. Review the latest version.")
         changes = {}
+        say = shop_text(db, principal.shop_id)
         charged = repairs.fee_charge_ids(db, principal.shop_id, repair_id)
         for name, amount in (("diagnosis", diagnosis), ("labor", labor)):
             if amount is None:
                 continue
-            values = normalize(ChargeInput(kind="labor", description=PROTECTED[name],
-                                           quantity_milli=1000, unit_price_cents=amount))
+            values = normalize(ChargeInput(kind="labor", description=say(PROTECTED[name]),
+                                           unit=say(DEFAULT_UNITS["labor"]), quantity_milli=1000,
+                                           unit_price_cents=amount))
             charge_id = charged.get(name)
             existing = (find_charge(db, principal.shop_id, repair_id, charge_id)
                         if charge_id is not None else None)
@@ -252,11 +264,14 @@ def create_charge(workspace: Path, access: RepairAccess, repair_id: int, details
         repair = find_unarchived_repair(db, principal.shop_id, repair_id)
         if part_revision is not None and repair.revision != part_revision:
             raise RepairError(409, "stale_revision", "The repair changed. Review the latest version.")
+        say = shop_text(db, principal.shop_id)
+        if not details.unit.strip():
+            values = values | {"unit": say(values["unit"])}
         created = append_charge(db, principal, repair_id, values)
         changes = {"repair_id": repair_id, **{k: v for k, v in values.items() if k != "notes"}}
         if part_revision is not None:
-            heading = f"Part used: {created.description} × {money.format_milli(created.quantity_milli)} {created.unit}"
-            kind, body = normalize_entry("work", heading)
+            kind, body = normalize_entry("work", part_used(say, created.description, created.quantity_milli,
+                                                          created.unit))
             changes["work_entry_id"] = repairs.insert_entry(db, principal, repair_id, kind, body).id
         charges.save_result(db, principal.shop_id, principal.user_id, operation, key, fingerprint,
                             repair_id, created)

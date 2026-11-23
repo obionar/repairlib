@@ -10,8 +10,8 @@
       <div class="obi-panel-body">
         <p><strong>{{ _('Review reversal of movement #{id}', id=reverse_target.id) }}</strong></p>
         <dl class="record-details">
-          <dt>{{ _('On hand') }}</dt><dd>{{ item.on_hand_milli|milli }} {{ item.unit }}</dd>
-          <dt>{{ _('Original quantity') }}</dt><dd>{{ '-' if reverse_target.quantity_milli < 0 }}{{ (reverse_target.quantity_milli|abs)|milli }} {{ item.unit }}</dd>
+          <dt>{{ _('On hand') }}</dt><dd>{{ item.on_hand_milli|milli }} {{ _(item.unit) }}</dd>
+          <dt>{{ _('Original quantity') }}</dt><dd>{{ '-' if reverse_target.quantity_milli < 0 }}{{ (reverse_target.quantity_milli|abs)|milli }} {{ _(item.unit) }}</dd>
           {% if reverse_target.reason %}<dt>{{ _('Original reason') }}</dt><dd>{{ reverse_target.reason }}</dd>{% endif %}
         </dl>
         {% if reverse_retry %}
@@ -37,14 +37,14 @@
   <p>{{ _('Revision {number}', number=item.revision) }}</p>
   <dl class="record-details">
     <dt>{{ _('SKU') }}</dt><dd>{{ item.sku }}</dd>
-    <dt>{{ _('On hand') }}</dt><dd>{{ item.on_hand_milli|milli }} {{ item.unit }}</dd>
+    <dt>{{ _('On hand') }}</dt><dd>{{ item.on_hand_milli|milli }} {{ _(item.unit) }}</dd>
     {% for field, label in [('description', _('Description')), ('category', _('Category')),
                             ('manufacturer', _('Manufacturer')), ('part_number', _('Part number')),
                             ('package', _('Package')), ('specifications', _('Specifications')),
                             ('bin', _('Bin')), ('unit', _('Unit'))] if item[field] %}
       <dt>{{ label }}</dt><dd class="customer-multiline">{{ item[field] }}</dd>
     {% endfor %}
-    <dt>{{ _('Low-stock threshold') }}</dt><dd>{{ item.low_stock_milli|milli }} {{ item.unit }}</dd>
+    <dt>{{ _('Low-stock threshold') }}</dt><dd>{{ item.low_stock_milli|milli }} {{ _(item.unit) }}</dd>
     {% if can_write %}<dt>{{ _('Purchase cost') }}</dt><dd>{{ '—' if item.purchase_cost_cents is none else item.purchase_cost_cents|cents }} €</dd>{% endif %}
     <dt>{{ _('Selling price') }}</dt><dd>{{ item.selling_price_cents|cents }} €</dd>
   </dl>
