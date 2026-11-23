@@ -1,6 +1,6 @@
 """Repair, work-entry, charge and attachment commands run against the local workspace."""
 
-from argparse import BooleanOptionalAction
+from argparse import Action, BooleanOptionalAction
 from contextlib import contextmanager
 from dataclasses import asdict
 import json
@@ -26,6 +26,15 @@ CHARGE_SUMMARY = TypeAdapter(ChargeSummary)
 STAGES = ("new", "in_progress", "waiting_parts", "lab_test", "customer_test", "repaired", "no_repair")
 
 
+class OneStage(Action):
+    """A second --stage used to replace the first silently; an agent then reported the wrong list."""
+
+    def __call__(self, parser, namespace, value, option_string=None):
+        if getattr(namespace, self.dest) is not None:
+            parser.error("give one --stage per command; run it again for the other stage")
+        setattr(namespace, self.dest, value)
+
+
 def add_common(command):
     add_workspace(command)
     command.add_argument("--json", action="store_true", help="print machine-readable JSON")
@@ -38,7 +47,7 @@ def register_repair_commands(commands) -> None:
     listing.add_argument("--limit", default=25, type=int)
     listing.add_argument("--before", type=int)
     listing.add_argument("--query", default="", help="search device, serial, issue or customer name")
-    listing.add_argument("--stage", choices=STAGES)
+    listing.add_argument("--stage", choices=STAGES, action=OneStage)
     listing.add_argument("--queue", choices=("open", "pickup"), default="")
     listing.add_argument("--picked-up", action=BooleanOptionalAction)
     listing.add_argument("--archived", action=BooleanOptionalAction)

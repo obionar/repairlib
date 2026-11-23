@@ -34,6 +34,10 @@ class CliReplyTests(TokenFixture, unittest.TestCase):
         self.assertEqual(missing.returncode, 8)
         self.assertIn("/nowhere/photo 1.jpg (No such file or directory)", missing.stderr)
 
+        twice = self.cli("list", "--stage", "lab_test", "--stage", "customer_test")
+        self.assertEqual(twice.returncode, 2)
+        self.assertIn("give one --stage per command", twice.stderr)
+
 
 if __name__ == "__main__":
     unittest.main()
