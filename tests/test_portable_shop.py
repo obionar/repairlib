@@ -21,6 +21,7 @@ from fastapi.testclient import TestClient
 
 from repairlib.app import create_app
 from repairlib.config import DISK_RESERVE_BYTES
+from repairlib.contracts import PortablePreview
 from repairlib.domain import portable_shop
 from repairlib.domain.users import ensure_local_actor
 from repairlib.domain.setup import initialize_workspace
@@ -185,7 +186,8 @@ class PortableShopTests(TokenFixture, unittest.TestCase):
             self.assertEqual((manifest["format"], manifest["schema"]), ("repairlib-portable-shop-1", 21))
             self.assertEqual(manifest["source_shop"], {"id": 1, "name": "Synthetic"})
             self.assertEqual(preview, {k: manifest[k] for k in ("format", "schema", "source_shop", "counts")}
-                             | {"attachment_files": 2, "attachment_bytes": len(ORIGINAL) + len(DETACHED)})
+                             | {"attachment_files": 2, "attachment_bytes": len(ORIGINAL) + len(DETACHED),
+                                "omitted": list(PortablePreview.omitted)})
             self.assertEqual(manifest["counts"], {name: len(rows) for name, rows in records.items()})
             self.assertEqual(manifest["files"], {
                 name: file_record(archive.read(name)) for name in archive.namelist() if name != "manifest.json"

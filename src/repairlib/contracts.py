@@ -776,6 +776,12 @@ class PortablePreview:
     counts: dict[str, int]
     attachment_files: int
     attachment_bytes: int
+    # What format 1 cannot carry. A portable transfer is not a complete move; use a full backup for that.
+    omitted: tuple[str, ...] = (
+        "payment status", "which charge lines are the diagnosis and repair fees (re-entering fees adds "
+        "duplicate charge lines)", "which attachment is the device photo", "warranty dates and return links",
+        "shop address, phone, terms and default language",
+    )
 
 
 

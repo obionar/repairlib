@@ -10,6 +10,7 @@ from tempfile import TemporaryDirectory
 
 from repairlib.cli.common import add_revision, add_workspace
 from repairlib.client import local
+from repairlib.contracts import PortablePreview
 from repairlib.lifecycle.recovery import publish_backup, require_private
 from repairlib.lifecycle.workspace import WorkspaceError
 
@@ -82,6 +83,9 @@ def run_portable_command(args) -> int:
                 *(f"{table}\t{count}" for table, count in result["counts"].items()),
             ])
         print(json.dumps(result, ensure_ascii=False) if args.json else summary)
+        if args.portable_action != "preview" or not args.json:
+            print("Format 1 does not carry: " + "; ".join(PortablePreview.omitted)
+                  + ". For a complete move use a full backup.", file=sys.stderr)
     except WorkspaceError:
         print("portable: The workspace is not available.", file=sys.stderr)
         return 3
