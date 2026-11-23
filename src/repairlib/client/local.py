@@ -331,8 +331,8 @@ def change_repair_flag(ctx, repair_id, flag, details, key) -> Repair:
     return run(ctx, repairs.change_repair_flag, repair_id, parse(RepairFlagChange, details), key=key, flag=flag)
 
 
-def list_work_entries(ctx, repair_id, *, limit, before) -> WorkEntryPage:
-    return run(ctx, repairs.list_work_entries, repair_id, before=before, limit=limit)[0]
+def list_work_entries(ctx, repair_id, *, limit, before, live_only=False) -> WorkEntryPage:
+    return run(ctx, repairs.list_work_entries, repair_id, before=before, limit=limit, live_only=live_only)[0]
 
 
 def create_work_entry(ctx, repair_id, details, key) -> WorkEntry:
@@ -435,7 +435,7 @@ def repair_brief(ctx, repair_id) -> RepairBrief:
     repair, names = repair_with_names(ctx, repair_id)
     return RepairBrief(repair=repair, customer=names["customer"], customer_phone=names["customer_phone"],
                        technician=names["technician"], next_stages=repairs.stage_options(repair.stage),
-                       recent_entries=list_work_entries(ctx, repair_id, limit=10, before=None).items,
+                       recent_entries=list_work_entries(ctx, repair_id, limit=10, before=None, live_only=True).items,
                        charges=charge_summary(ctx, repair_id))
 
 

@@ -406,12 +406,12 @@ def change_repair_flag(workspace: Path, access: RepairAccess, repair_id: int,
 
 
 def list_work_entries(workspace: Path, access: RepairAccess, repair_id: int, *,
-                      before: int | None = None, limit: int = 25):
+                      before: int | None = None, limit: int = 25, live_only: bool = False):
     if not 1 <= limit <= 100 or (before is not None and not 1 <= before <= MAX_ID):
         raise RepairError(422, "validation", "Invalid work-entry page.")
     with authorized(workspace, access) as (db, principal, _, can_write):
         find_repair(db, principal.shop_id, repair_id)
-        rows = repairs.list_entries(db, principal.shop_id, repair_id, before, limit + 1)
+        rows = repairs.list_entries(db, principal.shop_id, repair_id, before, limit + 1, live_only=live_only)
     page = rows[:limit]
     return WorkEntryPage(page, page[-1].id if len(rows) > limit else None), can_write
 
