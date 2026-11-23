@@ -43,6 +43,7 @@ def create_app(
     *, workspace: str | Path | None = None, bootstrap_token: str | None = None,
     require_initialized: bool = False,
     listener_state: Callable[[], dict] | None = None, listener_id: str | None = None,
+    lan: bool = False,
 ) -> FastAPI:
     resolved = resolve_workspace(workspace)
     bootstrap = Bootstrap(bootstrap_token) if bootstrap_token else None
@@ -122,7 +123,8 @@ def create_app(
 
             try:
                 hosts = request.headers.getlist("host")
-                if len(hosts) != 1 or not loopback_authority.fullmatch(hosts[0]):
+                # LAN mode serves a closed shop network under whatever name staff devices use.
+                if len(hosts) != 1 or not (lan or loopback_authority.fullmatch(hosts[0])):
                     request.state.error_code = "invalid_host"
                     response = PlainTextResponse("Invalid host header", status_code=400)
                 elif (listener_state is not None and not listener_state()["writes_open"]

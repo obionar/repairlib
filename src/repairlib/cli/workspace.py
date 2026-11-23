@@ -74,6 +74,7 @@ def register_workspace_commands(commands) -> None:
     dev = commands.add_parser("dev", help="run the loopback development server")
     dev.add_argument("--workspace", default=None)
     dev.add_argument("--host", default="127.0.0.1")
+    dev.add_argument("--lan", action="store_true", help="listen on every network interface for a closed shop LAN (plain HTTP)")
     dev.add_argument("--port", type=int, default=8000)
     dev.add_argument("--browser-setup", action="store_true", help="print a one-time setup link")
 
@@ -84,6 +85,7 @@ def register_workspace_commands(commands) -> None:
     service.add_argument("--port", type=int, default=8000)
     service.add_argument("--openrc-system", action="store_true",
                          help="manage a root-supervised OpenRC system service that runs as this user")
+    service.add_argument("--lan", action="store_true", help="listen on every network interface for a closed shop LAN (plain HTTP)")
 
     links = commands.add_parser("links", help="link the repairlib command and the agent skill into this account")
     links.add_argument("--executable", type=Path, default=None,
@@ -305,7 +307,9 @@ def run_dev(args) -> int:
 
     from repairlib.app import create_app
 
-    if args.host not in LOOPBACK_BIND_HOSTS:
+    if args.lan:
+        args.host = "0.0.0.0"
+    elif args.host not in LOOPBACK_BIND_HOSTS:
         print("dev: choose a loopback host (127.0.0.1, localhost or ::1).", file=sys.stderr)
         return 1
     workspace = resolve_workspace(args.workspace)
@@ -324,7 +328,7 @@ def run_dev(args) -> int:
         print(f"Open the one-time setup link: http://{host}:{args.port}/setup/exchange?token={token}",
               flush=True)
     uvicorn.run(
-        create_app(workspace=workspace, bootstrap_token=token),
+        create_app(workspace=workspace, bootstrap_token=token, lan=args.lan),
         host=args.host,
         port=args.port,
         log_level="info",

@@ -72,7 +72,7 @@ def recovery_message(path: Path) -> str:
             "No data was restored automatically.")
 
 
-def stopped_or_running(repo: Path, target: tuple[Path, int, bool]) -> str:
+def stopped_or_running(repo: Path, target: tuple) -> str:
     observed = service_command(repo, "status", target).get("service")
     if observed not in {"running", "unready", "stopped"}:
         raise CheckoutError("The managed service is not confirmed running or stopped.")
@@ -112,7 +112,7 @@ def update_checkout(repo: Path, *, progress: Callable[[str], None] | None = None
         if before == after:
             return before, after, "unchanged", None
         target = service_target()
-        workspace, port, openrc = target
+        workspace, port, openrc, *_ = target
         validate_workspace(repo, workspace, after)
         restart = stopped_or_running(repo, target) != "stopped"
         recovery = Path(mkdtemp(prefix=".repairlib-recovery-", dir=repo.parent))

@@ -82,7 +82,7 @@ def run_service_command(args) -> int:
     from repairlib.lifecycle.service import run_service
 
     return run_service(args.action, resolve_workspace(args.workspace), args.port,
-                       openrc_system=args.openrc_system)
+                       openrc_system=args.openrc_system, lan=args.lan)
 
 
 def run_mcp_command(args) -> int:

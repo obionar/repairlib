@@ -265,7 +265,7 @@ def browser_routes(workspace: Path, bootstrap: Bootstrap | None, key: bytearray,
         token = setup_csrf(request, setup)
         check_csrf(request, form, token)
         fields = {name: form.get(name, "") for name in ("shop", "timezone", "username")}
-        with budget.attempt() as wait:
+        with budget.attempt(request) as wait:
             if wait:
                 return page(request, "Set up workspace", action="setup", csrf=token, fields=fields,
                             status=429, headers={"Retry-After": str(wait)},
@@ -310,7 +310,7 @@ def browser_routes(workspace: Path, bootstrap: Bootstrap | None, key: bytearray,
             return RedirectResponse(request.url_for("home").path, status_code=303)
         username = form.get("username", "")
         session_only = form.get("session_only") == "1"
-        with budget.attempt() as wait:
+        with budget.attempt(request) as wait:
             if wait:
                 return page(request, "Sign in", action="login", csrf=token, fields={"username": username},
                             session_only=session_only, status=429, headers={"Retry-After": str(wait)},

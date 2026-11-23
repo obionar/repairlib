@@ -6,6 +6,7 @@ from functools import lru_cache
 import json
 import os
 from pathlib import Path
+import re
 import shlex
 import subprocess
 import sys
@@ -96,7 +97,7 @@ def parse_service_target(text: str) -> tuple[Path, int] | None:
     return None
 
 
-def service_target() -> tuple[Path, int, bool]:
+def service_target() -> tuple[Path, int, bool, bool]:
     """Discover arguments only; the service CLI separately verifies exact registration."""
     from repairlib.lifecycle.service import OPENRC_INITD, OPENRC_SERVICE, UNIT, using_openrc
 
@@ -110,10 +111,12 @@ def service_target() -> tuple[Path, int, bool]:
             continue
         if path.is_symlink() or not path.is_file() or info.st_size > 65536:
             raise CheckoutError("Refusing an invalid service registration.")
-        parsed = parse_service_target(path.read_text(encoding="utf8"))
+        text = path.read_text(encoding="utf8")
+        parsed = parse_service_target(text)
         if parsed is None:
             raise CheckoutError("Could not read workspace and port from the registered service.")
-        targets.append((*parsed, openrc))
+        lan = re.search(r"(?m)^(?:ExecStart|command_args)=.*\s--lan\b", text) is not None
+        targets.append((*parsed, openrc, lan))
     if len(targets) != 1 or (not targets[0][2] and using_openrc()):
         raise CheckoutError("Automatic checkout updates require exactly one managed OpenRC or systemd user service.")
     return targets[0]
@@ -135,12 +138,13 @@ def version_text() -> str:
     return f"repairlib {base}" + (f" ({commit})" if commit else "")
 
 
-def service_command(repo: Path, action: str, target: tuple[Path, int, bool]) -> dict:
+def service_command(repo: Path, action: str, target: tuple) -> dict:
     """Use the service CLI's identity, supervisor, listener and health checks."""
-    workspace, port, openrc = target
+    workspace, port, openrc, *lan = target  # (workspace, port, openrc[, lan])
     done = subprocess.run(
         [sys.executable, "-I", "-B", str(repo / "bin" / "repairlib"), "service", action,
-         "--workspace", str(workspace), "--port", str(port)] + (["--openrc-system"] if openrc else []),
+         "--workspace", str(workspace), "--port", str(port)] + (["--openrc-system"] if openrc else [])
+        + (["--lan"] if any(lan) else []),
         capture_output=True, text=True,
     )
     try:

@@ -53,9 +53,10 @@ def quote_unit_arg(arg: str) -> str:
     return '"' + arg.replace("\\", "\\\\").replace('"', '\\"').replace("%", "%%") + '"'
 
 
-def foreground_args(workspace: Path, port: int, *, managed: bool = False) -> tuple[str, ...]:
+def foreground_args(workspace: Path, port: int, *, managed: bool = False,
+                    lan: bool = False) -> tuple[str, ...]:
     return ("service", "managed-foreground" if managed else "foreground",
-            "--workspace", str(workspace), "--port", str(port))
+            "--workspace", str(workspace), "--port", str(port), *(("--lan",) if lan else ()))
 
 
 def python_args(executable: Path, source: Path, boot: str) -> tuple[str, ...]:
@@ -221,7 +222,7 @@ def private_control(control: Path, *, create: bool) -> bool:
 
 
 def foreground(workspace: Path, port: int, *, listener_state: Callable[[], dict] | None = None,
-               listener_id: str | None = None) -> int:
+               listener_id: str | None = None, lan: bool = False) -> int:
     # Supervised restarts (including at boot) must not start a half-updated checkout.
     pending = SOURCE.parent / ".git" / PENDING
     if os.path.lexists(pending):
@@ -250,8 +251,9 @@ def foreground(workspace: Path, port: int, *, listener_state: Callable[[], dict]
 
     server = ServiceServer(uvicorn.Config(
         create_app(workspace=workspace, require_initialized=True,
-                   listener_state=listener_state, listener_id=listener_id),
-        host="127.0.0.1", port=port, log_level="info",
+                   listener_state=listener_state, listener_id=listener_id, lan=lan),
+        # LAN mode binds every IPv4 interface, loopback included, so local probes still answer.
+        host="0.0.0.0" if lan else "127.0.0.1", port=port, log_level="info",
         access_log=False, proxy_headers=False, ws="none",
     ))
     try:
@@ -276,10 +278,10 @@ def service_paths(workspace: Path) -> tuple[Path, Path]:
     return unit, control
 
 
-def manage(action: str, workspace: Path, port: int) -> int:
+def manage(action: str, workspace: Path, port: int, lan: bool = False) -> int:
     unit, control = service_paths(workspace)
     executable = check_path(Path(sys.executable), canonical=False)
-    contents = tuple(unit_bytes(launcher + foreground_args(workspace, port))
+    contents = tuple(unit_bytes(launcher + foreground_args(workspace, port, lan=lan))
                      for launcher in service_launchers(executable))
     state, version = workspace_schema(workspace)
     report = {
@@ -672,12 +674,12 @@ def publish_script(tool: str, script: Path, content: bytes, launcher: tuple[str,
     return lambda: privileged(tool, "rm", "-f", str(script))
 
 
-def manage_openrc(action: str, workspace: Path, port: int) -> int:
+def manage_openrc(action: str, workspace: Path, port: int, lan: bool = False) -> int:
     script, control = openrc_paths(workspace)
     executable = check_path(Path(sys.executable), canonical=False)
     user, group = current_identity()
     state, version = workspace_schema(workspace)
-    quoted = f"--workspace {shlex.quote(str(workspace))} --port {port}"
+    quoted = f"--workspace {shlex.quote(str(workspace))} --port {port}" + (" --lan" if lan else "")
     report = {
         "backend": "openrc", "script": str(script), "name": OPENRC_SERVICE,
         "runlevel": OPENRC_RUNLEVEL, "user": f"{user}:{group}", "pidfile": str(OPENRC_PIDFILE),
@@ -690,7 +692,7 @@ def manage_openrc(action: str, workspace: Path, port: int) -> int:
     }
     try:
         launchers = service_launchers(executable)
-        argv = foreground_args(workspace, port)
+        argv = foreground_args(workspace, port, lan=lan)
         registrations = {openrc_script(launcher + argv, user, group): launcher + argv for launcher in launchers}
         content = next(iter(registrations))
         preferred = registrations[content]
@@ -810,7 +812,8 @@ def ignored_in_checkout(workspace: Path, checkout: Path) -> bool:
     return done.returncode == 0
 
 
-def run_service(action: str, workspace: Path, port: int, *, openrc_system: bool = False) -> int:
+def run_service(action: str, workspace: Path, port: int, *, openrc_system: bool = False,
+                lan: bool = False) -> int:
     try:
         if sys.platform != "linux" or os.geteuid() == 0:
             raise WorkspaceError("Service commands require an unprivileged Linux user.")
@@ -826,10 +829,10 @@ def run_service(action: str, workspace: Path, port: int, *, openrc_system: bool 
         if overlaps(workspace, SOURCE.parent) and not ignored_in_checkout(workspace, SOURCE.parent):
             raise WorkspaceError("A workspace inside the checkout must be Git-ignored; add it to .gitignore.")
         if action == "foreground":
-            return foreground(workspace, port)
+            return foreground(workspace, port, lan=lan)
         if openrc_system:
-            return manage_openrc(action, workspace, port)
-        return manage(action, workspace, port)
+            return manage_openrc(action, workspace, port, lan)
+        return manage(action, workspace, port, lan)
     except (WorkspaceError, OSError, RuntimeError) as error:
         message = str(error) if isinstance(error, WorkspaceError) else "Could not safely access service or workspace paths."
         print(f"service {action}: {message}", file=sys.stderr)

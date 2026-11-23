@@ -73,25 +73,37 @@ class Bootstrap:
 
 
 class PasswordBudget:
-    """Bound Argon2 CPU and memory use across the loopback listener."""
+    """Bound Argon2 work: 5 checks a minute per client, 30 overall, 2 at once."""
+
+    PER_CLIENT = 5
+    OVERALL = 30
 
     def __init__(self):
-        self._starts = deque()
+        self._starts: dict[str, deque] = {}
         self._active = 0
         self._lock = Lock()
 
     @contextmanager
-    def attempt(self):
+    def attempt(self, request: Request):
+        client = request.client.host if request.client else ""
         with self._lock:
             now = monotonic()
-            while self._starts and now - self._starts[0] >= 60:
-                self._starts.popleft()
-            if len(self._starts) >= 5:
-                wait = max(1, ceil(60 - (now - self._starts[0])))
+            for name in list(self._starts):
+                starts = self._starts[name]
+                while starts and now - starts[0] >= 60:
+                    starts.popleft()
+                if not starts:
+                    del self._starts[name]
+            mine = self._starts.get(client, deque())
+            oldest = min((starts[0] for starts in self._starts.values()), default=now)
+            if len(mine) >= self.PER_CLIENT:
+                wait = max(1, ceil(60 - (now - mine[0])))
+            elif sum(map(len, self._starts.values())) >= self.OVERALL:
+                wait = max(1, ceil(60 - (now - oldest)))
             else:
                 wait = 1 if self._active >= 2 else 0
             if not wait:
-                self._starts.append(now)
+                self._starts.setdefault(client, deque()).append(now)
                 self._active += 1
         try:
             yield wait

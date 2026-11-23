@@ -55,7 +55,7 @@ def token_routes(workspace: Path, templates: Jinja2Templates, key: bytearray,
         kind = form.get("kind", "user")
         preset = form.get("preset", "") or None
         shown = {**fields, "kind": kind, "preset": preset or ""}
-        with budget.attempt() as wait:
+        with budget.attempt(request) as wait:
             if wait:
                 return listing(request, fields=shown, status=429, headers={"Retry-After": str(wait)},
                                error="Too many attempts. Wait a moment and try again.")
@@ -95,7 +95,7 @@ def token_routes(workspace: Path, templates: Jinja2Templates, key: bytearray,
         check_csrf(request, form, csrf)
         revision = form_int(form.get("revision", ""))
         request_key = form.get("key", "")
-        with budget.attempt() as wait:
+        with budget.attempt(request) as wait:
             if wait:
                 try:
                     token = tokens.read_token(workspace, session, now=int(time()), token_id=token_id,
