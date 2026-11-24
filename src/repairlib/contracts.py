@@ -556,7 +556,10 @@ class ChargeSummary(ChargeTotals):
 
 @dataclass(frozen=True)
 class RepairBrief:
-    """One read for an agent: the repair, who it is for, what can happen next and the money so far."""
+    # Pydantic does not consistently use stdlib dataclass docstrings in JSON Schema.
+    __pydantic_config__ = {"json_schema_extra": {
+        "description": "One read for an agent: the repair, who it is for, what can happen next and the money so far.",
+    }}
     repair: Repair
     customer: str
     customer_phone: str
