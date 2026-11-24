@@ -33,6 +33,20 @@ def list_for_repair(db, shop_id: int, repair_id: int) -> list[Charge]:
     return [record(row) for row in rows]
 
 
+def list_active_for_repairs(db, shop_id: int, repair_ids: tuple[int, ...]) -> list[Charge]:
+    """One bulk read for list output; per-line rounding stays in the shared money helper."""
+    if not repair_ids:
+        return []
+    placeholders = ", ".join("?" for _ in repair_ids)
+    rows = db.execute(
+        f"""SELECT {COLUMNS} FROM repair_charges
+        WHERE shop_id = ? AND repair_id IN ({placeholders}) AND deleted_at IS NULL
+        ORDER BY repair_id, id""",
+        (shop_id, *repair_ids),
+    )
+    return [record(row) for row in rows]
+
+
 def active_count(db, shop_id: int, repair_id: int) -> int:
     return db.execute("SELECT COUNT(*) FROM repair_charges WHERE shop_id = ? AND repair_id = ? "
                       "AND deleted_at IS NULL", (shop_id, repair_id)).fetchone()[0]
@@ -101,6 +115,18 @@ def discount(db, shop_id: int, repair_id: int) -> tuple[str, int, int]:
     row = db.execute("SELECT kind, value, revision FROM repair_discounts WHERE shop_id = ? AND repair_id = ?",
                      (shop_id, repair_id)).fetchone()
     return tuple(row) if row is not None else ("none", 0, 0)
+
+
+def discounts_for_repairs(db, shop_id: int, repair_ids: tuple[int, ...]) -> dict[int, tuple[str, int, int]]:
+    if not repair_ids:
+        return {}
+    placeholders = ", ".join("?" for _ in repair_ids)
+    rows = db.execute(
+        f"""SELECT repair_id, kind, value, revision FROM repair_discounts
+        WHERE shop_id = ? AND repair_id IN ({placeholders})""",
+        (shop_id, *repair_ids),
+    )
+    return {row[0]: tuple(row[1:]) for row in rows}
 
 
 def save_discount(db, shop_id: int, repair_id: int, kind: str, value: int, revision: int) -> bool:

@@ -603,11 +603,13 @@ def _show_activity(result, args, ctx):
     next_page_hint(result)
 
 
-def list_flags(item) -> str:
-    """Money and handover state on one line, so a list answers "unpaid" or "collected" without more reads.
+def list_flags(item, amount_owed_cents: int) -> str:
+    """Money and handover state on one line, so a list answers "who owes what" without more reads.
     The line also carries `rN`, the revision, so payment, pickup or a stage change need no extra read."""
     flags = [("paid" if item.payment_paid else "unpaid")] if item.stage in TERMINAL_REPAIR_STAGES else []
     flags += ["collected"] * bool(item.picked_up_at) + ["archived"] * bool(item.archived_at)
+    owed = 0 if item.payment_paid else amount_owed_cents
+    flags.append(f"owed {money.format_cents(owed)} EUR")
     return " ".join(flags)
 
 
@@ -615,6 +617,8 @@ def list_flags(item) -> str:
 def _show_page(result, args, ctx):
     if not result.items:  # empty stdout reads as a failed command to agents; scripts keep a clean stdout
         print("No matches.", file=sys.stderr)
+    amounts = (local.repair_booked_totals(ctx, [item.id for item in result.items])
+               if args.repair_action == "list" and result.items else {})
     for item in result.items:
         if isinstance(item, Attachment):
             state = "detached" if item.detached else "attached"
@@ -625,7 +629,7 @@ def _show_page(result, args, ctx):
         else:
             print("\t".join((str(item.id), item.device_type, " ".join(filter(None, (item.brand, item.model))),
                              item.stage, display_name(item.customer_name or ""), f"r{item.revision}",
-                             list_flags(item))).rstrip())
+                             list_flags(item, amounts[item.id]))).rstrip())
     next_page_hint(result)
 
 

@@ -282,6 +282,10 @@ def list_repairs(ctx, *, limit, before, query="", stage=None, picked_up=None, ar
                queue=queue, paid=paid)[0]
 
 
+def repair_booked_totals(ctx, repair_ids) -> dict[int, int]:
+    return whole(ctx, charges.booked_totals, tuple(repair_ids))
+
+
 def list_repair_lines(ctx, **filters) -> RepairLinePage:
     """list_repairs with each repair cut to the fields a list answer needs (about a ninth of the size)."""
     page = list_repairs(ctx, **filters)

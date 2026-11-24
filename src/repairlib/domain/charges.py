@@ -55,6 +55,17 @@ def visible(charge: Charge, principal) -> Charge:
     return charge if principal.role != "viewer" else replace(charge, unit_cost_cents=None)
 
 
+def discounted_total(subtotal: int, kind: str, value: int) -> tuple[int, int]:
+    try:
+        reduction = money.discount(kind, value, subtotal)
+    except ValueError as error:
+        raise RepairError(409, "discount_exceeds_subtotal",
+                          f"{error} Change the discount first.") from None
+    if subtotal > money.MAX_TOTAL:
+        raise RepairError(409, "total_out_of_range", "The repair total would be out of range.")
+    return reduction, subtotal - reduction
+
+
 def build_summary(db, principal, repair_id: int) -> ChargeSummary:
     items = charges.list_for_repair(db, principal.shop_id, repair_id)
     active = [item for item in items if not item.deleted]
@@ -64,19 +75,29 @@ def build_summary(db, principal, repair_id: int) -> ChargeSummary:
     diagnosis_id = repairs.fee_charge_ids(db, principal.shop_id, repair_id).get("diagnosis")
     diagnosis = next((item.unit_price_cents for item in active if item.id == diagnosis_id), 0)
     subtotal = parts + labor
-    try:
-        reduction = money.discount(kind, value, subtotal)
-    except ValueError as error:
-        raise RepairError(409, "discount_exceeds_subtotal",
-                          f"{error} Change the discount first.") from None
-    if subtotal > money.MAX_TOTAL:
-        raise RepairError(409, "total_out_of_range", "The repair total would be out of range.")
+    reduction, total = discounted_total(subtotal, kind, value)
     return ChargeSummary(
         items=[visible(item, principal) for item in items], parts_subtotal_cents=parts,
         labor_subtotal_cents=labor, subtotal_cents=subtotal, discount_kind=kind,
-        discount_value=value, discount_cents=reduction, total_cents=subtotal - reduction,
+        discount_value=value, discount_cents=reduction, total_cents=total,
         discount_revision=revision, diagnosis_cents=diagnosis,
     )
+
+
+def booked_totals(workspace: Path, access: RepairAccess, repair_ids: tuple[int, ...]) -> dict[int, int]:
+    """Booked totals for one already-authorized page, without a summary query per row."""
+    if not repair_ids:
+        return {}
+    subtotals = dict.fromkeys(repair_ids, 0)
+    with authorized(workspace, access) as (db, principal, _, _):
+        for item in charges.list_active_for_repairs(db, principal.shop_id, repair_ids):
+            subtotals[item.repair_id] += item.line_total_cents
+        discounts = charges.discounts_for_repairs(db, principal.shop_id, repair_ids)
+    totals = {}
+    for repair_id, subtotal in subtotals.items():
+        kind, value, _ = discounts.get(repair_id, ("none", 0, 0))
+        totals[repair_id] = discounted_total(subtotal, kind, value)[1]
+    return totals
 
 
 def replay(db, principal, operation: str, key: str, payload: dict, shape):
