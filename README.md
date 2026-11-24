@@ -33,6 +33,16 @@ Update with `bin/repairlib update`. Staff devices on a closed LAN: add `--lan`
 Try it first: [disposable workspace](docs/operations.md#initialize-a-workspace-in-the-browser)
 or [synthetic demo](docs/operations.md#initialize-an-isolated-synthetic-demo).
 
+## Screenshots
+
+The workshop dashboard, repair register, and a repair ticket. All records shown are fictional.
+
+![Workshop dashboard with open work and repairs awaiting pickup](docs/screenshots/repairlib-dashboard.png)
+
+![Repair register with search, status filters, and a list of appliance repairs](docs/screenshots/repairlib-repair-register.png)
+
+![Bosch washing-machine repair ticket with the fault, work log, part used, and payment](docs/screenshots/repairlib-repair-ticket.png)
+
 ## Guides
 
 | Task | Guide |
