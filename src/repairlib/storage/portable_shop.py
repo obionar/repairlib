@@ -1,8 +1,9 @@
-"""Schema-21 shop projections and isolated relational validation."""
+"""Portable shop projections (format 1 at schema 21, format 2 at schema 43) and isolated relational validation."""
 
 from contextlib import closing
 import json
 import sqlite3
+from typing import NamedTuple
 
 from repairlib.storage.initialization import apply_migration
 from repairlib.storage.stock import mismatches
@@ -56,6 +57,33 @@ COLUMNS = {
     "audit_events": "id shop_id actor_kind actor_user_id operation occurred_at actor_username source "
                     "entity_type entity_id changes",
 }
+# Format 2 pins schema 43 and adds what format 1 predates: shop contact, terms, language and the diagnosis
+# default; warranty dates, return links and payment status; the diagnosis and labour fee links; the device photo.
+ADDED_IN_2 = {
+    "shop_settings": " language address phone terms diagnosis_fee_cents",
+    "repairs": " warranty_until warranty_repair_id payment_paid",
+    "attachments": " role",
+}
+COLUMNS_2 = {}
+for _table, _columns in COLUMNS.items():
+    if _table in ("estimates", "estimate_lines"):
+        continue  # retired at schema 36; format 2 has no estimate tables
+    COLUMNS_2[_table] = _columns + ADDED_IN_2.get(_table, "")
+    if _table == "repair_discounts":
+        COLUMNS_2["repair_fees"] = "shop_id repair_id diagnosis_charge_id labor_charge_id diagnosis_saved"
+
+
+class Format(NamedTuple):
+    identity: str
+    schema: int
+    columns: dict
+
+
+FORMAT_1 = Format("repairlib-portable-shop-1", SCHEMA, COLUMNS)
+FORMAT_2 = Format("repairlib-portable-shop-2", 43, COLUMNS_2)
+FORMATS = {fmt.identity: fmt for fmt in (FORMAT_1, FORMAT_2)}
+CURRENT = FORMAT_2
+
 AUDIT_TARGETS = {
     "attachment": ("attachments", "id"),
     "charge": ("repair_charges", "id"),
@@ -86,10 +114,10 @@ def source_name(db, shop_id: int) -> str:
     return row[0]
 
 
-def rows(db, shop_id: int, table: str):
+def rows(db, shop_id: int, table: str, columns: dict = COLUMNS_2):
     if table in RETIRED:
         return
-    projection = ", ".join(COLUMNS[table].split())
+    projection = ", ".join(columns[table].split())
     if table == "audit_events":
         # Schema 21 knows only person and maintenance actors, so an agent's event travels as the
         # person's event with the source "agent" rather than as a value older validators refuse.
@@ -116,8 +144,8 @@ def retained_storage(db, shop_id: int):
     """, (shop_id,))
 
 
-def add_rows(db, table: str, rows: list, shop_id: int, *, storage_names=None) -> None:
-    columns = COLUMNS[table].split()
+def add_rows(db, table: str, rows: list, shop_id: int, *, storage_names=None, layout: dict = COLUMNS) -> None:
+    columns = layout[table].split()
     types = {column: {"TEXT": str, "INTEGER": int}[kind]
              for _, column, kind, *_ in db.execute(f"PRAGMA table_info({table})")
              if column in columns}
@@ -157,7 +185,10 @@ def add_rows(db, table: str, rows: list, shop_id: int, *, storage_names=None) ->
 
 
 def check_audit_targets(db) -> None:
+    present = {name for (name,) in db.execute("SELECT name FROM sqlite_master WHERE type = 'table'")}
     for entity, (table, column) in AUDIT_TARGETS.items():
+        if table not in present:
+            continue  # retired tables; their history is dropped on import
         if db.execute(f"""
             SELECT 1 FROM audit_events AS a
             WHERE a.entity_type = ? AND (a.actor_kind != 'user' OR NOT EXISTS (
@@ -167,7 +198,7 @@ def check_audit_targets(db) -> None:
             raise RecordError("An audit event references an invalid business record.")
 
 
-def validate_records(records: dict, shop_id: int, name: str) -> None:
+def validate_records(records: dict, shop_id: int, name: str, fmt: Format = FORMAT_1) -> None:
     # Reuse the trusted migrations for CHECK, UNIQUE and composite FK constraints.
     # Archive data is inserted as parameters into a database that exists only in RAM.
     try:
@@ -176,11 +207,11 @@ def validate_records(records: dict, shop_id: int, name: str) -> None:
             db.execute("PRAGMA foreign_keys = ON")
             apply_migration(db, 1)
             db.execute("INSERT INTO shops(id, name) VALUES (?, ?)", (shop_id, name))
-            for version in range(2, SCHEMA + 1):
+            for version in range(2, fmt.schema + 1):
                 apply_migration(db, version)
             db.execute("PRAGMA defer_foreign_keys = ON")
-            for table, rows in records.items():
-                add_rows(db, table, rows, shop_id)
+            for table in fmt.columns:
+                add_rows(db, table, records[table], shop_id, layout=fmt.columns)
             if db.execute("PRAGMA foreign_key_check").fetchone() is not None:
                 raise RecordError("A record references a missing or unrelated record.")
             check_audit_targets(db)
@@ -193,7 +224,7 @@ def validate_records(records: dict, shop_id: int, name: str) -> None:
 
 
 REFERENCES = {
-    "repairs": {"customer_id": "customers", "technician_id": "users"},
+    "repairs": {"customer_id": "customers", "technician_id": "users", "warranty_repair_id": "repairs"},
     "work_entries": {"repair_id": "repairs", "author_id": "users"},
     "work_entry_revisions": {"entry_id": "work_entries", "editor_id": "users"},
     "attachments": {"repair_id": "repairs", "uploader_id": "users"},
@@ -202,6 +233,8 @@ REFERENCES = {
                             "actor_user_id": "users"},
     "repair_charges": {"repair_id": "repairs", "created_by": "users"},
     "repair_discounts": {"repair_id": "repairs"},
+    "repair_fees": {"repair_id": "repairs", "diagnosis_charge_id": "repair_charges",
+                    "labor_charge_id": "repair_charges"},
     "repair_part_consumptions": {"charge_id": "repair_charges", "movement_id": "inventory_movements"},
     "estimates": {"repair_id": "repairs", "created_by": "users", "accepted_by": "users"},
     "estimate_lines": {"estimate_id": "estimates"},
@@ -212,7 +245,7 @@ AUDIT_REFERENCES = {
     "entry_id": "work_entries", "item_id": "inventory_items", "movement_id": "inventory_movements",
     "reverses_id": "inventory_movements",
 }
-BUSINESS_TABLES = tuple(table for table in COLUMNS
+BUSINESS_TABLES = tuple(table for table in COLUMNS_2
                         if table not in {"shop_settings", "users", "audit_events", *RETIRED})
 
 
@@ -233,9 +266,9 @@ def settings_revision(db, shop_id: int) -> int:
     return db.execute("SELECT revision FROM shop_settings WHERE shop_id = ?", (shop_id,)).fetchone()[0]
 
 
-def allocate_ids(db, records: dict, shop_id: int):
+def allocate_ids(db, records: dict, shop_id: int, layout: dict = COLUMNS):
     maps = {}
-    for table, projection in COLUMNS.items():
+    for table, projection in layout.items():
         if not projection.startswith("id ") or table in RETIRED:
             continue
         base = db.execute(f"SELECT coalesce(max(id), 0) FROM {table}").fetchone()[0]
@@ -273,14 +306,14 @@ def map_history(row, maps):
     row["changes"] = json.dumps(changes)
 
 
-def map_records(db, records: dict, shop_id: int):
-    maps = allocate_ids(db, records, shop_id)
+def map_records(db, records: dict, shop_id: int, layout: dict = COLUMNS):
+    maps = allocate_ids(db, records, shop_id, layout)
     occupied = {row[0] for row in db.execute("SELECT username FROM users WHERE shop_id = ?", (shop_id,))}
     # The built-in `cli` and `mcp` names stay free even before first use, so imported history never takes them.
     occupied |= set(LOCAL_ACTORS)
     reserved = occupied | {row["username"] for row in records["users"]}
     mapped = {}
-    for table in COLUMNS:
+    for table in layout:
         if table in RETIRED:
             continue
         mapped[table] = []
@@ -291,7 +324,8 @@ def map_records(db, records: dict, shop_id: int):
             if "id" in row:
                 row["id"] = maps[table][row["id"]]
             for field, target in REFERENCES.get(table, {}).items():
-                row[field] = mapped_id(maps, target, row[field])
+                if field in row:  # format 1 predates some references
+                    row[field] = mapped_id(maps, target, row[field])
             if table == "users":
                 row["active"] = 0
                 if row["username"] in occupied:
@@ -309,19 +343,23 @@ def map_records(db, records: dict, shop_id: int):
 
 
 def insert_import(db, mapped, shop_id: int, storage_names, revision: int, *,
-                  actor_id: int, key: str, fingerprint: str, result: dict) -> None:
+                  actor_id: int, key: str, fingerprint: str, result: dict, layout: dict = COLUMNS) -> None:
     settings = mapped["shop_settings"][0]
-    updated = db.execute("""
-        UPDATE shop_settings SET timezone = ?, max_upload_mib = ?, inline_preview_mib = ?,
+    # Format 2 also carries contact, terms, language and the diagnosis default; format 1 leaves them alone.
+    extra = [name for name in ADDED_IN_2["shop_settings"].split() if name in settings]
+    assignments = "".join(f", {name} = ?" for name in extra)
+    updated = db.execute(f"""
+        UPDATE shop_settings SET timezone = ?, max_upload_mib = ?, inline_preview_mib = ?{assignments},
             revision = revision + 1 WHERE shop_id = ? AND revision = ?
     """, (settings["timezone"], settings["max_upload_mib"], settings["inline_preview_mib"],
-          shop_id, revision))
+          *(settings[name] for name in extra), shop_id, revision))
     if not updated.rowcount:
         raise DestinationUnavailable("The destination settings changed. Review the destination again.")
     try:
-        for table, records in mapped.items():
-            if table != "shop_settings":
-                add_rows(db, table, records, shop_id, storage_names=storage_names)
+        db.execute("PRAGMA defer_foreign_keys = ON")  # a return may reference a later-numbered repair
+        for table in layout:
+            if table != "shop_settings" and table in mapped:
+                add_rows(db, table, mapped[table], shop_id, storage_names=storage_names, layout=layout)
         movements = mapped["inventory_movements"]
         db.execute("""
             INSERT INTO portable_imports (shop_id, actor_id, request_key, fingerprint, result, last_movement_id)

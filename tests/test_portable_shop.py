@@ -10,6 +10,7 @@ import sqlite3
 import sys
 import stat
 import subprocess
+from pathlib import Path
 from types import SimpleNamespace
 import unittest
 import warnings
@@ -183,7 +184,7 @@ class PortableShopTests(TokenFixture, unittest.TestCase):
         with ZipFile(output) as archive:
             manifest = json.loads(archive.read("manifest.json"))
             records = json.loads(archive.read("records.json"))
-            self.assertEqual((manifest["format"], manifest["schema"]), ("repairlib-portable-shop-1", 21))
+            self.assertEqual((manifest["format"], manifest["schema"]), ("repairlib-portable-shop-2", 43))
             self.assertEqual(manifest["source_shop"], {"id": 1, "name": "Synthetic"})
             self.assertEqual(preview, {k: manifest[k] for k in ("format", "schema", "source_shop", "counts")}
                              | {"attachment_files": 2, "attachment_bytes": len(ORIGINAL) + len(DETACHED),
@@ -201,7 +202,7 @@ class PortableShopTests(TokenFixture, unittest.TestCase):
             self.assertEqual(records["work_entry_revisions"][0]["editor_username"], "fixture-technician")
             self.assertEqual([row["kind"] for row in records["inventory_movements"]], ["receive", "consume", "return"])
             self.assertEqual(records["repair_part_consumptions"][0]["charge_id"], charge["id"])
-            self.assertEqual((records["estimates"], records["estimate_lines"]), ([], []))  # Retired at schema 36.
+            self.assertNotIn("estimates", records)  # Retired at schema 36; format 1 kept empty keys.
             self.assertEqual(records["shop_settings"][0]["timezone"], "Europe/Nicosia")
             self.assertTrue(any(row["actor_username"] == "fixture-technician" for row in records["audit_events"]))
             forbidden = ("password_hash", "token_hash", "token_label", "api_token", "sessions",
@@ -441,16 +442,10 @@ class PortableShopTests(TokenFixture, unittest.TestCase):
             self.assertEqual(get("/inventory/reconciliation").json()["issues"], [])
 
     def test_older_archive_with_estimates_imports_without_them(self):
-        with self.client() as source:
-            token = self.token(source)
-            repair = self.mutate(source, token, "/repairs", json=DEVICE)
-            self.mutate(source, token, f"/repairs/{repair['id']}/charges",
-                        json={"kind": "labor", "description": "Bench labour", "quantity_milli": 1000,
-                              "unit_price_cents": 5000})
-            exported = source.get(EXPORT, headers=self.auth(token))
-            self.assertEqual(exported.status_code, 200, exported.text)
-        with ZipFile(BytesIO(exported.content)) as archive:
+        # The format-1 fixture is a real older archive: one repair (ID 1) with two labour charges.
+        with ZipFile(Path(__file__).parent / "fixtures" / "portable" / "format1-paid-ticket.zip") as archive:
             files = {name: archive.read(name) for name in archive.namelist()}
+        repair = {"id": 1}
         manifest, records = json.loads(files["manifest.json"]), json.loads(files["records.json"])
         owner = records["users"][0]
         shop_id = records["repairs"][0]["shop_id"]
@@ -488,7 +483,8 @@ class PortableShopTests(TokenFixture, unittest.TestCase):
             self.assertEqual(db.execute("SELECT name FROM sqlite_master WHERE name LIKE 'estimate%'").fetchall(), [])
             self.assertEqual(db.execute("SELECT count(*) FROM audit_events WHERE entity_type = 'estimate'"
                                         " OR operation LIKE 'estimate.%'").fetchone(), (0,))
-            self.assertEqual(db.execute("SELECT description FROM repair_charges").fetchall(), [("Bench labour",)])
+            self.assertEqual(db.execute("SELECT description FROM repair_charges ORDER BY id").fetchall(),
+                             [("Diagnosis",), ("Labour",)])
 
     def test_import_refuses_low_disk_before_writes_but_allows_replay(self):
         with self.client() as source:

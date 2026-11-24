@@ -768,6 +768,13 @@ class PortableSourceShop:
     name: str
 
 
+FORMAT_1_OMITTED = (
+    "payment status", "which charge lines are the diagnosis and repair fees (re-entering fees adds "
+    "duplicate charge lines)", "which attachment is the device photo", "warranty dates and return links",
+    "shop address, phone, terms and default language",
+)
+
+
 @dataclass(frozen=True)
 class PortablePreview:
     format: str
@@ -776,12 +783,8 @@ class PortablePreview:
     counts: dict[str, int]
     attachment_files: int
     attachment_bytes: int
-    # What format 1 cannot carry. A portable transfer is not a complete move; use a full backup for that.
-    omitted: tuple[str, ...] = (
-        "payment status", "which charge lines are the diagnosis and repair fees (re-entering fees adds "
-        "duplicate charge lines)", "which attachment is the device photo", "warranty dates and return links",
-        "shop address, phone, terms and default language",
-    )
+    # What this archive's format cannot carry; empty for format 2. A format-1 transfer is not a complete move.
+    omitted: tuple[str, ...] = ()
 
 
 
@@ -792,6 +795,7 @@ class PortableImport:
     source_shop: PortableSourceShop
     counts: dict[str, int]
     attachment_files: int
+    omitted: tuple[str, ...] = ()
 
 
 CSV_MAX_BYTES = 256 * 1024

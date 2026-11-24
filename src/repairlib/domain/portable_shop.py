@@ -14,9 +14,9 @@ from tempfile import TemporaryFile
 from typing import BinaryIO
 from zipfile import BadZipFile, ZipFile
 
-from repairlib import money
+from repairlib import i18n, money
 from repairlib.config import DISK_RESERVE_BYTES
-from repairlib.contracts import PORTABLE_MAX_BYTES, PortableImport, PortablePreview, PortableSourceShop, TokenIdentity
+from repairlib.contracts import FORMAT_1_OMITTED, PORTABLE_MAX_BYTES, PortableImport, PortablePreview, PortableSourceShop, TokenIdentity
 from repairlib.domain.attachments import MAX_UPLOAD_BYTES, sniff
 from repairlib.domain.customers import KEY_FORMAT, CustomerAccess, CustomerError, authorized
 from repairlib.domain.settings import normalize_timezone
@@ -31,11 +31,10 @@ from repairlib.storage import audit, blobs, portable_shop as storage
 from repairlib.storage.blobs import blob_path
 from repairlib.storage.stock_reconciliation import repair_snapshot_issues
 from repairlib.storage.portable_shop import (
-    AUDIT_TARGETS, COLUMNS, MAINTENANCE_HISTORY, MAX_ID, MAX_RECORDS, SCHEMA, RecordError,
+    AUDIT_TARGETS, CURRENT, FORMAT_1, FORMATS, MAINTENANCE_HISTORY, MAX_ID, MAX_RECORDS, RecordError,
     retained_storage, rows, source_name, validate_records,
 )
 
-FORMAT = "repairlib-portable-shop-1"
 RECORDS = "records.json"
 MAX_RECORD_BYTES = 16 << 20
 MAX_MANIFEST_BYTES = 2 << 20
@@ -81,7 +80,7 @@ def encode_json(value):
     return json.dumps(value, ensure_ascii=False, separators=(",", ":"), allow_nan=False).encode("utf-8")
 
 
-def encode_records(db, shop_id: int) -> bytes:
+def encode_records(db, shop_id: int, fmt=CURRENT) -> bytes:
     output = BytesIO()
     count = 0
 
@@ -91,9 +90,9 @@ def encode_records(db, shop_id: int) -> bytes:
         output.write(value)
 
     emit(b"{")
-    for index, table in enumerate(COLUMNS):
+    for index, table in enumerate(fmt.columns):
         emit((b"," if index else b"") + encode_json(table) + b":[")
-        for offset, row in enumerate(rows(db, shop_id, table)):
+        for offset, row in enumerate(rows(db, shop_id, table, fmt.columns)):
             count += 1
             if count > MAX_RECORDS or (table == "attachments" and offset >= MAX_ATTACHMENTS):
                 raise ArchiveError("Portable records exceed their count limit.")
@@ -103,8 +102,8 @@ def encode_records(db, shop_id: int) -> bytes:
     return output.getvalue()
 
 
-def record_counts(records) -> dict[str, int]:
-    if not isinstance(records, dict) or records.keys() != COLUMNS.keys():
+def record_counts(records, fmt) -> dict[str, int]:
+    if not isinstance(records, dict) or records.keys() != fmt.columns.keys():
         raise ArchiveError("The portable records do not match the required tables.")
     if any(not isinstance(items, list) for items in records.values()):
         raise ArchiveError("The portable records must be lists of rows.")
@@ -115,7 +114,32 @@ def record_counts(records) -> dict[str, int]:
     return counts
 
 
-def check_record_details(records) -> dict:
+def check_format_2_details(records) -> None:
+    """Rules the schema cannot express: the app's own limits on settings and the shape of fee links."""
+    settings = records["shop_settings"][0]
+    if (settings["language"] not in ("", *i18n.LANGUAGES)
+            or not 0 <= settings["diagnosis_fee_cents"] <= money.MAX_CENTS
+            or any(len(settings[name]) > limit or not settings[name].isprintable()
+                   for name, limit in (("address", 200), ("phone", 40), ("terms", 2000)))):
+        raise ArchiveError("The portable shop settings are invalid.")
+    repairs = {row["id"] for row in records["repairs"]}
+    for row in records["repairs"]:
+        target = row["warranty_repair_id"]
+        if target is not None and (target == row["id"] or target not in repairs):
+            raise ArchiveError("A warranty return links to an unknown repair.")
+    charges = {row["id"]: row for row in records["repair_charges"]}
+    for row in records["repair_fees"]:
+        linked = [charges.get(row[name]) for name in ("diagnosis_charge_id", "labor_charge_id")
+                  if row[name] is not None]
+        if (row["diagnosis_charge_id"] is not None and row["diagnosis_charge_id"] == row["labor_charge_id"]
+                or any(charge is None or charge["repair_id"] != row["repair_id"] or charge["kind"] != "labor"
+                       or charge["quantity_milli"] != 1000 or charge["deleted_at"] is not None
+                       for charge in linked)
+                or (row["diagnosis_charge_id"] is not None and not row["diagnosis_saved"])):
+            raise ArchiveError("A fee link does not name a live labour charge of its repair.")
+
+
+def check_record_details(records, fmt) -> dict:
     settings = records["shop_settings"][0]
     try:
         if normalize_timezone(settings["timezone"]) != settings["timezone"]:
@@ -132,6 +156,8 @@ def check_record_details(records) -> dict:
         if row["changes"] is not None and not isinstance(parse_json(row["changes"].encode()), dict):
             raise ArchiveError("An audit event has invalid changes.")
 
+    if fmt is not FORMAT_1:
+        check_format_2_details(records)
     files = {}
     for row in records["attachments"]:
         size, digest = row["size_bytes"], row["sha256"]
@@ -145,23 +171,24 @@ def check_record_details(records) -> dict:
     return files
 
 
-def inspect_records(raw: bytes, source: PortableSourceShop):
+def inspect_records(raw: bytes, source: PortableSourceShop, fmt=CURRENT):
     records = parse_json(raw)
-    counts = record_counts(records)
-    validate_records(records, source.id, source.name)
-    files = check_record_details(records)
-    preview = PortablePreview(FORMAT, SCHEMA, source, counts, len(files),
-                              sum(record["size"] for record in files.values()))
+    counts = record_counts(records, fmt)
+    validate_records(records, source.id, source.name, fmt)
+    files = check_record_details(records, fmt)
+    preview = PortablePreview(fmt.identity, fmt.schema, source, counts, len(files),
+                              sum(record["size"] for record in files.values()),
+                              FORMAT_1_OMITTED if fmt is FORMAT_1 else ())
     return preview, files, records
 
 
 def write_export(workspace: Path, db, shop_id: int, handle: BinaryIO) -> None:
     source = source_identity({"id": shop_id, "name": source_name(db, shop_id)})
     raw = encode_records(db, shop_id)
-    preview, files, _ = inspect_records(raw, source)
+    preview, files, _ = inspect_records(raw, source, CURRENT)
     manifest_files = {RECORDS: hash_stream(BytesIO(raw), len(raw)), **files}
     manifest = encode_json({
-        "format": FORMAT, "schema": SCHEMA, "source_shop": {"id": source.id, "name": source.name},
+        "format": CURRENT.identity, "schema": CURRENT.schema, "source_shop": {"id": source.id, "name": source.name},
         "counts": preview.counts, "files": manifest_files,
     })
     # Reserve the maximum central directory size on this writer; local headers are
@@ -245,11 +272,11 @@ def archive_members(handle: BinaryIO, archive: ZipFile, size: int):
     return members
 
 
-def check_manifest(manifest, members) -> PortableSourceShop:
+def check_manifest(manifest, members):
     if (not isinstance(manifest, dict)
             or manifest.keys() != {"format", "schema", "source_shop", "counts", "files"}
-            or manifest["format"] != FORMAT or type(manifest["schema"]) is not int
-            or manifest["schema"] != SCHEMA):
+            or manifest["format"] not in FORMATS or type(manifest["schema"]) is not int
+            or manifest["schema"] != FORMATS[manifest["format"]].schema):
         raise ArchiveError("The portable archive format or schema is unsupported.")
     files = manifest["files"]
     if not isinstance(files, dict) or files.keys() != members.keys() - {MANIFEST}:
@@ -259,7 +286,7 @@ def check_manifest(manifest, members) -> PortableSourceShop:
                 or type(record["size"]) is not int or record["size"] != members[name].file_size
                 or not isinstance(record["sha256"], str) or not SHA256.fullmatch(record["sha256"])):
             raise ArchiveError("A manifest member has invalid size or hash metadata.")
-    return source_identity(manifest["source_shop"])
+    return source_identity(manifest["source_shop"]), FORMATS[manifest["format"]]
 
 
 @contextmanager
@@ -270,11 +297,11 @@ def verified_archive(handle: BinaryIO):
     with ZipFile(BoundedZipReader(handle)) as archive:
         members = archive_members(handle, archive, size)
         manifest = parse_json(archive.read(members[MANIFEST]))
-        source = check_manifest(manifest, members)
+        source, fmt = check_manifest(manifest, members)
         raw = archive.read(members[RECORDS])
         if hash_stream(BytesIO(raw), len(raw)) != manifest["files"][RECORDS]:
             raise ArchiveError("The records hash does not match the manifest.")
-        preview, attachments, records = inspect_records(raw, source)
+        preview, attachments, records = inspect_records(raw, source, fmt)
         declared_counts = manifest["counts"]
         if (not isinstance(declared_counts, dict)
                 or any(type(count) is not int for count in declared_counts.values())
@@ -334,13 +361,13 @@ def check_import_billing(records) -> None:
         for row in records["repair_discounts"]:
             money.discount(row["kind"], row["value"], subtotals.get(row["repair_id"], 0))
         groups = {}
-        for line in records["estimate_lines"]:
+        for line in records.get("estimate_lines", ()):
             total = money.line_total(line["quantity_milli"], line["unit_price_cents"])
             if total != line["line_total_cents"]:
                 raise RecordError("An imported estimate line has an inconsistent total.")
             key = (line["estimate_id"], line["kind"])
             groups[key] = groups.get(key, 0) + total
-        for row in records["estimates"]:
+        for row in records.get("estimates", ()):
             if (groups.get((row["id"], "part"), 0) != row["parts_subtotal_cents"]
                     or groups.get((row["id"], "labor"), 0) != row["labor_subtotal_cents"]
                     or money.discount(row["discount_kind"], row["discount_value"], row["subtotal_cents"])
@@ -399,14 +426,15 @@ def import_archive(workspace: Path, access: CustomerAccess, handle: BinaryIO, *,
                 if shutil.disk_usage(database_path(workspace).parent).free < DISK_RESERVE_BYTES + size:
                     raise CustomerError(507, "insufficient_storage",
                                         "Not enough disk space for this import. Free up space and retry.")
-                mapped, ids = storage.map_records(db, records, shop_id)
+                layout = FORMATS[preview.format].columns
+                mapped, ids = storage.map_records(db, records, shop_id, layout)
                 names = {row["id"]: blobs.image_folder(row["media_type"], row["repair_id"])
                          + secrets.token_hex(blobs.STORAGE_NAME_LENGTH // 2)
                          for row in mapped["attachments"]}
                 result = PortableImport(shop_id, revision + 1, preview.source_shop,
-                                        preview.counts, preview.attachment_files)
+                                        preview.counts, preview.attachment_files, preview.omitted)
                 storage.insert_import(db, mapped, shop_id, names, revision, actor_id=principal.user_id,
-                                      key=key, fingerprint=fingerprint, result=asdict(result))
+                                      key=key, fingerprint=fingerprint, result=asdict(result), layout=layout)
                 if repair_snapshot_issues(db, (shop_id, shop_id), portable=True):
                     raise RecordError("The stock ledger lacks matching repair audit history.")
                 audit.record(db, principal, access.source, label, "portable.import", "shop_settings",
