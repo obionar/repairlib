@@ -315,6 +315,8 @@ class PortableShopTests(TokenFixture, unittest.TestCase):
             # Keep occupied shop 1 in the same DB to force distinct repair/catalog IDs.
             db.execute("INSERT INTO customers(shop_id, name) VALUES (1, 'Outside destination')")
             db.execute("INSERT INTO repairs(shop_id, reported_issue) VALUES (1, 'Outside repair')")
+            db.execute("INSERT INTO work_entries(shop_id, repair_id, author_id, author_username, kind, body) "
+                       "VALUES (1, 1, 1, 'owner', 'work', 'Outside entry')")
             db.execute("INSERT INTO inventory_items(shop_id, sku, description, unit) "
                        "VALUES (1, 'OUTSIDE', 'Outside stock', 'pcs')")
             db.execute("INSERT INTO shops(id, name) VALUES (2, 'Explicit destination')")
@@ -407,6 +409,10 @@ class PortableShopTests(TokenFixture, unittest.TestCase):
                 self.assertEqual(rows["work_entry_revisions"][0]["editor_id"], 5)
                 self.assertEqual(rows["attachment_links"][0]["repair_id"], 2)
                 self.assertEqual(rows["inventory_movements"][-1]["reverses_id"], 2)
+                consume = next(row for row in rows["audit_events"] if row["operation"] == "inventory.consume")
+                work_entry_id = json.loads(consume["changes"])["work_entry_id"]
+                self.assertEqual(work_entry_id, rows["work_entries"][-1]["id"])
+                self.assertEqual(rows["work_entries"][-1]["kind"], "work")
                 for row, original in zip(rows["attachments"], (ORIGINAL, DETACHED, PURGED)):
                     self.assertEqual(row["sha256"], sha256(original).hexdigest())
                     self.assertEqual(row["uploader_username"], "owner")

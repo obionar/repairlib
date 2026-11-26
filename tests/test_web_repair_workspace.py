@@ -111,7 +111,7 @@ class WebRepairWorkspaceTests(TokenFixture, unittest.TestCase):
             self.assertRegex(status, r'<dt>Serial:</dt><dd class="obi-muted">—</dd>')
             self.assertLess(status.index('id="device-details"'), status.index('<dt>Opened:</dt>'))
 
-    def test_pages_opened_from_a_ticket_name_it_and_show_their_title(self):
+    def test_pages_opened_from_a_ticket_name_it_without_a_visible_heading(self):
         with self.client() as client:
             _, auth = self.owner_auth(client)
             repair = self.repair(client, auth)
@@ -119,7 +119,7 @@ class WebRepairWorkspaceTests(TokenFixture, unittest.TestCase):
             for path in ("/entries/new", "/consume-part", "/edit"):
                 page = client.get(ticket + path).text
                 self.assertIn(f'<a class="rl-context-link" href="{ticket}">', page)
-                self.assertIn('<h1 class="rl-page-title">', page)
+                self.assertIn('<h1 class="rl-page-title rl-sr-only">', page)
                 self.assertIn("rl-subpage", page)
             self.assertNotIn("rl-context-link", client.get(ticket).text)
             self.assertNotIn("rl-context-link", client.get("/repairs/new").text)

@@ -243,7 +243,7 @@ REFERENCES = {
 AUDIT_REFERENCES = {
     "customer_id": "customers", "technician_id": "users", "repair_id": "repairs",
     "entry_id": "work_entries", "item_id": "inventory_items", "movement_id": "inventory_movements",
-    "reverses_id": "inventory_movements",
+    "reverses_id": "inventory_movements", "work_entry_id": "work_entries",
 }
 BUSINESS_TABLES = tuple(table for table in COLUMNS_2
                         if table not in {"shop_settings", "users", "audit_events", *RETIRED})
@@ -288,26 +288,52 @@ def mapped_id(maps, table, old):
     return maps[table][old]
 
 
-def map_history(row, maps):
+def map_history(row, maps, parents=None):
+    source_entity = row["entity_id"]
     if row["entity_type"] is not None:
         table, _ = AUDIT_TARGETS[row["entity_type"]]
         row["entity_id"] = mapped_id(maps, table, row["entity_id"])
     if row["changes"] is None:
         return
     changes = json.loads(row["changes"])
+    source_repair = changes.get("repair_id") if type(changes.get("repair_id")) is int else None
+
+    def same_repair(table, reference, repair):
+        if parents is None or repair is None or type(reference) is not int:
+            return True
+        return parents.get(table, {}).get(reference) == repair
+
     for field, table in AUDIT_REFERENCES.items():
         if field not in changes:
             continue
         value = changes[field]
+        # Older transfers left these history IDs unchanged; keep and mark unresolvable ones.
+        if field == "work_entry_id" and type(value) is int and value > 0 and (
+                changes.get("work_entry_id_unresolved") is True or value not in maps[table]
+                or not same_repair("work_entries", value, source_repair)):
+            changes["work_entry_id_unresolved"] = True
+            continue
         if isinstance(value, dict) and value.keys() == {"before", "after"}:
             changes[field] = {side: mapped_id(maps, table, ref) for side, ref in value.items()}
         else:
             changes[field] = mapped_id(maps, table, value)
+    if row["operation"] == "repair.fees" and isinstance(changes.get("fees"), dict):
+        for fee in changes["fees"].values():
+            if isinstance(fee, dict) and "charge_id" in fee:
+                charge_id = fee["charge_id"]
+                if type(charge_id) is int and charge_id > 0 and (
+                        fee.get("charge_id_unresolved") is True or charge_id not in maps["repair_charges"]
+                        or not same_repair("repair_charges", charge_id, source_entity)):
+                    fee["charge_id_unresolved"] = True
+                else:
+                    fee["charge_id"] = mapped_id(maps, "repair_charges", charge_id)
     row["changes"] = json.dumps(changes)
 
 
 def map_records(db, records: dict, shop_id: int, layout: dict = COLUMNS):
     maps = allocate_ids(db, records, shop_id, layout)
+    parents = {table: {row["id"]: row.get("repair_id") for row in records[table]}
+               for table in ("work_entries", "repair_charges") if table in records}
     occupied = {row[0] for row in db.execute("SELECT username FROM users WHERE shop_id = ?", (shop_id,))}
     # The built-in `cli` and `mcp` names stay free even before first use, so imported history never takes them.
     occupied |= set(LOCAL_ACTORS)
@@ -337,7 +363,7 @@ def map_records(db, records: dict, shop_id: int, layout: dict = COLUMNS):
                     reserved.add(candidate)
                     row["username"] = candidate
             elif table == "audit_events":
-                map_history(row, maps)
+                map_history(row, maps, parents)
             mapped[table].append(row)
     return mapped, maps
 

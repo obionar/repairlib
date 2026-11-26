@@ -25,6 +25,7 @@ class NamedToken:
     scope: str
     revision: int
     kind: str = "user"
+    preset: str | None = None
 
 
 def identity(path: Path, token_hash: str) -> TokenIdentity | None:
@@ -81,7 +82,7 @@ def list_owned(db: sqlite3.Connection, credential: Credential, before: int, limi
     actor = credential.principal
     rows = db.execute(
         """
-        SELECT id, name, scope, revision, kind FROM api_tokens
+        SELECT id, name, scope, revision, kind, preset FROM api_tokens
         WHERE shop_id = ? AND user_id = ? AND revoked_at IS NULL AND user_revision = ?
           AND (? = 0 OR id < ?)
         ORDER BY id DESC LIMIT ?
@@ -94,7 +95,7 @@ def owned_token(db: sqlite3.Connection, credential: Credential, token_id: int) -
     actor = credential.principal
     row = db.execute(
         """
-        SELECT id, name, scope, revision, kind FROM api_tokens
+        SELECT id, name, scope, revision, kind, preset FROM api_tokens
         WHERE shop_id = ? AND user_id = ? AND id = ? AND revoked_at IS NULL
           AND user_revision = ?
         """, (actor.shop_id, actor.user_id, token_id, credential.revision),

@@ -73,6 +73,7 @@ class LanUpdateTests(unittest.TestCase):
             argv = " ".join(("/usr/bin/python3", "-m", "repairlib", *foreground_args(Path("/srv/shop"), 8000, lan=True)))
             unit.write_text(f"[Service]\nExecStart={argv}\n")
             with patch.dict("os.environ", {"XDG_CONFIG_HOME": config}), \
+                    patch("repairlib.lifecycle.service.OPENRC_INITD", Path(config) / "init.d"), \
                     patch("repairlib.lifecycle.service.using_openrc", return_value=False):
                 target = service_target()
         self.assertEqual(target, (Path("/srv/shop"), 8000, False, True))

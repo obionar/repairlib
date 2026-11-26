@@ -16,17 +16,21 @@
           {% call ui.panel('user-form-details', 'User') %}
           <div class="obi-panel-body">
             <div class="obi-intake-grid">
-              <label class="rl-sr-only" for="username">{{ _('Username') }}</label>
+              <div class="obi-field">
+              <label for="username">{{ _('Username') }}</label>
               <input id="username" name="username" value="{{ details.get('username', '') }}" placeholder="{{ _('Username') }}" maxlength="80" autocomplete="off" required{% if field_errors.get('username') %} aria-invalid="true" aria-describedby="username-error"{% endif %}>
               {% if field_errors.get('username') %}<span id="username-error">{{ _(field_errors.username) }}</span>{% endif %}
-              <label class="rl-sr-only" for="role">{{ _('Role') }}</label>
+              </div><div class="obi-field">
+              <label for="role">{{ _('Role') }}</label>
               <select id="role" name="role"{% if field_errors.get('role') %} aria-invalid="true" aria-describedby="role-error"{% endif %}>
                 {% for role in roles %}<option value="{{ role }}"{% if details.get('role') == role %} selected{% endif %}>{{ _(role|title) }}</option>{% endfor %}
               </select>
               {% if field_errors.get('role') %}<span id="role-error">{{ _(field_errors.role) }}</span>{% endif %}
-              <label class="rl-sr-only" for="password">{{ _('New password (leave blank to keep current)') if user_id else _('Password') }}</label>
+              </div><div class="obi-field">
+              <label for="password">{{ _('New password (leave blank to keep current)') if user_id else _('Password') }}</label>
               <input id="password" name="password" type="password" placeholder="{{ _('New password (leave blank to keep current)') if user_id else _('Password') }}" maxlength="1024" autocomplete="new-password"{% if not user_id %} required{% endif %}{% if field_errors.get('password') %} aria-invalid="true" aria-describedby="password-error"{% endif %}>
               {% if field_errors.get('password') %}<span id="password-error">{{ _(field_errors.password) }}</span>{% endif %}
+              </div>
               {% if user_id %}
                 <label class="obi-check" for="active"><input id="active" name="active" type="checkbox" value="1"{% if details.get('active') %} checked{% endif %}> {{ _('Active account') }}</label>
               {% endif %}

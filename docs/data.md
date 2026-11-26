@@ -50,6 +50,8 @@ API: `POST /api/v1/portable/import?destination_shop_id=1&revision=1` with the ra
 
 The import keeps the destination's name, users, credentials and printer configuration, and copies the source timezone and attachment limits. It allocates record IDs in source-ID order above the destination's current IDs and remaps links. Imported accounts are disabled and have no credentials; a colliding login gets a generated name while historical username snapshots keep the original spelling. Stock reconciliation uses the imported movement and repair audit history. The destination administrator is recorded on the import audit event.
 
+Older transfers could leave work-entry or fee-charge IDs in history pointing to their original shop. When an ID cannot be matched on import, it is kept with a `work_entry_id_unresolved` or `charge_id_unresolved` marker instead of being guessed; the marker stays on later transfers.
+
 Originals are staged and verified before their records become visible. If the process stops before the commit, retry the import; with the app stopped, run `reconcile-files` to remove staging files or unreferenced originals left behind.
 
 ## Preview and apply a customer CSV

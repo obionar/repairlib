@@ -143,7 +143,7 @@ class WebStockFormsTests(TokenFixture, unittest.TestCase):
             self.assertEqual(self.snapshot("SELECT on_hand_milli FROM inventory_items"), [(29000,)])
             response = client.post(route, data=review | {"reason": draft["reason"]})
             self.assertEqual(response.status_code, 303)
-            self.assertEqual(response.headers["location"], older_page)
+            self.assertEqual(response.headers["location"], older_page + "&saved=1")
             self.assertEqual(client.post(route, data=review | {"reason": draft["reason"]}).status_code, 303)
             self.assertEqual(self.snapshot("SELECT reverses_id, quantity_milli, reason FROM inventory_movements "
                                            "WHERE kind='reversal'"), [(movement_id, -1000, draft["reason"])])

@@ -1,9 +1,12 @@
 {% extends "base.html" %}
+{% import "_ui.html" as ui with context %}
 {% set title = _('Correct work entry') if entry else _('Add work entry') %}
 {% set ticket_context = repair_id %}
 {% block content %}
   {% if error %}<p class="obi-notice" role="alert" id="form-error">{{ _(error) }}</p>{% endif %}
   {% set action = request.url_for('entry_correct', repair_id=repair_id, entry_id=entry.id) if entry else request.url_for('entry_create', repair_id=repair_id) %}
+  {% call ui.panel('entry-details', 'Work entry') %}
+  <div class="obi-panel-body">
   <form method="post" action="{{ action.path }}"{% if error %} aria-describedby="form-error"{% endif %}>
     <input type="hidden" name="csrf" value="{{ csrf }}">
     <input type="hidden" name="key" value="{{ request_key }}">
@@ -13,14 +16,16 @@
       {% for kind in kinds %}<option value="{{ kind }}"{% if details.get('kind') == kind %} selected{% endif %}>{{ _(kind|title) }}</option>{% endfor %}
     </select>
     <label for="body">{{ _('Entry') }}</label>
-    <textarea id="body" name="body" maxlength="5000" required{% if field_errors.get('body') %} aria-invalid="true"{% endif %}>{{ details.get('body', '') }}</textarea>
-    {% if field_errors.get('body') %}<span>{{ _(field_errors.body) }}</span>{% endif %}
+    <textarea id="body" name="body" maxlength="5000" required{% if field_errors.get('body') %} aria-invalid="true" aria-describedby="body-error"{% endif %}>{{ details.get('body', '') }}</textarea>
+    {% if field_errors.get('body') %}<span id="body-error">{{ _(field_errors.body) }}</span>{% endif %}
     {% if entry %}
       <label for="reason">{{ _('Correction reason') }}</label>
-      <textarea id="reason" name="reason" maxlength="1000" required>{{ details.get('reason', '') }}</textarea>
-      {% if field_errors.get('reason') %}<span>{{ _(field_errors.reason) }}</span>{% endif %}
+      <textarea id="reason" name="reason" maxlength="1000" required{% if field_errors.get('reason') %} aria-invalid="true" aria-describedby="reason-error"{% endif %}>{{ details.get('reason', '') }}</textarea>
+      {% if field_errors.get('reason') %}<span id="reason-error">{{ _(field_errors.reason) }}</span>{% endif %}
     {% endif %}
-    <button type="submit">{{ _('Correct work entry') if entry else _('Add work entry') }}</button>
+    {{ ui.button('Correct work entry' if entry else 'Add work entry', 'primary') }}
   </form>
+  </div>
+  {% endcall %}
   <p class="account-link"><a href="{{ request.url_for('repair_detail', repair_id=repair_id).path }}">{{ _('Back to repair') }}</a></p>
 {% endblock %}

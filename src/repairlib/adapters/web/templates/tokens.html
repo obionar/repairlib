@@ -16,28 +16,30 @@
             <div class="obi-intake-grid">
           <input type="hidden" name="csrf" value="{{ csrf }}">
           <input type="hidden" name="key" value="{{ fields.key }}">
-          <label class="rl-sr-only" for="name">{{ _('Token name') }}</label>
+          <div class="obi-field"><label for="name">{{ _('Token name') }}</label>
           <input id="name" name="name" value="{{ fields.name }}" placeholder="{{ _('Token name') }}" maxlength="80" required>
-          <label class="rl-sr-only" for="scope">{{ _('Scope') }}</label>
+          </div><div class="obi-field"><label for="scope">{{ _('Scope') }}</label>
           <select id="scope" name="scope">
             {% for scope in scopes %}
               <option value="{{ scope }}"{% if fields.scope == scope %} selected{% endif %}>{{ _('Read only') if scope == 'read' else _('Read and write') }}</option>
             {% endfor %}
           </select>
-          <label class="rl-sr-only" for="kind">{{ _('Used by') }}</label>
+          </div><div class="obi-field"><label for="kind">{{ _('Used by') }}</label>
           <select id="kind" name="kind">
             <option value="user"{% if fields.kind != 'agent' %} selected{% endif %}>{{ _('A person or script') }}</option>
             <option value="agent"{% if fields.kind == 'agent' %} selected{% endif %}>{{ _('An agent') }}</option>
           </select>
-          <label class="rl-sr-only" for="preset">{{ _('Agent limit') }}</label>
-          <select id="preset" name="preset">
+          </div><div class="obi-field"><label for="preset">{{ _('Agent limit') }}</label>
+          <select id="preset" name="preset" aria-describedby="preset-help">
             <option value=""{% if not fields.preset %} selected{% endif %}>{{ _('No limit') }}</option>
             <option value="read-only"{% if fields.preset == 'read-only' %} selected{% endif %}>{{ _('Read only') }}</option>
             <option value="repairs-write"{% if fields.preset == 'repairs-write' %} selected{% endif %}>{{ _('Repairs and customers') }}</option>
             <option value="inventory-write"{% if fields.preset == 'inventory-write' %} selected{% endif %}>{{ _('Inventory') }}</option>
           </select>
-          <label class="rl-sr-only" for="password">{{ _('Current password') }}</label>
+          <span class="obi-hint" id="preset-help">{{ _('Agent limits apply only to agent tokens.') }}</span>
+          </div><div class="obi-field"><label for="password">{{ _('Current password') }}</label>
           <input id="password" name="password" type="password" placeholder="{{ _('Current password') }}" maxlength="1024" autocomplete="current-password" required>
+          </div>
             </div>
           </div>
           {% endcall %}
@@ -46,13 +48,14 @@
         {% call ui.panel('active-tokens', 'Active tokens') %}
           {% if items %}
             {% call ui.table('Active tokens') %}
-              <thead><tr><th scope="col">{{ _('Token name') }}</th><th scope="col">{{ _('Scope') }}</th><th scope="col">{{ _('Used by') }}</th><th scope="col">{{ _('Actions') }}</th></tr></thead>
+              <thead><tr><th scope="col">{{ _('Token name') }}</th><th scope="col">{{ _('Scope') }}</th><th scope="col">{{ _('Used by') }}</th><th scope="col">{{ _('Agent limit') }}</th><th scope="col">{{ _('Actions') }}</th></tr></thead>
               <tbody>
                 {% for token in items %}
                   <tr>
                     <th scope="row">{{ token.name }}</th>
                     <td>{{ _('Read only') if token.scope == 'read' else _('Read and write') }}</td>
                     <td>{{ _('An agent') if token.kind == 'agent' else _('A person or script') }}</td>
+                    <td>{{ _({'read-only': 'Read only', 'repairs-write': 'Repairs and customers', 'inventory-write': 'Inventory'}.get(token.preset, 'No limit')) }}</td>
                     <td><a href="{{ request.url_for('review_revocation', token_id=token.id).path }}" aria-label="{{ _('Revoke {name}', name=token.name) }}">{{ _('Revoke') }}</a></td>
                   </tr>
                 {% endfor %}

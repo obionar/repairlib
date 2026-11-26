@@ -15,6 +15,19 @@ from test_web_repair_workspace import panel
 
 
 class WebSettingsFlowsTests(TokenFixture, unittest.TestCase):
+    def test_browser_can_clear_shop_contact_details(self):
+        with self.client() as client:
+            self.sign_in(client)
+            fields = form_for(client.get("/settings"), "/settings")
+            result = client.post("/settings", data=fields | {
+                "address": "1 Main Street", "phone": "123456", "terms": "Collect soon",
+            })
+            self.assertEqual(result.status_code, 303)
+            fields = form_for(client.get("/settings"), "/settings")
+            result = client.post("/settings", data=fields | {"address": "", "phone": "", "terms": ""})
+            self.assertEqual(result.status_code, 303)
+            self.assertEqual(self.snapshot("SELECT address, phone, terms FROM shop_settings"), [("", "", "")])
+
     def test_default_diagnosis_fee_and_saved_ticket_amounts(self):
         with self.client() as client:
             self.sign_in(client)

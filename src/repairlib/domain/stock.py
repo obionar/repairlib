@@ -86,6 +86,7 @@ def consume_for_repair(workspace: Path, access: CustomerAccess, repair_id: int, 
         ))
         updated, movement = append_movement(db, principal, item, "consume", -quantity, "")
         charge = billing.append_charge(db, principal, repair.id, values)
+        billing.build_summary(db, principal, repair.id)
         charges.link_consumption(db, principal.shop_id, charge.id, movement.id)
         heading = billing.part_used(billing.shop_text(db, principal.shop_id), item.description, quantity, item.unit)
         kind, body = normalize_entry("work", f"{heading}\n{work_note}" if work_note else heading)

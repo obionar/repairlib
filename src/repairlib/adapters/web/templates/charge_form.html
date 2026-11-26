@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% import "_ui.html" as ui with context %}
 {% set title = _('Correct charge') if charge else _('Add charge') %}
 {% set ticket_context = repair_id %}
 {% block content %}
@@ -9,6 +10,8 @@
   {% endif %}
   {% if not charge or not charge.deleted or not charge.movement_id %}
   {% set action = request.url_for('charge_correct', repair_id=repair_id, charge_id=charge.id) if charge else request.url_for('charge_create', repair_id=repair_id) %}
+  {% call ui.panel('charge-details', 'Charge') %}
+  <div class="obi-panel-body">
   <form method="post" action="{{ action.path }}"{% if error %} aria-describedby="form-error"{% endif %}>
     <input type="hidden" name="csrf" value="{{ csrf }}">
     <input type="hidden" name="key" value="{{ request_key }}">
@@ -37,13 +40,17 @@
     <textarea id="notes" name="notes" maxlength="1000">{{ details.get('notes', '') }}</textarea>
     {% if charge %}
       <label for="reason">{{ _('Correction reason') }}</label>
-      <textarea id="reason" name="reason" maxlength="1000" required>{{ details.get('reason', '') }}</textarea>
-      {% if field_errors.get('reason') %}<span>{{ _(field_errors.reason) }}</span>{% endif %}
+      <textarea id="reason" name="reason" maxlength="1000" required{% if field_errors.get('reason') %} aria-invalid="true" aria-describedby="reason-error"{% endif %}>{{ details.get('reason', '') }}</textarea>
+      {% if field_errors.get('reason') %}<span id="reason-error">{{ _(field_errors.reason) }}</span>{% endif %}
     {% endif %}
-    <button type="submit">{{ _('Correct charge') if charge else _('Add charge') }}</button>
+    {{ ui.button('Correct charge' if charge else 'Add charge', 'primary') }}
   </form>
+  </div>
+  {% endcall %}
   {% endif %}
   {% if charge %}
+    {% call ui.panel('charge-visibility', 'Restore charge' if charge.deleted else 'Remove charge') %}
+    <div class="obi-panel-body">
     <form method="post" action="{{ request.url_for('charge_visibility', repair_id=repair_id, charge_id=charge.id).path }}">
       <input type="hidden" name="csrf" value="{{ visibility_csrf }}">
       <input type="hidden" name="key" value="{{ visibility_key }}">
@@ -53,6 +60,8 @@
       <textarea id="visibility-reason" name="reason" maxlength="1000" required></textarea>
       <button type="submit">{{ _('Restore charge') if charge.deleted else _('Remove charge') }}</button>
     </form>
+    </div>
+    {% endcall %}
   {% endif %}
   <p class="account-link"><a href="{{ request.url_for('repair_detail', repair_id=repair_id).path }}">{{ _('Back to repair') }}</a></p>
 {% endblock %}

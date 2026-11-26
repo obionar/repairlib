@@ -14,7 +14,8 @@
     {% if error and error.status == 409 %}
       <p><a href="{{ review }}">{{ _('Open latest version') }}</a></p>
     {% endif %}
-    <h2>{{ item.sku }} · {{ item.description }}</h2>
+    {% call ui.panel('part-review', item.sku ~ ' · ' ~ item.description, translate_title=false) %}
+    <div class="obi-panel-body">
     <dl class="record-details">
       <dt>{{ _('On hand') }}</dt><dd>{{ item.on_hand_milli|milli }} {{ _(item.unit) }}</dd>
     </dl>
@@ -43,6 +44,8 @@
       {% if part_work_log %}</details>{% endif %}
       {{ ui.button('Use catalog part' if part_work_log else 'Use part and add charge', 'primary') }}
     </form>
+    </div>
+    {% endcall %}
     <p><a href="{{ picker }}{{ query }}">{{ _('Choose a catalog part') }}</a></p>
   {% else %}
     {% call ui.search(picker, q) %}

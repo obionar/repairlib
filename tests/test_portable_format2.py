@@ -125,6 +125,97 @@ class FormatTwoTests(TokenFixture, unittest.TestCase):
             self.assertEqual(local.charge_summary(dest, new_returned).total_cents, 5000)
             self.assertEqual(self.rows(path, "SELECT count(*) FROM repair_charges WHERE repair_id = ?",
                                        new_returned), [(2,)])
+            (event,), = self.rows(path, "SELECT changes FROM audit_events WHERE operation = 'repair.fees' "
+                                        "AND entity_id = ? ORDER BY id LIMIT 1", new_returned)
+            (diagnosis_id, labor_id), = self.rows(
+                path, "SELECT diagnosis_charge_id, labor_charge_id FROM repair_fees WHERE repair_id = ?",
+                new_returned)
+            fees_history = json.loads(event)["fees"]
+            self.assertEqual((fees_history["diagnosis"]["charge_id"], fees_history["labor"]["charge_id"]),
+                             (diagnosis_id, labor_id))
+
+    def test_work_entry_history_reference_is_remapped(self):
+        from repairlib.storage.portable_shop import map_history
+        row = {"entity_type": "charge", "entity_id": 1, "operation": "inventory.consume",
+               "changes": json.dumps({"repair_id": 2, "work_entry_id": 3})}
+        parents = {"work_entries": {3: 2}}
+        map_history(row, {"repair_charges": {1: 11}, "repairs": {2: 12}, "work_entries": {3: 13}}, parents)
+        self.assertEqual(row["entity_id"], 11)
+        self.assertEqual(json.loads(row["changes"]), {"repair_id": 12, "work_entry_id": 13})
+
+    def test_colliding_history_ids_are_not_mapped_to_another_repair(self):
+        from repairlib.storage.portable_shop import map_history
+        maps = {"repair_charges": {1: 11, 7: 17}, "repairs": {2: 12}, "work_entries": {3: 13}}
+        work = {"entity_type": "charge", "entity_id": 1, "operation": "inventory.consume",
+                "changes": json.dumps({"repair_id": 2, "work_entry_id": 3})}
+        fees = {"entity_type": "repair", "entity_id": 2, "operation": "repair.fees",
+                "changes": json.dumps({"fees": {"diagnosis": {"charge_id": 7}}})}
+        # Both IDs exist in the archive, but belong to a different repair.
+        parents = {"work_entries": {3: 99}, "repair_charges": {7: 99}}
+        map_history(work, maps, parents)
+        map_history(fees, maps, parents)
+        work_changes = json.loads(work["changes"])
+        fee_changes = json.loads(fees["changes"])
+        self.assertEqual((work_changes["work_entry_id"], work_changes["work_entry_id_unresolved"]), (3, True))
+        self.assertEqual((fee_changes["fees"]["diagnosis"]["charge_id"],
+                          fee_changes["fees"]["diagnosis"]["charge_id_unresolved"]), (7, True))
+
+    def test_colliding_old_history_is_marked_during_import(self):
+        from contextlib import ExitStack
+        ctx, original, returned = self.source_ticket()
+        local.set_fees(ctx, original, {"diagnosis": 1000, "labor": 2000}, 1, "original-fees")
+        archive, _ = self.export(ctx)
+        files = unpack(archive.getvalue())
+        records = json.loads(files["records.json"])
+        other_charge = next(row["id"] for row in records["repair_charges"]
+                            if row["repair_id"] == original)
+
+        def stale_history(data):
+            event = next(row for row in data["audit_events"]
+                         if row["operation"] == "repair.fees" and row["entity_id"] == returned)
+            changes = json.loads(event["changes"])
+            changes["fees"]["diagnosis"]["charge_id"] = other_charge
+            event["changes"] = json.dumps(changes)
+
+        content = pack(with_records(files, stale_history))
+        with ExitStack() as stack:
+            path = self.destination(stack)
+            dest = local.open_workspace(path)
+            local.import_portable_shop(dest, BytesIO(content), len(content), destination_shop_id=1,
+                                       revision=1, key="collision")
+            (raw,), = self.rows(path, "SELECT changes FROM audit_events WHERE operation='repair.fees' "
+                                     "AND json_extract(changes, '$.fees.diagnosis.charge_id_unresolved') = 1")
+            fee = json.loads(raw)["fees"]["diagnosis"]
+            self.assertEqual((fee["charge_id"], fee["charge_id_unresolved"]), (other_charge, True))
+
+    def test_old_unmapped_history_survives_two_transfers(self):
+        from contextlib import ExitStack
+        ctx, _, returned = self.source_ticket()
+        local.create_work_entry(ctx, returned, {"kind": "work", "body": "Replaced a part"}, "entry")
+        archive, _ = self.export(ctx)
+
+        def old_history(records):
+            event = next(row for row in records["audit_events"] if row["operation"] == "repair.fees")
+            changes = json.loads(event["changes"])
+            changes["work_entry_id"] = 9999
+            changes["fees"]["diagnosis"]["charge_id"] = 9998
+            event["changes"] = json.dumps(changes)
+
+        content = pack(with_records(unpack(archive.getvalue()), old_history))
+        with ExitStack() as stack:
+            first = self.destination(stack)
+            one = local.open_workspace(first)
+            local.import_portable_shop(one, BytesIO(content), len(content), destination_shop_id=1,
+                                       revision=1, key="first")
+            archive, size = self.export(one)
+            second = self.destination(stack)
+            two = local.open_workspace(second)
+            local.import_portable_shop(two, archive, size, destination_shop_id=1, revision=1, key="second")
+            (raw,), = self.rows(second, "SELECT changes FROM audit_events WHERE operation='repair.fees'")
+            changes = json.loads(raw)
+            self.assertEqual((changes["work_entry_id"], changes["work_entry_id_unresolved"]), (9999, True))
+            self.assertEqual((changes["fees"]["diagnosis"]["charge_id"],
+                              changes["fees"]["diagnosis"]["charge_id_unresolved"]), (9998, True))
 
     def test_invalid_references_are_refused_without_partial_writes(self):
         from contextlib import ExitStack

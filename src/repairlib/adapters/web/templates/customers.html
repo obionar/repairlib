@@ -22,14 +22,16 @@
           <div class="obi-panel-body">
             <div class="obi-intake-grid">
               {% for field, label in [('name', _('Name')), ('phone', _('Phone')), ('email', _('Email')), ('address', _('Address')), ('notes', _('Notes'))] %}
-                <label class="rl-sr-only" for="{{ field }}">{{ label }}</label>
+                <div class="obi-field{% if field in ('address', 'notes') %} obi-span{% endif %}">
+                <label for="{{ field }}">{{ label }}</label>
                 {% set invalid = field_errors.get(field) %}
                 {% if field in ('address', 'notes') %}
-                  <textarea class="obi-span" id="{{ field }}" name="{{ field }}" placeholder="{{ label }}" maxlength="{{ limits[field] }}"{% if invalid %} aria-invalid="true" aria-describedby="{{ field }}-error"{% endif %}>{{ details.get(field, '') }}</textarea>
+                  <textarea id="{{ field }}" name="{{ field }}" placeholder="{{ label }}" maxlength="{{ limits[field] }}"{% if invalid %} aria-invalid="true" aria-describedby="{{ field }}-error"{% endif %}>{{ details.get(field, '') }}</textarea>
                 {% else %}
                   <input id="{{ field }}" name="{{ field }}" value="{{ details.get(field, '') }}" placeholder="{{ label }}" maxlength="{{ limits[field] }}"{% if field == 'name' %} required autocomplete="name"{% elif field == 'phone' %} type="tel" autocomplete="tel"{% elif field == 'email' %} inputmode="email" autocomplete="email"{% endif %}{% if invalid %} aria-invalid="true" aria-describedby="{{ field }}-error"{% endif %}>
                 {% endif %}
                 {% if invalid %}<span id="{{ field }}-error">{{ _(invalid) }}</span>{% endif %}
+                </div>
               {% endfor %}
             </div>
           </div>
@@ -39,7 +41,7 @@
             {% if next_repair %}
               <a href="{{ request.url_for('repair_new').path }}">{{ _('Cancel') }}</a>
             {% else %}
-              <a href="{{ request.url_for('customer_list').path }}">{{ _('Back to customers') }}</a>
+              <a href="{{ request.url_for('customer_detail', customer_id=customer_id).path if customer_id else request.url_for('customer_list').path }}">{{ _('Cancel') }}</a>
             {% endif %}
           </div>
         </form>

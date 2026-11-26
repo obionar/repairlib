@@ -38,6 +38,14 @@ def form_for(page, action, *, reviewed=None):
 
 
 class WebFeedbackTests(TokenFixture, unittest.TestCase):
+    def test_unknown_page_shows_an_error_without_a_visible_page_title(self):
+        with self.client() as client:
+            self.sign_in(client)
+            response = client.get("/not-a-real-page")
+            self.assertEqual(response.status_code, 404)
+            self.assertIn('id="error-message">Page not found</div>', response.text)
+            self.assertIn('<h1 class="rl-page-title rl-sr-only">Page not found</h1>', response.text)
+
     def admin_auth(self, client):
         self.sign_in(client)
         token = issued_secret(client.post(ACCOUNT, data=self.issue_form(client)))

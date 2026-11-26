@@ -4,6 +4,7 @@ from contextlib import closing
 from html import unescape
 import re
 import sqlite3
+from html.parser import HTMLParser
 import unittest
 
 from test_dashboard import links, queue, seed_dashboard
@@ -152,6 +153,44 @@ class WebListsTests(TokenFixture, unittest.TestCase):
             self.assertEqual(links(first.text, "inventory") + links(client.get("/inventory" + older).text, "inventory"),
                              list(range(27, 0, -1)))
             self.assertEqual(client.get("/inventory/42").status_code, 404)
+
+    def test_inventory_filter_controls_belong_to_a_form(self):
+        class Forms(HTMLParser):
+            def __init__(self):
+                super().__init__()
+                self.current = None
+                self.forms = []
+
+            def handle_starttag(self, tag, attrs):
+                attrs = dict(attrs)
+                if tag == "form":
+                    self.current = set()
+                    self.forms.append(self.current)
+                elif self.current is not None and tag in ("input", "button") and attrs.get("name"):
+                    self.current.add(attrs["name"])
+
+            def handle_endtag(self, tag):
+                if tag == "form":
+                    self.current = None
+
+        with self.client() as client:
+            self.sign_in(client)
+            parser = Forms()
+            parser.feed(client.get("/inventory?q=screen&category=Parts").text)
+            self.assertTrue(any({"q", "category", "include_archived", "low_stock"} <= form
+                                for form in parser.forms))
+            self.assertTrue(any({"q", "category"} <= form for form in parser.forms))
+
+    def test_item_sku_is_not_translated(self):
+        from repairlib.client import local
+        ctx = local.open_workspace(self.workspace)
+        item = local.create_inventory_item(ctx, {"sku": "Inventory", "description": "Part",
+                                                  "selling_price_cents": 100}, "sku")
+        with self.client() as client:
+            self.sign_in(client)
+            page = client.get(f"/inventory/{item.id}", headers={"Accept-Language": "el"})
+            self.assertEqual(page.status_code, 200)
+            self.assertIn('<h2 id="inventory-item">Inventory</h2>', page.text)
 
     def test_customer_open_counts(self):
         seed_registers(self.db)

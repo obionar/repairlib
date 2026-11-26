@@ -67,10 +67,9 @@ adapters/web/
   Warranty fields are not part of the day-to-day ticket UI. Estimates were removed
   everywhere at schema 36.
 - Forms: native `method="post"`, one primary submit, optional cancel link. Fields
-  sit in `.obi-intake-grid`; each control keeps a visually hidden `<label>` and a
-  visible placeholder. Long text fields add `class="obi-span"`.
-- Every page renders one semantic `h1`; authenticated pages hide it visually when
-  the content already starts with titled windows.
+  sit in `.obi-intake-grid` with visible labels; long text fields span the grid.
+- Every page renders one semantic `h1`; authenticated pages hide it visually.
+  Repair subpages keep their back-to-repair link visible.
 - Keep permission, CSRF, revision, idempotency-key and error markup exactly as the
   handlers expect. Styling never changes names, ids or routes.
 - Core forms work without JavaScript. The optional `page-scroll.js` (repair, inventory item and customer pages)

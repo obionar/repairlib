@@ -4,6 +4,7 @@
 {% set detail = request.url_for('inventory_detail', item_id=item.id).path %}
 {% block content %}
   {% if error %}<p class="obi-notice" role="alert" id="form-error">{{ _(error) }}</p>{% endif %}
+  {% if request.query_params.get('saved') == '1' %}{{ ui.notice('Changes saved.') }}{% endif %}
   {% if stale and not reverse_target %}<p><a href="{{ detail }}">{{ _('Open latest version') }}</a></p>{% endif %}
   {% if reverse_target %}
     {% call ui.panel('reverse-review', 'Review stock reversal') %}
@@ -33,8 +34,9 @@
       </div>
     {% endcall %}
   {% endif %}
-  {% if item.archived_at %}<p>{{ _('Archived {when}', when=item.archived_at) }}</p>{% endif %}
-  <p>{{ _('Revision {number}', number=item.revision) }}</p>
+  {% call ui.panel('inventory-item', item.sku, path=request.url_for('inventory_edit', item_id=item.id).path if can_write and not item.archived_at else '', link='Edit inventory item', translate_title=false) %}
+  <div class="obi-panel-body">
+  {% if item.archived_at %}<p>{{ _('Archived {when}', when=item.archived_at|localtime) }}</p>{% endif %}
   <dl class="record-details">
     <dt>{{ _('SKU') }}</dt><dd>{{ item.sku }}</dd>
     <dt>{{ _('On hand') }}</dt><dd>{{ item.on_hand_milli|milli }} {{ _(item.unit) }}</dd>
@@ -57,11 +59,14 @@
       <button type="submit">{{ _('Send to P15') }}</button>
     </form>
   {% endif %}
+  </div>
+  {% endcall %}
   {% set active_stock = can_write and not item.archived_at %}
   {% if active_stock %}
     {% for action, heading in [('receive', _('Receive stock')), ('adjust', _('Adjust stock'))] %}
       {% set values = stock_values if stock_action == action else {} %}
-      <h2 id="{{ action }}-heading">{{ heading }}</h2>
+      {% call ui.panel(action ~ '-heading', heading) %}
+      <div class="obi-panel-body">
       <form method="post" action="{{ request.url_for('inventory_' ~ action, item_id=item.id).path }}" aria-labelledby="{{ action }}-heading"{% if error and stock_action == action %} aria-describedby="form-error"{% endif %}>
         <input type="hidden" name="csrf" value="{{ csrf }}">
         <input type="hidden" name="key" value="{{ values.get('key') or keys[action] }}">
@@ -80,22 +85,23 @@
           <input id="{{ action }}-{{ field }}" name="{{ field }}" value="{{ values.get(field, '') }}"{% if field == 'quantity' %} inputmode="decimal" required{% else %} maxlength="200"{% if action == 'adjust' %} required{% endif %}{% endif %}{% if invalid %} aria-invalid="true" aria-describedby="{{ action }}-{{ field }}-error"{% endif %}>
           {% if invalid %}<span id="{{ action }}-{{ field }}-error">{{ _(invalid) }}</span>{% endif %}
         {% endfor %}
-        <button type="submit">{{ heading }}</button>
+        {{ ui.button(heading) }}
       </form>
+      </div>
+      {% endcall %}
     {% endfor %}
   {% endif %}
-  <h2 id="stock-movements">{{ _('Stock movements') }}</h2>
+  {% call ui.panel('stock-movements', 'Stock movements') %}
   {% if movements.movements %}
-    <div class="table-scroll">
-      <table class="charge-table">
-        <thead><tr><th scope="col">{{ _('When') }}</th><th scope="col">{{ _('Movement') }}</th><th scope="col" class="numeric">{{ _('Quantity') }}</th><th scope="col" class="numeric">{{ _('On hand after') }}</th><th scope="col">{{ _('Reason') }}</th><th scope="col">{{ _('By') }}</th>{% if active_stock %}<th scope="col">{{ _('Reverse') }}</th>{% endif %}</tr></thead>
+      {% call ui.table('Stock movements', wide=true) %}
+        <thead><tr><th scope="col">{{ _('When') }}</th><th scope="col">{{ _('Movement') }}</th><th scope="col" class="obi-number">{{ _('Quantity') }}</th><th scope="col" class="obi-number">{{ _('On hand after') }}</th><th scope="col">{{ _('Reason') }}</th><th scope="col">{{ _('By') }}</th>{% if active_stock %}<th scope="col">{{ _('Reverse') }}</th>{% endif %}</tr></thead>
         <tbody>
           {% for movement in movements.movements %}
             <tr>
-              <td>{{ movement.created_at }}</td>
+              <td>{{ ui.local_time(movement.created_at) }}</td>
               <td>{{ {'receive': _('Receipt'), 'adjust': _('Adjustment'), 'reversal': _('Reversal'), 'consume': _('Repair consumption'), 'return': _('Repair return')}[movement.kind] }}{% if movement.reverses_id %} · #{{ movement.reverses_id }}{% endif %} #{{ movement.id }}</td>
-              <td class="numeric">{{ '-' if movement.quantity_milli < 0 }}{{ (movement.quantity_milli|abs)|milli }}</td>
-              <td class="numeric">{{ movement.on_hand_after_milli|milli }}</td>
+              <td class="obi-number">{{ '-' if movement.quantity_milli < 0 }}{{ (movement.quantity_milli|abs)|milli }}</td>
+              <td class="obi-number">{{ movement.on_hand_after_milli|milli }}</td>
               <td>{{ movement.reason }}</td>
               <td>{{ movement.actor_username }}</td>
               {% if active_stock %}<td>
@@ -115,16 +121,12 @@
             </tr>
           {% endfor %}
         </tbody>
-      </table>
-    </div>
-    {% if movements.next_before %}<p><a href="?before={{ movements.next_before }}">{{ _('Older movements') }}</a></p>{% endif %}
-    {% if before %}<p><a href="{{ detail }}">{{ _('Newest movements') }}</a></p>{% endif %}
+      {% endcall %}
+    {{ ui.pager(detail, {}, before, movements.next_before, 'Newest movements', 'Older movements') }}
   {% else %}
-    <p>{{ _('No stock movements yet.') }}</p>
+    {{ ui.empty('No stock movements yet.') }}
   {% endif %}
-  {% if active_stock %}
-    <p><a href="{{ request.url_for('inventory_edit', item_id=item.id).path }}">{{ _('Edit inventory item') }}</a></p>
-  {% endif %}
+  {% endcall %}
   {% if can_write %}
     {% set action = 'archive' if active_stock else 'restore' %}
     <form method="post" action="{{ request.url_for('inventory_' ~ action, item_id=item.id).path }}">

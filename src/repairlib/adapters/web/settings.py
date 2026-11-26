@@ -37,8 +37,9 @@ def settings_routes(workspace: Path, templates, key: bytearray) -> APIRouter:
                error=None, field_errors=None):
         return templates.TemplateResponse(request, "settings.html", {
             "current": current, "details": fields or {}, "error": str(error) if error else "",
-            "field_errors": field_errors or {}, "request_key": request_key or uuid4().hex,
-            "revision": current.revision if current else (fields or {}).get("revision", ""),
+             "field_errors": field_errors or {}, "request_key": request_key or uuid4().hex,
+             "revision": current.revision if current else (fields or {}).get("revision", ""),
+             "stale": error is not None and error.code == "stale_revision",
             "csrf": form_token(request, key, "settings.update"),
         }, status_code=status)
 
@@ -77,15 +78,15 @@ def settings_routes(workspace: Path, templates, key: bytearray) -> APIRouter:
             settings.update_settings(workspace, access(request), SettingsPatch(
                 revision=reviewed, name=form.get("name"), timezone=form.get("timezone"),
                 language=fields["language"] or None,
-                address=fields["address"] or None, phone=fields["phone"] or None,
-                terms=fields["terms"] or None, **limits),
+                 address=form.get("address"), phone=form.get("phone"),
+                 terms=form.get("terms"), **limits),
                 key=request_key, diagnosis_fee_cents=diagnosis)
         except SettingsError as error:
             if error.status in (422, 409):
                 return render(request, status=error.status, fields={**fields, "revision": revision},
                               request_key=request_key, error=error, field_errors=error.fields)
             return failure(request, error)
-        return RedirectResponse(request.url_for("settings_page").path, status_code=303)
+        return RedirectResponse(request.url_for("settings_page").path + "?saved=1", status_code=303)
 
     @router.get("/printer")
     def printer_page(request: Request):
@@ -109,7 +110,7 @@ def settings_routes(workspace: Path, templates, key: bytearray) -> APIRouter:
             printing.configure_printer(workspace, access(request), change, key=form.get("key", ""))
         except printing.RepairError as error:
             return failure(request, error)
-        return RedirectResponse(request.url_for("printer_page").path, status_code=303)
+        return RedirectResponse(request.url_for("printer_page").path + "?saved=1", status_code=303)
 
     @router.post("/printer/test")
     def printer_test(request: Request, form: Annotated[dict[str, str], Depends(printer_form)]):

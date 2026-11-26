@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% import "_ui.html" as ui with context %}
 {% set title = _('Review physical return') %}
 {% set ticket_context = repair_id %}
 {% block content %}
@@ -19,8 +20,8 @@
     {% set combined = action == 'intake_mistake_submit' %}
     {% set values = forms[action] %}
     {% set errors = field_errors if attempted == action else {} %}
-    <section aria-labelledby="{{ action }}-title">
-      <h2 id="{{ action }}-title">{{ label }}</h2>
+    {% call ui.panel(action ~ '-title', label) %}
+      <div class="obi-panel-body">
       {% if combined %}
         <p>{{ _('Removes the whole charge and returns all remaining quantity from this consumption.') }}</p>
       {% else %}
@@ -40,9 +41,10 @@
         <label for="{{ action }}-reason">{{ _('Intake mistake reason') if combined else _('Return reason') }}</label>
         <input id="{{ action }}-reason" name="reason" maxlength="200" required value="{{ values.reason }}"{% if errors.reason %} aria-invalid="true" aria-describedby="{{ action }}-reason-error"{% endif %}>
         {% if errors.reason %}<span id="{{ action }}-reason-error">{{ _(errors.reason) }}</span>{% endif %}
-        <button type="submit">{{ label }}</button>
+        {{ ui.button(label) }}
       </form>
-    </section>
+      </div>
+    {% endcall %}
   {% endfor %}
   <p class="account-link"><a href="{{ request.url_for('repair_detail', repair_id=repair_id).path }}">{{ _('Back to repair') }}</a></p>
 {% endblock %}

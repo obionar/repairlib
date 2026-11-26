@@ -206,6 +206,14 @@ ALLOWED = {
 
 
 class PresetTests(test_tokens.TokenFixture, TestCase):
+    def test_token_list_shows_agent_limit(self):
+        with self.client() as client:
+            self.sign_in(client)
+            self.issue(client, preset="repairs-write")
+            page = client.get(ACCOUNT)
+            self.assertIn("<th scope=\"col\">Agent limit</th>", page.text)
+            self.assertIn("<td>Repairs and customers</td>", page.text)
+
     def issue(self, client, preset=None, **overrides):
         extra = {"preset": preset} if preset is not None else {}
         reply = client.post(ACCOUNT, data=self.issue_form(

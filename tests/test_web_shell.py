@@ -32,7 +32,7 @@ class WebShellTests(TokenFixture, TestCase):
             self.assertNotIn('type="checkbox"', page.text)
             self.assertRegex(page.text, r'<h2 id="customer-results">Customers</h2>\s*<a href="/customers/new">New customer</a>')
             form = client.get('/customers/new')
-            self.assertRegex(form.text, r'<label class="rl-sr-only" for="name">Name</label>')
+            self.assertRegex(form.text, r'<label for="name">Name</label>')
             self.assertRegex(form.text, r'<input[^>]*id="name"[^>]*placeholder="Name"')
 
     def test_repair_register_uses_search_and_results_title_bars(self):
@@ -69,6 +69,15 @@ class WebShellTests(TokenFixture, TestCase):
                     self.assertIn("Synthetic", nav)
                     self.assertIn("owner", nav)
                     self.assertEqual('id="language-choice"' in response.text, path == "/account")
+
+    def test_repair_subpage_keeps_context_but_hides_page_title(self):
+        seed_dashboard(self.db)
+        with self.client() as client:
+            self.sign_in(client)
+            page = client.get("/repairs/6/edit")
+            self.assertEqual(page.status_code, 200)
+            self.assertIn('<h1 class="rl-page-title rl-sr-only">', page.text)
+            self.assertIn('class="rl-context-link" href="/repairs/6"', page.text)
 
     def test_inventory_and_users_creation_links_are_in_result_bars(self):
         with self.client() as client:

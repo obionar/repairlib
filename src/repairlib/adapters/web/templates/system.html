@@ -1,17 +1,20 @@
 {% extends "base.html" %}
+{% import "_ui.html" as ui with context %}
 {% set title = _('System') %}
 {% block content %}
 
       {% if error %}
-        <p class="obi-error">{{ error }}</p>
+        {{ ui.error(error, 'system-error') }}
       {% else %}
-      <dl class="obi-setting-list">
+      {% call ui.panel('system-status', 'System') %}
+      <dl class="obi-setting-list obi-panel-body">
         <dt>{{ _('Schema') }}</dt><dd>{{ facts.schema_version }} / {{ facts.expected_schema_version }}</dd>
         <dt>{{ _('Workspace') }}</dt><dd>{{ facts.workspace }}</dd>
-        <dt>{{ _('Disk free') }}</dt><dd>{{ facts.disk_free_bytes if facts.disk_free_bytes is not none else _('Unknown') }}</dd>
+        <dt>{{ _('Disk free') }}</dt><dd>{{ (facts.disk_free_bytes // 1048576) ~ ' MiB' if facts.disk_free_bytes is not none else _('Unknown') }}</dd>
         <dt>{{ _('Printer') }}</dt><dd>{{ facts.printer }}</dd>
         <dt>{{ _('Sessions') }}</dt><dd>{{ facts.sessions }}</dd>
         <dt>{{ _('Clock') }}</dt><dd>{% if facts.clock_warning %}{{ _('Clock trails the newest record') }} {{ facts.clock_skew_seconds }} s{% else %}{{ _('ok') }}{% endif %}</dd>
       </dl>
+      {% endcall %}
       {% endif %}
 {% endblock %}

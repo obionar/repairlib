@@ -1,7 +1,11 @@
 {% extends "base.html" %}
+{% import "_ui.html" as ui with context %}
 {% set title = _('Label printer') %}
 {% block content %}
   {% include '_settings_nav.html' %}
+  {% if request.query_params.get('saved') == '1' %}{{ ui.notice('Changes saved.') }}{% endif %}
+  {% call ui.panel('printer-settings', 'Label printer') %}
+  <div class="obi-panel-body">
   <p>{{ _('P15 program found on the server.') if printer.available else _('P15 program unavailable on the server.') }}</p>
   <p>{{ _('Finding the program does not confirm that the printer is connected or ready.') }}</p>
   <form method="post" action="{{ request.url_for('printer_save').path }}">
@@ -13,14 +17,16 @@
       <option value="none"{% if printer.driver == 'none' %} selected{% endif %}>{{ _('Disabled') }}</option>
       <option value="p15"{% if printer.driver == 'p15' %} selected{% endif %}>{{ _('P15') }}</option>
     </select>
-    <button type="submit">{{ _('Save printer') }}</button>
+    {{ ui.button('Save printer', 'primary') }}
   </form>
   {% if printer.driver == 'p15' and printer.available %}
   <form method="post" action="{{ request.url_for('printer_test').path }}">
     <input type="hidden" name="csrf" value="{{ test_csrf }}">
     <input type="hidden" name="key" value="{{ test_key }}">
     <input type="hidden" name="revision" value="{{ printer.revision }}">
-    <button type="submit">{{ _('Send test label to P15') }}</button>
+    {{ ui.button('Send test label to P15') }}
   </form>
   {% endif %}
+  </div>
+  {% endcall %}
 {% endblock %}

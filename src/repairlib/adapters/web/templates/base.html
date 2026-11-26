@@ -50,8 +50,8 @@
   {% endif %}
   <main id="main" tabindex="-1" class="{{ 'rl-workspace' if shell_principal else 'rl-public' }}">
     <div class="obi-window rl-workspace-inner{% if shell_section == '' %} rl-dashboard{% endif %}{% if ticket_context %} rl-subpage{% endif %}">
-      {% set quiet_page_heading = shell_principal and not show_page_heading and not ticket_context %}
-      <header class="rl-page-header{% if quiet_page_heading %} rl-sr-only{% endif %}">
+      {% set quiet_page_heading = shell_principal %}
+      <header class="rl-page-header{% if quiet_page_heading and not ticket_context %} rl-sr-only{% endif %}">
         {% if ticket_context %}<a class="rl-context-link" href="{{ request.url_for('repair_detail', repair_id=ticket_context).path }}"><span aria-hidden="true">←</span> {{ _('Repair #{id}', id=ticket_context) }}</a>{% endif %}
         <h1 class="rl-page-title{% if quiet_page_heading %} rl-sr-only{% endif %}">{{ title }}</h1>
       </header>

@@ -1,9 +1,8 @@
 {% extends "base.html" %}
 {% import '_ui.html' as ui with context %}
 {% set title = _(heading) %}
-{% set show_page_heading = true %}
 {% block content %}
-  {% if message %}{{ ui.error(message, 'error-message') }}{% endif %}
+  {{ ui.error(message or heading, 'error-message') }}
   {% if request_id %}<p class="obi-muted">{{ _('Request ID') }}: {{ request_id }}</p>{% endif %}
   {% if typed %}
     <p>{{ _('Your typed text was not saved. Copy it before you leave this page.') }}</p>

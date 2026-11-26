@@ -25,21 +25,23 @@
                                       ('bin', _('Bin')), ('unit', _('Unit')), ('low_stock', _('Low-stock threshold')),
                                       ('purchase_cost', _('Purchase cost')),
                                       ('selling_price', _('Selling price (€)'))] %}
-                <label class="rl-sr-only" for="{{ field }}">{{ label }}</label>
+                <div class="obi-field{% if field == 'specifications' %} obi-span{% endif %}">
+                <label for="{{ field }}">{{ label }}</label>
                 {% set invalid = field_errors.get(field) %}
                 {% if field == 'specifications' %}
-                  <textarea class="obi-span" id="{{ field }}" name="{{ field }}" placeholder="{{ label }}" maxlength="{{ limits[field] }}"{% if invalid %} aria-invalid="true" aria-describedby="{{ field }}-error"{% endif %}>{{ details.get(field, '') }}</textarea>
+                  <textarea id="{{ field }}" name="{{ field }}" maxlength="{{ limits[field] }}"{% if invalid %} aria-invalid="true" aria-describedby="{{ field }}-error"{% endif %}>{{ details.get(field, '') }}</textarea>
                 {% else %}
                   <input id="{{ field }}" name="{{ field }}" value="{{ details.get(field, '') }}" placeholder="{{ label }}"{% if field in limits %} maxlength="{{ limits[field] }}"{% else %} inputmode="decimal"{% endif %}{% if field in ('sku', 'description', 'unit', 'selling_price') %} required{% endif %}{% if invalid %} aria-invalid="true" aria-describedby="{{ field }}-error"{% endif %}>
                 {% endif %}
                 {% if invalid %}<span id="{{ field }}-error">{{ _(invalid) }}</span>{% endif %}
+                </div>
               {% endfor %}
             </div>
           </div>
           {% endcall %}
           <div class="obi-actions">
             <button type="submit">{{ _('Save item') if item_id else _('Create item') }}</button>
-            <a href="{{ request.url_for('inventory_list').path }}">{{ _('Back to inventory') }}</a>
+            <a href="{{ request.url_for('inventory_detail', item_id=item_id).path if item_id else request.url_for('inventory_list').path }}">{{ _('Cancel') }}</a>
           </div>
         </form>
       {% elif page %}
@@ -48,6 +50,7 @@
         <form class="rl-compact-search" method="get" action="{{ path }}" role="search">
           <label class="rl-sr-only" for="inventory-search">{{ _('Search SKU, description, manufacturer or part number') }}</label>
           <input id="inventory-search" type="search" name="q" value="{{ query }}" maxlength="100" placeholder="{{ _('Search') }}">
+          {% if category %}<input type="hidden" name="category" value="{{ category }}">{% endif %}
           {% if include_archived %}<input type="hidden" name="include_archived" value="true">{% endif %}
           {% if low_stock %}<input type="hidden" name="low_stock" value="true">{% endif %}
           <button type="submit" aria-label="{{ _('Search') }}">
@@ -56,6 +59,8 @@
         </form>
         <details class="rl-search-filters"{% if category or include_archived or low_stock %} open{% endif %}>
           <summary>{{ _('Filters') }}</summary>
+          <form method="get" action="{{ path }}">
+          {% if query %}<input type="hidden" name="q" value="{{ query }}">{% endif %}
           <div class="obi-intake-grid">
             <div class="obi-field">
               <label for="filter-category">{{ _('Category') }}</label>
@@ -77,6 +82,7 @@
             {{ ui.button('Apply filters') }}
             {% if query or category or include_archived or low_stock %}<a href="{{ path }}">{{ _('Clear filters') }}</a>{% endif %}
           </div>
+          </form>
         </details>
         {% endcall %}
         {% call ui.panel('inventory-results', 'Inventory', path=request.url_for('inventory_new').path if can_write else '', link='New inventory item') %}
@@ -115,7 +121,7 @@
               </tbody>
             {% endcall %}
           {% else %}
-            {{ ui.empty('No inventory items on this page.') }}
+            {{ ui.empty('No inventory items match these filters.' if query or category or include_archived or low_stock else 'No inventory items on this page.') }}
           {% endif %}
           {{ ui.pager(path, {'q': query, 'category': category, 'include_archived': include_archived, 'low_stock': low_stock},
                       before, page.next_before, 'Newest items', 'Older items') }}

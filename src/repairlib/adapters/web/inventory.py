@@ -95,7 +95,7 @@ def inventory_routes(workspace: Path, templates, key: bytearray) -> APIRouter:
                 return draft(request, fields=fields, request_key=request_key, error=error,
                              item_id=item_id, revision=revision)
             return failure(request, error)
-        return RedirectResponse(request.url_for("inventory_detail", item_id=item.id).path, status_code=303)
+        return RedirectResponse(request.url_for("inventory_detail", item_id=item.id).path + "?saved=1", status_code=303)
 
     @router.get("")
     def inventory_list(request: Request, before: int | None = None, include_archived: bool = False,
@@ -198,8 +198,8 @@ def inventory_routes(workspace: Path, templates, key: bytearray) -> APIRouter:
                                    movement_id=movement_id)
             return failure(request, error)
         location = request.url_for("inventory_detail", item_id=item_id).path
-        if action == "reverse" and before:
-            location += "?" + urlencode({"before": before}) 
+        location += "?" + urlencode({"before": before, "saved": 1} if action == "reverse" and before
+                                     else {"saved": 1})
         return RedirectResponse(location, status_code=303)
 
     @router.post("/{item_id}/receive")
@@ -242,7 +242,7 @@ def inventory_routes(workspace: Path, templates, key: bytearray) -> APIRouter:
             if error.status in (422, 409):
                 return render(request, status=error.status, error=str(error), review_id=item_id)
             return failure(request, error)
-        return RedirectResponse(request.url_for("inventory_detail", item_id=item_id).path, status_code=303)
+        return RedirectResponse(request.url_for("inventory_detail", item_id=item_id).path + "?saved=1", status_code=303)
 
     @router.post("/{item_id}/archive")
     def inventory_archive(request: Request, item_id: int, form: Annotated[dict[str, str], Depends(item_form)]):

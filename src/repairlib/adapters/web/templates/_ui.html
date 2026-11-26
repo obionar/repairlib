@@ -41,16 +41,16 @@
   <a href="{{ path }}" class="obi-button{% if tone %} obi-button--{{ tone }}{% endif %}">{{ _(label) }}</a>
 {% endmacro %}
 
-{% macro panel(id, title, count='', path='', link='', fold=false, expanded=true) %}
+{% macro panel(id, title, count='', path='', link='', fold=false, expanded=true, translate_title=true) %}
   <section class="obi-panel" aria-labelledby="{{ id }}">
     {% if fold %}
       <details{% if expanded %} open{% endif %}>
-        <summary class="obi-panel-bar"><h2 id="{{ id }}">{{ _(title) }}{% if count %} <span class="obi-panel-count">{{ count }}</span>{% endif %}</h2></summary>
+        <summary class="obi-panel-bar"><h2 id="{{ id }}">{{ _(title) if translate_title else title }}{% if count %} <span class="obi-panel-count">{{ count }}</span>{% endif %}</h2></summary>
         {{ caller() }}
       </details>
     {% else %}
       <header class="obi-panel-bar">
-        <h2 id="{{ id }}">{{ _(title) }}{% if count %} <span class="obi-panel-count">{{ count }}</span>{% endif %}</h2>
+        <h2 id="{{ id }}">{{ _(title) if translate_title else title }}{% if count %} <span class="obi-panel-count">{{ count }}</span>{% endif %}</h2>
         {% if path %}<a href="{{ path }}">{{ _(link) }}</a>{% endif %}
       </header>
       {{ caller() }}

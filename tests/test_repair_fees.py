@@ -10,6 +10,7 @@ import unittest
 from uuid import uuid4
 
 from repairlib.storage import initialization
+from repairlib.client import local
 from test_baseline import python_env
 from test_cli_identity import COMMAND
 from test_repairs import API, DEVICE
@@ -21,6 +22,28 @@ BOOKKEEPING = "SELECT count(*) FROM audit_events WHERE actor_kind = 'maintenance
 
 
 class RepairFeeTests(TokenFixture, unittest.TestCase):
+    def test_fee_correction_validates_the_final_discount(self):
+        ctx = local.open_workspace(self.workspace)
+        repair = local.create_repair(ctx, DEVICE, "new")
+        local.set_fees(ctx, repair.id, {"diagnosis": 10000, "labor": 0, "discount": 8000}, 1, "first")
+        result = local.set_fees(ctx, repair.id, {
+            "diagnosis": 0, "labor": 5000, "discount": 0, "discount_revision": 1,
+        }, 2, "correct")
+        self.assertEqual((result.subtotal_cents, result.discount_cents, result.total_cents), (5000, 0, 5000))
+        with self.assertRaises(local.ClientError):
+            local.set_fees(ctx, repair.id, {"diagnosis": 100, "labor": 0, "discount": 200}, 3, "invalid")
+        self.assertEqual(local.charge_summary(ctx, repair.id).total_cents, 5000)
+
+    def test_pending_total_recalculates_percentage_discount(self):
+        ctx = local.open_workspace(self.workspace)
+        repair = local.create_repair(ctx, DEVICE, "new")
+        local.set_discount(ctx, repair.id, {"revision": 0, "kind": "percent", "value": 50}, "discount")
+        fees = local.ticket_fees(ctx, repair.id)
+        self.assertEqual((fees["diagnosis_input"], fees["total_cents"], fees["pending_total_cents"]),
+                         (2000, 0, 1000))
+        saved = local.set_fees(ctx, repair.id, {"diagnosis": 2000, "labor": 0}, 1, "save")
+        self.assertEqual(saved.total_cents, fees["pending_total_cents"])
+
     def test_diagnosis_and_repair_are_prefilled_stored_and_match_the_cli(self):
         with self.client() as client:
             self.sign_in(client)

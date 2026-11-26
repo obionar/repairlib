@@ -142,13 +142,11 @@ def read_charge(workspace: Path, access: RepairAccess, repair_id: int, charge_id
 
 
 def append_charge(db, principal, repair_id: int, values: dict) -> Charge:
-    """Insert and validate totals inside the caller's write transaction."""
+    """Insert a charge inside the caller's write transaction."""
     if charges.active_count(db, principal.shop_id, repair_id) >= MAX_ACTIVE_CHARGES:
         raise RepairError(409, "too_many_charges",
                           f"A repair can have at most {MAX_ACTIVE_CHARGES} active charges.")
-    created = charges.insert(db, principal, repair_id, values)
-    build_summary(db, principal, repair_id)
-    return created
+    return charges.insert(db, principal, repair_id, values)
 
 
 PROTECTED = {"diagnosis": "Diagnosis", "labor": "Labour"}
@@ -180,13 +178,16 @@ def ticket_fees(workspace: Path, access: RepairAccess, repair_id: int):
                     else default,
                     "labor": stored["labor"]}
         other = summary.subtotal_cents - stored["diagnosis"] - stored["labor"]
+        pending_subtotal = sum(proposed.values()) + other
+        pending_total = pending_subtotal - money.discount(summary.discount_kind, summary.discount_value,
+                                                          pending_subtotal)
         return {"diagnosis": stored["diagnosis"],
                 "diagnosis_input": proposed["diagnosis"],
                 "labor": stored["labor"],
                 "labor_input": proposed["labor"],
                 "parts": summary.parts_subtotal_cents,
                 "total_cents": summary.total_cents,
-                "pending_total_cents": sum(proposed.values()) + other - summary.discount_cents,
+                "pending_total_cents": pending_total,
                 "discount_cents": summary.discount_cents,
                 "discount_kind": summary.discount_kind,
                 "discount_value": summary.discount_value,
@@ -311,6 +312,7 @@ def create_charge(workspace: Path, access: RepairAccess, repair_id: int, details
         if not details.unit.strip():
             values = values | {"unit": say(values["unit"])}
         created = append_charge(db, principal, repair_id, values)
+        build_summary(db, principal, repair_id)
         changes = {"repair_id": repair_id, **{k: v for k, v in values.items() if k != "notes"}}
         if part_revision is not None:
             kind, body = normalize_entry("work", part_used(say, created.description, created.quantity_milli,
